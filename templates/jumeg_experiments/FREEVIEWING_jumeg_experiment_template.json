@@ -1,0 +1,52 @@
+{
+"info":{
+          "time":"2018-03-20  00:00:01",
+          "user": "fboers",
+          "version": "v2018-03-20-001"
+         },
+"experiment":{
+              "name" : "FREVIEWING",
+              "ids"  : [],
+              "scans":["FREEVIEW01"],
+              "stages": ["/mnt/meg_store1/exp/FREEVIEWING","/data/meg_store1/exp/FREEVIEWING","/home/fboers/MEGBoers/data/exp/FREEVIEWING"],
+              "bads_list":["MEG 007","MEG 010","MEG 142","MEG 156","RFM 011"],
+              "path":{
+                       "experiment" : "/mnt/meg_store1/exp/FREEVIEWING",
+                       "mne"        : "mne",
+                       "empty_room" : "empty_room",
+                       "eeg"        : "eeg",
+                       "mft"        : "mft",
+                       "doc"        : "doc",
+                       "source"     : "source",
+                       "stimuli"    : "stimuli"
+                      },
+
+              "mri"  : {
+                        "path":{
+                                "dicom"        : "mrdata/dicom",
+                                "mrdata"       : "mrdata",
+                                "mri_orig"     : "mrdata/mri_orig",
+                                "segmentation" : "mrdata/segmentation",
+                                "freesurfer"   : "mrdata/freesurfer"
+                               }
+                      }
+  },
+  
+ "data_preprocessing": {
+ 
+                        "meeg_merger":{"start_code"        : 128,
+                                       "meg_stim_chammel"  : "ST 014",
+                                       "eeg_stim_channel"  : "ST 014",
+                                       "eeg_stim_type"     :  null,
+                                       "eeg_response_shift":1000,
+                                       "eeg_and_mask"      : 255
+                                      }
+ 
+ } 
+  
+  
+  
+  
+  }
+
+

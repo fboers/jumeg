@@ -1,0 +1,4 @@
+{
+"local":    {"name":"local",    "nodes": 1,"maxnodes": 1, "kernels":1,"maxkernels": 1 },
+"mrcluster":{"name":"mrcluster","nodes": 1,"maxnodes": 10,"kernels":1,"maxkernels": 8 }
+}
