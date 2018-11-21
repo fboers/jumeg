@@ -1,5 +1,6 @@
 <application>
   <component name="GeneralSettings">
+    <option name="confirmExit" value="false" />
     <option name="defaultProjectDirectory" value="$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers" />
     <option name="showTipsOnStartup" value="false" />
   </component>
