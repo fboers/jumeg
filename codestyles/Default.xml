@@ -1,0 +1,11 @@
+<code_scheme name="Default" version="173">
+  <Python>
+    <option name="SPACE_WITHIN_BRACES" value="true" />
+    <option name="DICT_ALIGNMENT" value="2" />
+    <option name="FROM_IMPORT_PARENTHESES_FORCE_IF_MULTILINE" value="true" />
+    <option name="HANG_CLOSING_BRACKETS" value="true" />
+  </Python>
+  <codeStyleSettings language="Python">
+    <option name="SPACE_WITHIN_METHOD_PARENTHESES" value="true" />
+  </codeStyleSettings>
+</code_scheme>

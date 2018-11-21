@@ -1,0 +1,23 @@
+<application>
+  <component name="PyCodeInsightSettings">
+    <option name="SHOW_IMPORT_POPUP" value="true" />
+  </component>
+  <component name="PyTestFrameworkService">
+    <option name="SDK_TO_PYTEST">
+      <map>
+        <entry key="$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui/venv/bin/python" value="false" />
+        <entry key="/usr/bin/python3.7" value="true" />
+      </map>
+    </option>
+    <option name="SDK_TO_NOSETEST">
+      <map>
+        <entry key="/usr/bin/python3.7" value="true" />
+      </map>
+    </option>
+    <option name="SDK_TO_TRIALTEST">
+      <map>
+        <entry key="/usr/bin/python3.7" value="true" />
+      </map>
+    </option>
+  </component>
+</application>

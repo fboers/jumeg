@@ -1,0 +1,128 @@
+<application>
+  <component name="ProjectJdkTable">
+    <jdk version="2">
+      <name value="Python 3.7" />
+      <type value="Python SDK" />
+      <version value="Python 3.7.1" />
+      <homePath value="/usr/bin/python3.7" />
+      <roots>
+        <classPath>
+          <root type="composite">
+            <root url="file:///usr/bin" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/megtools/python" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/megtools/python/mne-python" type="simple" />
+            <root url="file:///usr/lib/python3.7" type="simple" />
+            <root url="file:///usr/lib/python3.7/lib-dynload" type="simple" />
+            <root url="file:///usr/local/lib/python3.7/dist-packages" type="simple" />
+            <root url="file:///usr/lib/python3/dist-packages" type="simple" />
+            <root url="file:///usr/lib/python3.7/dist-packages" type="simple" />
+            <root url="file://$USER_HOME$/.PyCharmCE2018.2/system/python_stubs/-1247971762" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/python-skeletons" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/3.4" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/2and3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/third_party/3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/third_party/2and3" type="simple" />
+          </root>
+        </classPath>
+        <sourcePath>
+          <root type="composite" />
+        </sourcePath>
+      </roots>
+      <additional />
+    </jdk>
+    <jdk version="2">
+      <name value="Python 3.7 (jumeg01)" />
+      <type value="Python SDK" />
+      <version value="Python 3.7.1" />
+      <homePath value="$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg01/venv/bin/python" />
+      <roots>
+        <classPath>
+          <root type="composite">
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg01/venv/bin" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/megtools/python" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/megtools/python/mne-python" type="simple" />
+            <root url="file:///usr/lib/python3.7" type="simple" />
+            <root url="file:///usr/lib/python3.7/lib-dynload" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg01/venv/lib/python3.7/site-packages" type="simple" />
+            <root url="jar://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg01/venv/lib/python3.7/site-packages/setuptools-39.1.0-py3.7.egg!/" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg01/venv/lib/python3.7/site-packages/pip-10.0.1-py3.7.egg" type="simple" />
+            <root url="file://$USER_HOME$/.PyCharmCE2018.2/system/python_stubs/573692976" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/python-skeletons" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/3.4" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/2and3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/third_party/3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/third_party/2and3" type="simple" />
+          </root>
+        </classPath>
+        <sourcePath>
+          <root type="composite" />
+        </sourcePath>
+      </roots>
+      <additional ASSOCIATED_PROJECT_PATH="$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg01" />
+    </jdk>
+    <jdk version="2">
+      <name value="Python 3.7 (jumeg_preproc_gui01)" />
+      <type value="Python SDK" />
+      <version value="Python 3.7.1" />
+      <homePath value="$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui01/venv/bin/python" />
+      <roots>
+        <classPath>
+          <root type="composite">
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers-2018-11-19/jumeg_preproc_gui01/venv/bin" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/megtools/python" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/megtools/python/mne-python" type="simple" />
+            <root url="file:///usr/lib/python3.7" type="simple" />
+            <root url="file:///usr/lib/python3.7/lib-dynload" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui01/venv/lib/python3.7/site-packages" type="simple" />
+            <root url="jar://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui01/venv/lib/python3.7/site-packages/setuptools-39.1.0-py3.7.egg!/" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui01/venv/lib/python3.7/site-packages/pip-10.0.1-py3.7.egg" type="simple" />
+            <root url="file://$USER_HOME$/.PyCharmCE2018.2/system/python_stubs/-1782256026" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/python-skeletons" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/3.4" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/2and3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/third_party/3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/third_party/2and3" type="simple" />
+          </root>
+        </classPath>
+        <sourcePath>
+          <root type="composite" />
+        </sourcePath>
+      </roots>
+      <additional ASSOCIATED_PROJECT_PATH="$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui01" />
+    </jdk>
+    <jdk version="2">
+      <name value="Python 3.7 (jumeg_preproc_gui)" />
+      <type value="Python SDK" />
+      <version value="Python 3.7.1" />
+      <homePath value="$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui/venv/bin/python" />
+      <roots>
+        <classPath>
+          <root type="composite">
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers-2018-11-19/jumeg_preproc_gui/venv/bin" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/megtools/python" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/megtools/python/mne-python" type="simple" />
+            <root url="file:///usr/lib/python3.7" type="simple" />
+            <root url="file:///usr/lib/python3.7/lib-dynload" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui/venv/lib/python3.7/site-packages" type="simple" />
+            <root url="jar://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui/venv/lib/python3.7/site-packages/setuptools-39.1.0-py3.7.egg!/" type="simple" />
+            <root url="file://$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui/venv/lib/python3.7/site-packages/pip-10.0.1-py3.7.egg" type="simple" />
+            <root url="file://$USER_HOME$/.PyCharmCE2018.2/system/python_stubs/-1842448283" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/python-skeletons" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/3.4" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/stdlib/2and3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/third_party/3" type="simple" />
+            <root url="file://$APPLICATION_HOME_DIR$/helpers/typeshed/third_party/2and3" type="simple" />
+          </root>
+        </classPath>
+        <sourcePath>
+          <root type="composite" />
+        </sourcePath>
+      </roots>
+      <additional ASSOCIATED_PROJECT_PATH="$USER_HOME$/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg_preproc_gui" />
+    </jdk>
+  </component>
+</application>
