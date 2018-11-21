@@ -1,5 +1,25 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -+-coding: utf-8 -+-
+
+""" JuMEG preprocessing GUI based on mne-python
+#- Exporting 4D data to FIF
+- Merging MEG and EEG data
+#- NoisyChannel detection
+#- Artifact cleaning ICA
+#- filtering
+- Setting up experiment template structure
+"""
+
+#--------------------------------------------
+# Authors: Frank Boers <f.boers@fz-juelich.de>
+#
+#--------------------------------------------
+# Date: 21.11.18
+#--------------------------------------------
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+#--------------------------------------------
 
 import wx
 from   wx.lib.pubsub import pub
@@ -26,8 +46,8 @@ from jumeg.gui.jumeg_gui_meeg_merger                      import JuMEG_wxMEEGMer
 
 #from jumeg.gui.jumeg_gui_meeg_merger  import JuMEG_wxMEEGMergerPanel
 
+__version__="2018-11-18-001"
 
-__version__="2018-09-17-001"
 
 
 class JuMEG_wxPreProcPanel(wx.Panel):

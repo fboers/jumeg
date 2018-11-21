@@ -1,6 +1,21 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -+-coding: utf-8 -+-
 
+"""
+JuMEG GUI to merge MEG (FIF) and EEG data (BrainVision)
+call <jumeg_merge_meeeg> with meg and eeg file and parameters
+"""
+
+#--------------------------------------------
+# Authors: Frank Boers <f.boers@fz-juelich.de>
+#
+#--------------------------------------------
+# Date: 21.11.18
+#--------------------------------------------
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+#--------------------------------------------
 import os,sys #path,fnmatch
 import numpy as np
 
@@ -25,7 +40,7 @@ from jumeg.gui.jumeg_gui_wx_argparser                     import JuMEG_GUI_wxArg
 #---
 from jumeg.ioutils.jumeg_ioutils_subprocess               import JuMEG_IoUtils_SubProcess
 
-__version__='2018-09-18.001'
+__version__="2018-11-18-001"
 
 
 class JuMEG_wxMEEG_PDFBox(wx.Panel):

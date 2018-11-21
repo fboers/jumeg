@@ -1,11 +1,23 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -+-coding: utf-8 -+-
 
 """
-Created on Wed Jun 27 11:14:57 2018
-
-@author: fboers
+JuMEG Gui argparser
+selects an executable <jumeg_xyz.py> script from list
+start them with chosen parameters
 """
+
+#--------------------------------------------
+# Authors: Frank Boers <f.boers@fz-juelich.de>
+#
+#--------------------------------------------
+# Date: 21.11.18
+#--------------------------------------------
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+#--------------------------------------------
+
 import os,sys,argparse
 import warnings
 import wx
@@ -21,7 +33,7 @@ from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxControl
 from jumeg.ioutils.jumeg_ioutils_function_parser          import JuMEG_IoUtils_FunctionParser,JuMEG_IoUtils_FunctionParserBase,JuMEG_IoUtils_JuMEGModule
 from jumeg.ioutils.jumeg_ioutils_subprocess               import JuMEG_IoUtils_SubProcess
 
-__version__="v2018-08-24-001"
+__version__='2018-11-18.001'
 
 
 class JuMEG_ArgParserBase(JuMEG_IoUtils_FunctionParserBase):

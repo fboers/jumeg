@@ -1,6 +1,20 @@
 #!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+# -+-coding: utf-8 -+-
 
+"""
+JuMEG GUI to setup an experiment template
+"""
+
+#--------------------------------------------
+# Authors: Frank Boers <f.boers@fz-juelich.de>
+#
+#--------------------------------------------
+# Date: 21.11.18
+#--------------------------------------------
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+#--------------------------------------------
 import os,sys #path,fnmatch
 import numpy as np
 
@@ -27,8 +41,8 @@ from jumeg.gui.wxlib.jumeg_gui_wxlib_experiment_template  import JuMEG_wxExpTemp
 #---
 #from jumeg.ioutils.jumeg_ioutils_subprocess               import JuMEG_IoUtils_SubProcess
 
-__version__='2018-09-18.001'
 
+__version__='2018-11-18.001'
 
 class JuMEG_wxExperimentTemplatePanel(JuMEG_wxMainPanel):
       """
