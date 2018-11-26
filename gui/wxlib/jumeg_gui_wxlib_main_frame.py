@@ -1,10 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Created on Tue Jul 10 09:10:43 2018
-
-@author: fboers
+JuMEG GUI Main Frame Class
+frame work
 """
+#--------------------------------------------
+# Authors: Frank Boers <f.boers@fz-juelich.de>
+#
+#--------------------------------------------
+# Date: 21.11.18
+#--------------------------------------------
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+#--------------------------------------------
+
+
+
+
 #--- wx Phoenix Version 4.03.01
 import os,wx
 from wx.lib.pubsub        import pub
@@ -25,10 +38,10 @@ class JuMEG_wxAboutBox(object):
         self.name        = "JuMEG"
         self.version     = "0.007"
         self.description = "JuMEG MEG Data Analysis at INM4-MEG-FZJ   user: " +os.getlogin()
-        self.licence     = "Copyright, authors of JuMEG"
-        self.copyright   = "(C) start - end author"
+        self.licence     = "License: BSD (3-clause)"
+        self.copyright   = "Copyright, authors of JuMEG"
         self.website     = 'https://github.com/jdammers/jumeg'
-        self.developer   = "JuMEG"
+        self.developer   = "JuMEG Team"
         self.docwriter   = None
         self.artist      = "JuMEG"
    #---     
@@ -60,7 +73,7 @@ class JuMEG_MainFrame(wx.Frame):
         
     """ 
     def __init__(self,*kargs,**kwargs):
-        super(JuMEG_MainFrame, self).__init__(*kargs) #,**kwargs)
+        super().__init__(*kargs)
         self.Center()
         self.verbose    = kwargs.get("verbose",False)      
         self.debug      = kwargs.get("debug",False)   
@@ -83,7 +96,7 @@ class JuMEG_MainFrame(wx.Frame):
         self.AboutBox.developer   = 'JuMEGs FB'
         self.AboutBox.docwriter   = 'JuMEGs FB'
     
-    #--- 
+   #---
     def _init_MenuDataListFileIO(self):
         """
         generate menu list for menu with File I/O items
@@ -136,9 +149,7 @@ class JuMEG_MainFrame(wx.Frame):
         wx.MessageBox("Info: "+data,caption="Info  " +self.Name,style=wx.ICON_INFORMATION|wx.OK)
    #---
     def log_info(self,data):
-        print("MAIN LOG INFO: {}".format(data))
         for msg in data:
-            print("MAIN LOG INFO MSG: {}".format(msg))
             if isinstance(msg,(list,dict)):
                for l in msg:
                    wx.LogMessage("TEST") # str(l) )
@@ -151,11 +162,10 @@ class JuMEG_MainFrame(wx.Frame):
         overwrite  e.g.
         self.toolbar = self.CreateToolBar()
         self.toolbar.SetToolBitmapSize((16,16))  # sets icon size
-
         self.toolbar.Realize()
-
         """
         pass
+
     def _init_pubsub(self):
         """ init pubsub call and messages"""
        #---
@@ -180,13 +190,19 @@ class JuMEG_MainFrame(wx.Frame):
            self.MenuBar= wx.MenuBar()
            self.isInit = False
 
-        self.onInit(**kwargs)
+        self.update_from_kwargs(**kwargs) # overwrite
+        self.onInit(**kwargs) # overwrite
         self.init_toolbar(**kwargs)
         self._init_AboutBox()
         self.wxInitMainMenu()
         self.wxInitStatusBar()
         
-        self.Sizer = wx.BoxSizer(wx.VERTICAL) 
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+       #---
+        self.UpdateAboutBox()
+       #---
+        self._init_MenuDataList()
+       #---
         wxOBJ = self.update(**kwargs) # return wx.Panel or wx.XYZ-Sizer
         
       #--- use pubsub to close frame
@@ -210,6 +226,10 @@ class JuMEG_MainFrame(wx.Frame):
         """
         pass
    #---
+    def update_from_kwargs(self,**kwargs):
+        """"""
+        pass
+   #---
     def update(self,**kwargs):
         """
         function to setup and do changes in the GUI
@@ -224,6 +244,10 @@ class JuMEG_MainFrame(wx.Frame):
         wxWidged e.g kind of wx.Sizer or wx.Panel
         """
         pass
+
+    def UpdateAboutBox(self):
+        pass
+
    #---
     def _update_menubar(self):
         for mdata in self.menu_data_list:
@@ -236,6 +260,8 @@ class JuMEG_MainFrame(wx.Frame):
         self.MenuBar.DestroyChildren()
         self._init_MenuDataList()
         self._update_menubar()
+        #if self.ShowLogger:
+        self.AddLoggerMenu(pos=1,label="Logger")
    #---
     def CreateMenu(self,md):
         """
@@ -392,13 +418,23 @@ class JuMEG_MainFrame(wx.Frame):
 
 #----    
 class JuMEG_MainFrameDemo(JuMEG_MainFrame):
-    """Demo Widget"""
+    """
+    Example
+    --------
+    import wx
+    from jumeg.gui.wxlib.jumeg_gui_wxlib_main_frame           import JuMEG_MainFrameDemo
+
+    app    = wx.App()
+    frame  = JuMEG_MainFrameDemo(None,-1,'JuMEG Main Frame Demo FZJ-INM4',debug=True)
+    frame.AboutBox.name="JuMEG MAIN TEST"
+    app.MainLoop()
+    """
     def __init__(self,parent,id,title,pos=wx.DefaultPosition,size=wx.DefaultSize,name='JuMEG_MAIN_FRAME_DEMO',*kargs,**kwargs):
         style = wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
         super(JuMEG_MainFrameDemo,self).__init__(parent,id, title, pos, size, style, name,**kwargs)
         self.SetBackgroundColour("blue")
         self.Center()
-     #---
+   #---
     def update(self,**kwargs):    
         """ 
         Results
@@ -406,35 +442,6 @@ class JuMEG_MainFrameDemo(JuMEG_MainFrame):
         wxPanel obj
         https://stackoverflow.com/questions/3104323/getting-a-wxpython-panel-item-to-expand  
         """
-       
-        txt = '''
-        JuMEG Main Frame Demo
-        
-        overwrite the <update> function in <JuMEG_MainFrame> class
-        to setup and do changes in the your own GUI
-        
-        Example:
-        ----------- 
-        class JuMEG_MyMainFrame(JuMEG_MainFrame):
-        
-        def update(self,**kwargs):           
-            p1 = ScrolledPanel(self,-1,style = wx.TAB_TRAVERSAL|wx.SUNKEN_BORDER, name="panel1" )
-            p1.SetBackgroundColour("White")
-            vbox = wx.BoxSizer(wx.VERTICAL)
-        
-            txt_info = wx.StaticText(p1, -1,txt)
-            txt_info.SetForegroundColour("Green")
-        
-            vbox.Add(txt_info, 0, wx.ALIGN_LEFT|wx.ALL, 5)
-            vbox.Add(wx.StaticLine(p1, -1, size=(1024,-1)), 0, wx.ALL, 5)
-            vbox.Add((20,20))
-        
-            p1.SetSizer(vbox)
-            p1.SetAutoLayout(1)
-            p1.SetupScrolling()
-            return p1  
-        '''
-        
         p1 = ScrolledPanel(self,-1,style = wx.TAB_TRAVERSAL|wx.SUNKEN_BORDER, name="panel1" )
         p1.SetBackgroundColour("White")
         vbox = wx.BoxSizer(wx.VERTICAL)

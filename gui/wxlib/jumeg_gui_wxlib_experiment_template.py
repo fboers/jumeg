@@ -6,17 +6,125 @@ Created on Tue Mar 27 14:14:42 2018
 @author: fboers
 -------------------------------------------------------------------------------
 Updates:
-2018-08-27: more help-docs
+2018-08-27.001 new structure, refrac
     
 
 """
 
-import wx
+import wx,sys
 from wx.lib.pubsub import pub
 from jumeg.template.jumeg_template import JuMEG_Template_Experiments
 from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxControlGrid
 
 __version__='2018-08-27.001'
+
+
+class JuMEG_ExpTemplate(JuMEG_Template_Experiments):
+   def __init__(self,**kwargs):
+       super().__init__()
+
+   @property
+   def name(self ): return self.template_data['experiment']['name']
+   @property
+   def scans(self): return self.template_data['experiment']['scans']
+
+   @property
+   def stages(self):return self.template_data['experiment']['stages']
+   @stages.setter
+   def stages(self,v):
+       if isinstance(v,(list)):
+          self.template_data['experiment']['stages']=v
+       else:
+          self.template_data['experiment']['stages'].append(v)
+
+   def update_from_kwargs( self, **kwargs ):
+       self.template_path = kwargs.get("template_path", self.template_path)
+       self._pubsub_error_msg = kwargs.get("pubsub_error_msg", "MAIN_FRAME.MSG.ERROR")
+
+   def _init( self, **kwargs ):
+       self.update_from_kwargs(**kwargs)
+
+   def get_sorted_experiments(self,issorted=True):
+       """
+       Result
+       -------
+        sorted list of scans
+       """
+       exps = self.template_update_name_list()
+       if issorted:
+          return sorted( exps )
+       return exps
+
+   def get_sorted_scans(self,issorted=True):
+       """
+       Result
+       -------
+        sorted list of scans
+       """
+       try:
+           if isinstance( self.scans, (list)):
+              if issorted:
+                 return sorted( self.scans )
+              return self.scans
+           else:
+              return [ self.scans ]
+
+       except:
+           return []
+
+   def template_check_experiment_data(self):
+        """
+        check's template for <experiment> structure e.g.:
+        "experiment":{
+              "name"  : experiment name,
+              "scans" :[ list of scans],
+              "stages":[ list of start dirs]
+              }
+        Result:
+        -------
+        True/False
+        """
+        error_msg=[]
+        if not self.template_data:
+           error_msg.append("No template data found : " + self.template_full_filename)
+        elif not self.template_data.get('experiment',None):
+           error_msg.append("No <experiment> structure found : "+self.template_name)
+        else:
+           exp = self.template_data.get('experiment',None)
+           for k in["scans","stages"]:
+               if not exp.get(k):
+                  error_msg.append("No <{}>  found".format(k))
+           if error_msg:
+              error_msg.insert(0,"Checking Experiment Template")
+              error_msg.append("Module  : "+sys._getframe(1).f_code.co_name )
+              error_msg.append("Function: check_experiment_template_data")
+              pub.sendMessage(self._pubsub_error_msg,data=error_msg)
+              return False
+        return True
+
+   def template_update(self,exp,path=None,verbose=False):
+        """ update a JuMEG template
+
+        Parameters
+        ----------
+         exp    : name of experiment
+         path   : <None>
+         verbose:<false>
+
+        Result
+        ------
+         template data dict
+        """
+        self.template_name = exp
+        if path:
+           self.template_path = path
+        self.verbose = verbose
+        self.template_update_file()
+
+        if self.template_check_experiment_data():
+           return self.template_data
+        return False
+
 
 class JuMEG_wxExpTemplate(wx.Panel):
     """
@@ -38,9 +146,13 @@ class JuMEG_wxExpTemplate(wx.Panel):
       ShowStage : show Stage combobox      <True>
 
     """
-    def __init__(self,parent,template_path=None,name="JUMEG_WX_EXP_TEMPLATE",**kwargs):
-        super(JuMEG_wxExpTemplate, self).__init__(parent)
-        self.TMP = JuMEG_Template_Experiments()
+    def __init__(self,parent,name="JUMEG_WX_EXPERIMENT_TEMPLATE",**kwargs):
+        super().__init__(parent)
+        self.TMP = JuMEG_ExpTemplate(**kwargs)
+        self._ctrl_names     = ["EXPERIMENT", "SCAN","STAGE","UPDATE"]
+        self.prefixes        = ["BT.","CB."]
+        self._pubsub_messages={"UPDATE":"UPDATE"}
+
         self._init(**kwargs)
 
     @property
@@ -65,26 +177,30 @@ class JuMEG_wxExpTemplate(wx.Panel):
     def verbose(self): return self.TMP.verbose
     @verbose.setter
     def verbose(self,v): self.TMP.verbose = v
-    
-    @property
-    def stage(self): return self.TMP.isPath( self.wxExpStageCb.GetValue() )
 
-    @property
-    def exp(self):   return self.wxExpCb.GetValue()
-  
-    @property   
-    def experiment(self): return self.wxExpCb.GetValue()
-  
-    @property   
-    def scan(self): return self.wxExpScanCb.GetValue()
-  
-    @property    
-    def tmp_data(self): return self.TMP.template_data
+    def GetExperiment(self):
+        return self.wxExpCb.GetValue()
 
-    @property
-    def template_path(self): return self.TMP.template_path
-    @template_path.setter
-    def template_path(self,v): self.TMP.template_path=v
+    def GetScan(self):
+        return self.wxExpScanCb.GetValue()
+
+    def GetStage( self ):
+        return self.TMP.isPath(self.wxExpStageCb.GetValue())
+
+  # --- pubsub msg
+  #--- ToDO new CLS
+    def GetMessageKey( self, msg ):    return self._pubsub_messages.get(msg.upper())
+    def SetMessageKey( self, msg, v ): self._pubsub_messages[msg] = v.upper()
+
+    def GetMessage( self, msg ): return self.GetName()+ "." +self.GetMessageKey(msg)
+
+    def send_message(self,msg,evt):
+        """ sends a pubsub msg, can change the message via <MessageKey> but not the arguments
+           "EXPERIMENT_TEMPLATE.UPDATE",stage=self.GetStage(),scan=self.GetScan(),data_type='mne'
+        """
+        if self.pubsub:
+           pub.sendMessage(self.GetMessage(msg),stage=self.GetStage(),scan=self.GetScan(),data_type='mne')
+        else: evt.Skip()
 
     def _init(self, **kwargs):
         """" init """
@@ -108,29 +224,19 @@ class JuMEG_wxExpTemplate(wx.Panel):
 
         if self.ShowStage:
            ctrls.append(("FLBT", "BT.STAGE", "Stage", "select stage", None))
-           ctrls.append(("COMBO","CB.STAGE", "STAGE", [], "select experiment satge",None))
-           ctrls.append(("BT",   "BT.UPDATE", "Update", "update",None))
+           ctrls.append(("COMBO","CB.STAGE", "Stage", [], "select experiment satge",None))
+           ctrls.append(("BT",   "BT.UPDATE","Update", "update",None))
 
-        self.pnl = JuMEG_wxControlGrid(self, label=None, drawline=False, control_list=ctrls, cols=len(ctrls) + 4,AddGrowableCol=[1,3,5])
-        self.pnl.SetBackgroundColour(self.bg_pnl)
+        self.CtrlGrid = JuMEG_wxControlGrid(self, label=None, drawline=False, control_list=ctrls, cols=len(ctrls) + 4,AddGrowableCol=[1,3,5])
+        self.CtrlGrid.SetBackgroundColour(self.bg_pnl)
 
-        for n in ["EXPERIMENT","SCAN","UPDATE"]:
-            try:
-                self.FindWindowByName("BT."+n).Disable()
-            except:
-                pass
-        for n in["EXPERIMENT","SCAN","STAGE"]:
-            try:
-                self.FindWindowByName("CB."+n).Enable(False)
-            except:
-                pass
+        self.CtrlGrid.EnableDisableCtrlsByName(self._ctrl_names,False,prefix=self.prefixes)
 
        #--- bind CTRLs in class
-        self.Bind(wx.EVT_BUTTON,  self.ClickOnButton)
-        self.Bind(wx.EVT_COMBOBOX,self.ClickOnComBoBox)
+        self.Bind(wx.EVT_BUTTON,  self.ClickOnCtrl)
+        self.Bind(wx.EVT_COMBOBOX,self.ClickOnCtrl)
 
     def _update_from_kwargs(self,**kwargs):
-        self.template_path = kwargs.get("template_path",self.TMP.template_path)
         self.verbose       = kwargs.get("verbose",self.verbose)
         self.pubsub        = kwargs.get("pubsub",True)
         self.bg            = kwargs.get("bg",    wx.Colour([230, 230, 230]))
@@ -144,168 +250,95 @@ class JuMEG_wxExpTemplate(wx.Panel):
         """ update  kwargs and widgets """
         self._update_from_kwargs(**kwargs)
         self.UpdateExperimentComBo()
-        self.wxExpBt.Enable(True)
-        self.UpdateStageComBo( self.wxExpCb.GetValue() )
-        if self.wxExpUpdateBt:
-           self.wxExpUpdateBt.Enable(True)
-        if self.wxExpScanBt:
-           self.wxExpScanBt.Enable(True)
-        if self.wxExpScanCb:
-           self.wxExpScanCb.Enable(True)
+        self.UpdateScanStageComBo( experiment = self.wxExpCb.GetValue() )
 
     def UpdateExperimentComBo(self):
         """ update experiment combobox if selected """
-        self.UpdateComBo(self.wxExpCb,self.UpdateTemplateList())
-        self.UpdateTemplateList()
+        self.CtrlGrid.UpdateComBox(self.wxExpCb,self.TMP.get_sorted_experiments())
+        self.CtrlGrid.EnableDisableCtrlsByName(self._ctrl_names[0], True, prefix=self.prefixes)  # experiment ctrl first
         self.wxExpCb.SetToolTip(wx.ToolTip("Template path: {}".format(self.TMP.template_path) ))
         if self.verbose:
-           self.TMP.pp(self.TMP.template_name_list,head="Template path: "+self.TMP.template_path)
-    
-    def UpdateStageComBo( self,exp ):
-        """ update stage """
-        self.UpdateTemplate( exp )
+           wx.LogMessage( self.TMP.pp_list2str(self.TMP.template_name_list,head="Template path: "+self.TMP.template_path))
 
-        if self.TMP.template_data:
-           stage_list=[]
-          #--- stage stuff to combobox
-           self.UpdateComBo(self.wxExpStageCb,self.TMP.template_data['experiment']['stages'] )
-           if self.wxExpStageCb:
-              self.wxExpStageCb.SetValue(self.wxExpStageCb.GetItems()[0])
-         #---  ck is dir
-           msg=[]
-          # for p in self.wxExpStageComBo.GetItems():
-          #     if not self.TMP.isPath(p,print_error=False):
-          #        msg.append(p )
-          # if msg:
-          #    msg.insert(0,"!!! Error : no such path or directory:")
-          #    print("ERROR: ".format(msg))
-          #    pub.sendMessage("MAIN_FRAME.MSG.ERROR",msgtxt=msg )
-         #---
-           try:
-              if isinstance( self.TMP.template_data['experiment']['scans'], (list)):
-                 scan_list = sorted( self.TMP.template_data['experiment']['scans'] )
-              else:
-                 scan_list=[ self.TMP.template_data['experiment']['scans'] ]
-           except:  
-                 scan_list=[ self.TMP.template_data['experiment']["name"] ] 
-
-           self.UpdateComBo( self.wxExpScanCb,scan_list )
-
-           if self.wxExpStageCb:
-              self.wxExpStageCb.SetValue( scan_list[0]  )
-           
-       #--- enable STAGE bt
-           if self.wxExpStageBt:
-              self.wxExpStageBt.Enable(True)
-           #self.UpdateComBo(self.wxExpStageCb,[])
-           #self.UpdateComBo(self.wxExpScanCb,[])
-           #if self.wxExpStageBt:
-           #   self.wxExpStageBt.Enable(False)
-
-           if self.pubsub:
-              pub.sendMessage('EXPERIMENT_TEMPLATE.SELECT', experiment=self.experiment, TMP=self.TMP)
-
-    #---
-    def UpdateComBo(self, cb, vlist, sort=True):
+    def UpdateScanComBo( self,scan_list=None ):
         """
-        update wx.ComboBox: clear,SetItems,SetValue first element in list
-        remove double items and sort list
-
-        Parameters:
-        -----------
-        combobox obj
-        list to insert
-        sort : will sort list <True>
+        :param scan_list:
+        :return:
         """
+        if not scan_list:
+           scan_list = self.TMP.get_sorted_scans()
+        self.CtrlGrid.UpdateComBox( self.wxExpScanCb,scan_list )
+        state = bool(len(scan_list))
+        if state:
+           self.wxExpStageCb.SetValue( scan_list[0]  )
 
-        if not cb: return
+        self.CtrlGrid.EnableDisableCtrlsByName(self._ctrl_names[1],state,prefix=self.prefixes)
 
-        cb.Enable(False)
-        cb.Clear()
-        if vlist:
-            if isinstance(vlist, (list)):
-                # avoid repetitios in list, make list from set
-                if sort:
-                    cb.SetItems(sorted(list(set(vlist))))
-                else:
-                    cb.SetItems(list(set(vlist)))
-            else:
-                cb.SetItems([vlist])
-            cb.SetSelection(0)
-            cb.SetValue(vlist[0])
+    def UpdateStageComBo(self,stage_list=None):
+        """
+        :param stage_list:
+        :return:
+        """
+        if not stage_list:
+           stage_list = self.TMP.stages
+        self.CtrlGrid.UpdateComBox(self.wxExpStageCb, stage_list)
+        state = bool(len(stage_list))
+        if state:
+           self.wxExpStageCb.SetValue(self.wxExpStageCb.GetItems()[0])
+        self.CtrlGrid.EnableDisableCtrlsByName(self._ctrl_names[2:],state, prefix=self.prefixes)
+
+    def UpdateScanStageComBo( self,experiment=None ):
+        """
+        fill scan
+
+        Parameter
+        ---------
+         experiment name
+        """
+        if experiment:
+           self.TMP.template_update( experiment )
+
+           if self.ShowScan:
+              self.UpdateScanComBo()
+           if self.ShowStage:
+              self.UpdateStageComBo()
         else:
-            cb.Append('')
-            cb.SetValue('')
-            cb.Update()
-        cb.Enable(True)
-
-    def ClickOnButton(self,evt):
-        """ click on button event """
+            self.CtrlGrid.UpdateComBox(self.wxExpScanCb, [])
+            self.CtrlGrid.UpdateComBox(self.wxExpStageCb,[])
+            self.EnableDisableCtrlsByName(self._ctrl_names[1:],status=False,prefix=self.prefixes)
+   #---
+    def ClickOnCtrl(self,evt):
+        """ click on button or combobox send event
+        """
         obj = evt.GetEventObject()
-      #--- ExpBt
-        if obj.GetName() == "BT.EXPERIMENT":
+       #--- ExpComBo
+        if obj.GetName() == "CB.EXPERIMENT":
+           self.UpdateScanStageComBo( obj.GetValue() )
+       #--- ExpBt
+        elif obj.GetName() == "BT.EXPERIMENT":
            self.update() 
-      #--- ExpStageBt start change Dir DLG
-        if obj.GetName() == "BT.STAGE":
+       #--- ExpStageBt start change Dir DLG
+        elif obj.GetName() == "BT.STAGE":
            dlg = wx.DirDialog(None,"Choose Stage directory","",wx.DD_DEFAULT_STYLE|wx.DD_DIR_MUST_EXIST)
            dlg.SetPath( self.wxExpStageCb.GetValue() )
            if (dlg.ShowModal() == wx.ID_OK):
               if self.TMP.template_data:
                  l=[dlg.GetPath()]
-                 l.extend(self.TMP.template_data['experiment']['path']['stage'])
+                 l.extend(self.TMP.stages)
                  self.UpdateComBo(self.wxExpStageCb, l )
            dlg.Destroy()
       #--- ExpBt 
-        if obj.GetName() == "BT.UPDATE":
-           if self.pubsub:
-              pub.sendMessage('EXPERIMENT_TEMPLATE.UPDATE',stage=self.stage,scan=self.scan,data_type='mne')  #experiment=self.experiment,TMP=self.template_data
-           else: evt.Skip()
-                 
-    def ClickOnComBoBox(self,evt):
-        """ click on combobox event"""
-        obj = evt.GetEventObject()
-       #--- ExpComBo
-        if obj.GetName() == "CB.EXPERIMENT":
-           self.UpdateStageComBo( obj.GetValue() )
-
-  #--- todo new CLS  
-    def UpdateTemplateList(self):
-        """ update template list
-        Result
-        -------
-         template list
-        """
-        self.TMP.template_update_name_list()
-        return self.TMP.template_name_list
-       
-    def UpdateTemplate(self,exp,path=None,verbose=False):
-        """ update a JuMEG template
-         
-        Parameters
-        ----------
-         exp    : name of experiment
-         path   : <None>
-         verbose:<false>
-         
-        Result
-        ------
-         template data dict
-        """
-        #print( "Experiment Template -> "+exp)
-        self.TMP.template_name = exp
-        if path:
-           self.TMP.template_path = path
-        self.TMP.verbose = verbose      
-        self.TMP.template_update_file()
-        #print("TEMP data: ".format(self.TMP.template_data))
-        return self.TMP.template_data
+        elif obj.GetName() == "BT.UPDATE":
+           self.send_message("UPDATE",evt)
+        else:
+            evt.Skip()
 
   #---      
     def _ApplyLayout(self):
         """ Apply Layout via wx.GridSizers"""
        #--- Label + line
         vbox = wx.BoxSizer(wx.VERTICAL)
-        vbox.Add( self.pnl,1, wx.ALIGN_LEFT|wx.EXPAND|wx.ALL,2)
+        vbox.Add( self.CtrlGrid,1, wx.ALIGN_LEFT|wx.EXPAND|wx.ALL,2)
         self.SetSizer(vbox)
         self.Fit()
         self.SetAutoLayout(1)

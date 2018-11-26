@@ -341,6 +341,29 @@ class JuMEG_wxControlUtils(object):
         s = obj.GetName().split(seperator)[0]
         return self.FindWindowByName(obj.GetName().replace(s, prefix, 1))
 
+
+    def EnableDisableCtrlsByName( self,names,status,prefix=None ):
+        """
+        enabling or disabling wx controls like buttons or comboboxes
+        :param names: list or string of Ctrl.name
+        :param status: enable or disabled True/False
+        :param prefix: list  <None>
+               e.g. ["BT.","CB."] to find "BT.UPDATE"
+        :return:
+        """
+        if not isinstance(names,(list)):
+           names=[names]
+        for n1 in names:
+            try:
+                if isinstance(prefix,(list)):
+                   for prf in prefix:
+                       n0 = prf if prf else ""
+                       self.FindWindowByName(n0+n1).Enable(status)
+                else:
+                    n0 = prefix if prefix else ""
+                    self.FindWindowByName(n0 + n1).Enable(status)
+
+            except: pass
    # ---
     def UpdateComBox(self, cb, vlist, sort=True):
         """

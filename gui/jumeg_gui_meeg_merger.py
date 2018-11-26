@@ -16,7 +16,7 @@ call <jumeg_merge_meeeg> with meg and eeg file and parameters
 #--------------------------------------------
 # Updates
 #--------------------------------------------
-import os,sys #path,fnmatch
+import os,sys
 import numpy as np
 
 import wx
@@ -313,6 +313,7 @@ class JuMEG_wxMEEG_PDFBox(wx.Panel):
                 wx.LogMessage( jb._pp.pformat(flist))# , head="MEEG posted PDFs")
         return flist
 
+
 class JuMEG_wxMEEGMergerPanel(JuMEG_wxMainPanel):
       """
       """
@@ -339,7 +340,6 @@ class JuMEG_wxMEEGMergerPanel(JuMEG_wxMainPanel):
          #---
           ds=1
           LEA = wx.ALIGN_LEFT | wx.EXPAND | wx.ALL
-
          #-- Top
           self.ExpTemplate = JuMEG_wxExpTemplate(self.TopPanel)
           self.HostCtrl    = JuMEG_wxPBSHosts(self.TopPanel, prefix=self.GetName())
@@ -377,7 +377,7 @@ class JuMEG_wxMEEGMergerPanel(JuMEG_wxMainPanel):
       def init_pubsub(self, **kwargs):
           """ init pubsub call overwrite """
           pub.subscribe(self.ClickOnApply,self.GetName().upper()+".BT_APPLY")
-          pub.subscribe(self.ClickOnExperimentTemplateUpdate,'EXPERIMENT_TEMPLATE.UPDATE')
+          pub.subscribe(self.ClickOnExperimentTemplateUpdate, self.ExpTemplate.GetMessage("UPDATE"))
     #---
       def Cancel(self):
           wx.LogMessage("CLICK ON CANCEL")
@@ -406,19 +406,23 @@ class JuMEG_wxMEEGMergerPanel(JuMEG_wxMainPanel):
              wx.LogMessage(jb.pp_list2str(self.HostCtrl.HOST.GetHostInfo(),head="HOST Info"))
           pub.sendMessage("SUBPROCESS.RUN.START",joblist=joblist,hostinfo=self.HostCtrl.HOST.GetHostInfo(),verbose=self.verbose)
 
+      def ClickOnCancel(self,evt):
+        wx.LogMessage( "<Cancel> button is no in use" )
+        pub.sendMessage("MAIN_FRAME.MSG.INFO",data="<Cancel> button is no in use")
+
       def ClickOnButton(self, evt):
           obj = evt.GetEventObject()
           if obj.GetName().startswith("ID_SELECTION_BOX.UPDATE"):
-             self.PDFs.stage = self.ExpTemplate.stage
-             self.PDFs.scan  = self.ExpTemplate.scan
+             self.PDFs.stage = self.ExpTemplate.GetStage()
+             self.PDFs.scan  = self.ExpTemplate.GetScan()
 
              self.PDFs.update(id_list=self.IdSelectionBox.ItemSelectedList)
              self.PDFBox.update(pdfs=self.PDFs.pdfs, n_pdfs=self.PDFs.number_of_pdfs_mne)
 
-          if obj.Label == "CLOSE":
-             pub.sendMessage('MAIN_FRAME.CLICK_ON_CLOSE',evt=evt)
-          if obj.Label == "CANCEL":
-             pub.sendMessage('MAIN_FRAME.CLICK_ON_CANCEL',evt=evt)
+          #if obj.Label == "CLOSE":
+          #   pub.sendMessage('MAIN_FRAME.CLICK_ON_CLOSE',evt=evt)
+          #if obj.Label == "CANCEL":
+          #   pub.sendMessage('MAIN_FRAME.CLICK_ON_CANCEL',evt=evt)
           if obj.Label == "APPLY":
              self.ClickOnApply()
           else:
@@ -430,47 +434,18 @@ class JuMEG_GUI_MEEGMergeFrame(JuMEG_MainFrame):
         style = wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
         super().__init__(parent,id, title, pos, size, style, name,**kwargs)
         self.template_path = None
-        self.verbose       = False
-   #---
-    def _update_kwargs(self,**kwargs):
-        self.verbose = kwargs.get("verbose",self.verbose)
-   #---
-    def wxInitMainMenu(self):
-        """
-        overwrite
-        add change of LoggerWindow position horizontal/vertical
-        """
-        self.MenuBar.DestroyChildren()
-        self._init_MenuDataList()
-        self._update_menubar()
-        self.AddLoggerMenu(pos=1,label="Logger")
-   #---
+
     def update(self,**kwargs):
-       #---
-        self.UpdateAboutBox()
-       #---
-        self._init_MenuDataList()
-       #---
         return JuMEG_wxMEEGMergerPanel(self,name="JuMEG_TEST_PANEL_OOOO",**kwargs)
-   #---
-    def wxInitStatusbar(self):
-        self.STB = self.CreateStatusBar(4)
-        #self.STB.SetStatusStyles([wx.SB_RAISED,wx.SB_SUNKEN,wx.SB_RAISED,wx.SB_SUNKEN])
-        self.STB.SetStatusWidths([-1,1,-1,4])
-        self.STB.SetStatusText('Experiment',0)
-        self.STB.SetStatusText('Path',2)
-   #--- 
+
     def UpdateAboutBox(self):
-        self.AboutBox.name        = self.GetName() #"JuMEG MEEG Merger INM4-MEG-FZJ"
-        self.AboutBox.description = self.GetName()#"JuMEG MEEG Merger"
+        self.AboutBox.description = "merging EEG data <*.vhdr> into MEG data <*.fif>"
         self.AboutBox.version     = __version__
-        self.AboutBox.copyright   = '(C) 2018 Frank Boers'
+        self.AboutBox.copyright   = '(C) 2018 Frank Boers <f.boers@fz-juelich.de>'
         self.AboutBox.developer   = 'Frank Boers'
         self.AboutBox.docwriter   = 'Frank Boers'
 
 if __name__ == '__main__':
-   
    app = wx.App()
-   frame = JuMEG_GUI_MEEGMergeFrame(None,-1,'JuMEG MEEG MERGER',module="jumeg_merge_meeg",function="get_args",ShowLogger=True,ShowParameter=True,debug=True,verbose=True)
-   #frame = JuMEG_GUI_MEEGMergerFrame(None,-1,'JuMEG MEEG MERGER FZJ-INM4',debug=True,verbose=True,ShowLogger=True)
+   frame = JuMEG_GUI_MEEGMergeFrame(None,-1,'JuMEG MEEG MERGER',module="jumeg_merge_meeg",function="get_args",ShowLogger=True,ShowCmdButtons=True,ShowParameter=True,debug=False,verbose=False)
    app.MainLoop()

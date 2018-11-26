@@ -15,16 +15,17 @@ JuMEG GUI to setup an experiment template
 #--------------------------------------------
 # Updates
 #--------------------------------------------
+
 import os,sys #path,fnmatch
 import numpy as np
 
 import wx
 from   wx.lib.pubsub import pub
-import wx.lib.scrolledpanel as scrolled
+from   wx.lib.scrolledpanel import ScrolledPanel
+
 import wx.propgrid as wxpg
 from   wx.propgrid import PropertyGridManager as wxpgm
 
-#import PropertyGridManager
 
 #--- jumeg cls
 from jumeg.jumeg_base                                     import jumeg_base as jb
@@ -34,15 +35,49 @@ from jumeg.gui.wxlib.jumeg_gui_wxlib_main_panel           import JuMEG_wxMainPan
 
 #--- Merger CTRLs
 from jumeg.gui.wxlib.jumeg_gui_wxlib_experiment_template  import JuMEG_wxExpTemplate
-#from jumeg.gui.wxlib.jumeg_gui_wxlib_id_selection_box     import JuMEG_wxIdSelectionBox
-#---
-#from jumeg.gui.wxlib.jumeg_gui_wxlib_pbshost              import JuMEG_wxPBSHosts
-#from jumeg.gui.jumeg_gui_wx_argparser                     import JuMEG_GUI_wxArgvParser
-#---
-#from jumeg.ioutils.jumeg_ioutils_subprocess               import JuMEG_IoUtils_SubProcess
-
 
 __version__='2018-11-18.001'
+
+
+class JuMEG_wxExperimentTemplateDefaults(object):
+   def __init__(self,**kwargs):
+       super().__init__()
+       info_keys=["time","user","version"]
+       experiment_keys =["name"]
+       experiment_list_names =["ids","scans","stages","bads_list"]
+
+       "mri"  = {
+                  "path":{
+                                "dicom"        : "mrdata/dicom",
+                                "iso"          : "mrdata/iso",
+                                "mask"         : "mrdata/iso/mask",
+                                "mni"          : "mrdata/iso/mni",
+                                "mni_trafo"    : "mrdata/iso/mni_trafo",
+                                "mrdata"       : "mrdata",
+                                "mri"          : "mrdata/iso/mri",
+                                "mri_orig"     : "mrdata/mri_orig",
+                                "segmentation" : "mrdata/segmentation",
+                                "freesurfer"   : "mrdata/freesurfer"
+                               }
+                      },
+                  "path":{
+                       "experiment" : "/data/meg_store2/exp/MEG94T",
+                       "mne"        : "mne",
+                       "empty_room" : "empty_room",
+                       "eeg"        : "eeg",
+                       "mft"        : "mft",
+                       "doc"        : "doc",
+                       "source"     : "source",
+                       "stimuli"    : "stimuli"
+                      },
+              "meeg_merger":{
+                           "stim_channel" : "STI 014",
+                           "start_code"   : 128,
+                           "stopt_code"   : 128
+                          },
+
+
+
 
 class JuMEG_wxExperimentTemplatePanel(JuMEG_wxMainPanel):
       """
@@ -85,11 +120,10 @@ class JuMEG_wxExperimentTemplatePanel(JuMEG_wxMainPanel):
           ds = 1
           LEA = wx.ALIGN_LEFT | wx.EXPAND | wx.ALL
 
-          self.pnl_pg = scrolled.ScrolledPanel(self.PanelA.Panel, -1, style=wx.TAB_TRAVERSAL | wx.SUNKEN_BORDER)
-
-          self.PGMPanel = wxpgm(self.pnl_pg.Panel,-1)
+          self.pnl_pg = ScrolledPanel(self.PanelA.Panel,-1,style = wx.TAB_TRAVERSAL|wx.SUNKEN_BORDER, name="panel1" )
+          self.PGMPanel = wxpgm(self.pnl_pg,-1)
           vbox=wx.BoxSizer(wx.VERTICAL)
-          vbox.Add(self.PGMPanel,1,LED,ds)
+          vbox.Add(self.PGMPanel,1,LEA,ds)
           self.pnl_pg.SetSizer(vbox)
           self.pnl_pg.SetAutoLayout(True)
           self.pnl_pg.Fit()
@@ -227,16 +261,6 @@ class JuMEG_GUI_ExperimentTemplateFrame(JuMEG_MainFrame):
    #---
     def _update_kwargs(self,**kwargs):
         self.verbose = kwargs.get("verbose",self.verbose)
-   #---
-    def wxInitMainMenu(self):
-        """
-        overwrite
-        add change of LoggerWindow position horizontal/vertical
-        """
-        self.MenuBar.DestroyChildren()
-        self._init_MenuDataList()
-        self._update_menubar()
-        self.AddLoggerMenu(pos=1,label="Logger")
    #---
     def update(self,**kwargs):
        #---

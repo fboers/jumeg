@@ -34,7 +34,12 @@ class JuMEG_wxLog(wx.Log):
         return self._LogLevelColours[idx]
 
     def DoLogTextAtLevel(self,level,msg):
-
+        """
+        writing loglevel message with spcial loglevel-colour to text ctrl
+        :param level: wx-loglevel [wx.LOG_Info, wx.LOG_Message,...]
+        :param msg:
+        :return:
+        """
         if self._txtctrl:
            self._txtctrl.SetDefaultStyle(wx.TextAttr(self.LogLevelColour(level)))
            self._txtctrl.AppendText(msg + '\n')
@@ -116,7 +121,6 @@ class JuMEG_wxLogger(wx.Panel):
         self._wx_init()
         self._init_logger()
         self._init_pubsub(**kwargs)
-       # self.start()
         self._ApplyLayout()
 
     def _wx_init(self):

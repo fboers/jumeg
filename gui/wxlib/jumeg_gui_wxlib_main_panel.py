@@ -11,7 +11,7 @@ from wx.lib.pubsub import pub
 from jumeg.gui.wxlib.jumeg_gui_wxlib_logger               import JuMEG_wxLogger
 from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxSplitterWindow,JuMEG_wxCMDButtons #,JuMEG_wxControlButtonPanel,JuMEG_wxControls,JuMEG_wxControlIoDLGButtons,JuMEG_wxControlGrid,
 
-version="2018.11.15.001"
+version="2018.11.21.001"
 
 
 class JuMEG_wxMainPanelBase(wx.Panel):
@@ -19,12 +19,31 @@ class JuMEG_wxMainPanelBase(wx.Panel):
     JuMEG_wxPanel  base CLS for JuMEG wx.Panels
     with functions to ovewrite to avoid overhead
 
+        PanelTop
+    PanelA | PanelB
+        Logger panel
+
+    PanelTop: for comboboxes e.g. experiment selection
+    PanelA  : left  container panel
+    PanelB  : right container panel e.g. parameter for argparser
+    Logger  : panel with TextCtrl and <Clear> and <MinMax> button on top right
+
     Paremeters:
     -----------
-     bg        : backgroundcolor <grey88>
-     verbose   : <verbose>
-     debug     : <debug>
-     ShowLogger: <False>
+     bg     : panel backgroundcolor <grey88>
+     bgA    : panel A" backgroundcolor <wx.Colour(132, 126, 238)>
+     bgB    : panel B" backgroundcolor <wx.Colour(140, 233, 238)>
+     labelA : panel A label
+     labelB : panel B label
+
+     Flags
+      ShowLogger    : show logger window at bottom <False>
+      ShowMinMaxBt  : show MinMax Button in Logger window, to min/max window <True>
+      ShowCmdButtons: show command buttons <Cloas,Cancel,Apply> <True>
+
+      verbose : <False>
+      debug   : <False>
+
 
     Functions to overwrite:
     -----------------------
@@ -71,8 +90,12 @@ class JuMEG_wxMainPanelBase(wx.Panel):
         self.debug      = False
         self.verbose    = False
         self._param     = {}
-        self.__isInit   = False
-        self.__isMinimize = False
+
+        self.__isInit   =    False
+        self.__isMinimize   = False
+        self._show_logger   = False
+        self._show_minmax_bt= False
+        self._show_cmd_bts  = False
       # self._init(**kwargs) # the function to call in child class
 
     def _get_param(self,k1,k2):
@@ -97,6 +120,16 @@ class JuMEG_wxMainPanelBase(wx.Panel):
     @ShowLogger.setter
     def ShowLogger(self,v): self._show_logger = v
 
+    @property
+    def ShowMinMaxBt(self)  : return self._show_minmax_bt
+    @ShowMinMaxBt.setter
+    def ShowMinMaxBt(self,v): self._show_minmax_bt = v
+
+    @property
+    def ShowCmdButtons(self)  : return self._show_cmd_bts
+    @ShowCmdButtons.setter
+    def ShowCmdButtons(self,v): self._show_cmd_bts = v
+
     def SetVerbose(self,value=False):
         self.verbose=value
 
@@ -106,11 +139,22 @@ class JuMEG_wxMainPanelBase(wx.Panel):
 
 #--- default methods
     def _update_from_kwargs_default(self,**kwargs):
-        self.ShowLogger = kwargs.get("ShowLogger", False)
-        self.verbose    = kwargs.get("verbose", False)
-        self.debug      = kwargs.get("debug", False)
-        self.SetBackgroundColour = kwargs.get("bg", "grey88")
-        #self.SetName( kwargs.get("name",self.GetName()))
+        """
+        update kwargs like doc <JuMEG_wxMainPanelBase>
+
+        :param kwargs:
+        :return:
+        """
+        self.labelA        = kwargs.get("labelA","PANEL A")
+        self.labelB        = kwargs.get("labelB","PANEL B")
+        self.bgA           = kwargs.get("bgA",wx.Colour(132, 126, 238))
+        self.bgB           = kwargs.get("bgB",wx.Colour(140, 233, 238))
+        self._show_logger  = kwargs.get("ShowLogger",self._show_logger)
+        self._show_minmax_bt= kwargs.get("ShowMinMaxBt",self._show_minmax_bt)
+        self._show_cmd_bts = kwargs.get("ShowCmdButtons",self._show_cmd_bts)
+        self.verbose       = kwargs.get("verbose", False)
+        self.debug         = kwargs.get("debug", False)
+        self.SetBackgroundColour(kwargs.get("bg", "grey88"))
 
     def FitBoxSizer(self,pnl,pos=wx.HORIZONTAL):
         """ fits a BoxSizer to a panel + AutoLayout
@@ -125,20 +169,20 @@ class JuMEG_wxMainPanelBase(wx.Panel):
         """ window default settings"""
         self.clear_children(self)
         # --- init splitter for controls and logger
-        self._splitter = None
+        self._splitter   = None
         self._pnl_logger = None
-        self._pnl_main = None
+        self._pnl_main   = None
         # --- command logger
         if self.ShowLogger:
-            self._splitter = JuMEG_wxSplitterWindow(self, label="Logger", name=self.GetName() + ".LOGGER",
-                                                    listener=self.GetParent().GetName())
+           self._splitter = JuMEG_wxSplitterWindow(self, label="Logger", name=self.GetName() + ".LOGGER",
+                                                   listener=self.GetParent().GetName())
 
-            self._pnl_logger = JuMEG_wxLogger(self._splitter, listener=self.GetParent().GetName())
-            self._pnl_main = wx.Panel(self._splitter)
-            self._pnl_main.SetBackgroundColour(wx.Colour(0, 0, 128))
+           self._pnl_logger = JuMEG_wxLogger(self._splitter, listener=self.GetParent().GetName())
+           self._pnl_main = wx.Panel(self._splitter)
+           self._pnl_main.SetBackgroundColour(wx.Colour(0, 0, 128))
         else:  # --- only you controls
-            self._pnl_main = wx.Panel(self)
-            self._pnl_main.SetBackgroundColour(wx.RED)
+           self._pnl_main = wx.Panel(self)
+           self._pnl_main.SetBackgroundColour(wx.RED)
 
     def _init_pubsub_default(self):
         pub.subscribe(self.SetVerbose,'MAIN_FRAME.VERBOSE')
@@ -254,15 +298,6 @@ class JuMEG_wxMainPanel(JuMEG_wxMainPanelBase):
         super(JuMEG_wxMainPanel,self).__init__(*kargs,name=name)
         #self._init(**kwargs)
 
-#--- overwrite methods
-    def update_from_kwargs(self,**kwargs):
-        """  update_from_kwarg """
-        self.labelA = kwargs.get("labelA","PANEL A")
-        self.labelB = kwargs.get("labelB","PANEL B")
-        self.bgA    = kwargs.get("bgA",wx.Colour(132, 126, 238))
-        self.bgB    = kwargs.get("bgB",wx.Colour(140, 233, 238))
-        self.ShowMinMaxBt=kwargs.get("ShowMinMaxBt",True)
-
     def wx_init(self, **kwargs):
         """ init WX controls """
         self.update_from_kwargs(**kwargs)
@@ -277,7 +312,8 @@ class JuMEG_wxMainPanel(JuMEG_wxMainPanelBase):
         self.PanelB     = JuMEG_wxPanelAB(self.SplitterAB,name=self.GetName()+"_B",bg=self.bgB,label=self.labelB,ShowMinMaxBt=self.ShowMinMaxBt)
         self.SplitterAB.SplitVertically(self.PanelA, self.PanelB)
        #---
-        self.CmdButtons = JuMEG_wxCMDButtons(self.MainPanel,prefix=self.GetName())
+        if self.ShowCmdButtons:
+           self.CmdButtons = JuMEG_wxCMDButtons(self.MainPanel,prefix=self.GetName())
 
        #--- make a BoxSizer to pack later CTRLs
         self.FitBoxSizer(self.PanelA.Panel)
@@ -288,7 +324,9 @@ class JuMEG_wxMainPanel(JuMEG_wxMainPanelBase):
         vbox = wx.BoxSizer(wx.VERTICAL)
         vbox.Add(self.TopPanel, 0, wx.ALIGN_LEFT| wx.EXPAND | wx.ALL, 1)
         vbox.Add(self.SplitterAB, 1, wx.ALIGN_LEFT | wx.EXPAND | wx.ALL, 1)
-        vbox.Add(self.CmdButtons,0,wx.ALIGN_BOTTOM|wx.EXPAND|wx.ALL,1 )
+        if self.ShowCmdButtons:
+           vbox.Add(self.CmdButtons,0,wx.ALIGN_BOTTOM|wx.EXPAND|wx.ALL,1 )
+
         self.MainPanel.SetSizer(vbox)
 
 class JuMEG_wxTitlePanel(wx.Panel):
@@ -332,7 +370,6 @@ class JuMEG_wxTitlePanel(wx.Panel):
         """ init Wx controls """
 
         self.Sizer = wx.BoxSizer(wx.HORIZONTAL)
-
         self._txt = wx.StaticText(self, wx.ID_ANY,self.label,style=wx.ALIGN_CENTRE)
         self._txt.SetBackgroundColour("grey70")
         self._txt.SetFont(self._font)

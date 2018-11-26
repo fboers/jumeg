@@ -27,6 +27,9 @@ from wx.lib.scrolledpanel import ScrolledPanel
 
 from jumeg.jumeg_base                                     import jumeg_base as jb
 from jumeg.gui.wxlib.jumeg_gui_wxlib_main_frame           import JuMEG_MainFrame
+from jumeg.gui.wxlib.jumeg_gui_wxlib_main_panel           import JuMEG_wxMainPanel
+
+from jumeg.gui.wxlib.jumeg_gui_wxlib_pbshost              import JuMEG_wxPBSHosts
 from jumeg.gui.wxlib.jumeg_gui_wxlib_logger               import JuMEG_wxLogger
 from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxControlButtonPanel,JuMEG_wxControls,JuMEG_wxControlIoDLGButtons,JuMEG_wxControlGrid,JuMEG_wxSplitterWindow
 
@@ -1229,7 +1232,7 @@ class JuMEG_wxArgvParserCMD(JuMEG_wxArgvParserBase):
         self.SetSizer(self.Sizer)
         self.SetAutoLayout(1)
 
-class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
+class JuMEG_GUI_wxArgvParser(JuMEG_wxMainPanel):
     """
     JuMEG_GUI_wxArgvParser, a wxGUI CLS to show arguments from a python-script,e.g. executable command (CMD),
     parsed by <argparse> module.
@@ -1241,6 +1244,7 @@ class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
     ShowFileIO
     ShowParameters
     ShowButtons
+    ShowPBSHosts
 
     Results:
     --------
@@ -1248,13 +1252,15 @@ class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
 
     """
     def __init__(self,parent,**kwargs):
-        super(JuMEG_GUI_wxArgvParser, self).__init__(parent)  
-        self._param  = { "show":{"All":False,"Command":False,"FileIO":False,"Parameter":False,"Logger":False,"Buttons":False} }
+        super().__init__(parent,name="JUMEG_ARGPARSER_PANEL")
+        #self._param     = { "show":{"All":False,"Command":False,"FileIO":False,"Parameter":False,"Logger":False,"Buttons":False,"PBSHosts":False} }
+        self._param     = { "show":{"All":False,"Command":False,"FileIO":False,"Parameter":False,"Buttons":False,"PBSHosts":False} }
         self.SubProcess = JuMEG_IoUtils_SubProcess() # init and use via pubsub
+        self.fullfile   = None
+        self._init(**kwargs)
 
-        self.fullfile = None
-        self.update(**kwargs)
-        self._ApplyLayout()
+        #self.update(**kwargs)
+        #self._ApplyLayout()
      
     def _get_param(self,k1,k2):
         return self._param[k1][k2]
@@ -1269,8 +1275,10 @@ class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
     def ShowParameter(self): return self._get_param("show","Parameter")
     @property        
     def ShowButtons(self):   return self._get_param("show","Buttons")
+    #@property
+    #def ShowLogger(self):    return self._get_param("show","Logger")\
     @property
-    def ShowLogger(self):    return self._get_param("show","Logger")
+    def ShowPBSHosts(self):  return self._get_param("show","PBSHosts")
     @property
     def ArgvParser(self):
         if self._pnl_argparser:
@@ -1284,7 +1292,7 @@ class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
     def GetParameter(self):
         return self._pnl_argparser.get_parameter()
 
-    def init_show_panel(self,**kwargs):
+    def init_status_of_ctrls(self,**kwargs):
         """
         select panel to show 
         name,value
@@ -1295,9 +1303,130 @@ class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
                self._param["show"][k]=True
         else:
            for k in self._param["show"].keys():
-               self._param["show"][k] = kwargs.get("Show"+k,False)   
+               self._param["show"][k] = kwargs.get("Show"+k,False)
 
-    def _wx_init(self):
+    def update_from_kwargs( self, **kwargs ):
+        self.init_status_of_ctrls(**kwargs)
+        self._use_pubsub = kwargs.get("use_pubsub", getattr(self.GetParent(), "use_pubsub", False))
+        self.module_stage = kwargs.get("stage", os.environ['JUMEG_PATH'])  # os.environ['PWD']
+        self.module = kwargs.get("module")
+        self.function = kwargs.get("function", "get_args")
+        self.fullfile = kwargs.get("fullfile", self.fullfile)
+        self.SetBackgroundColour(kwargs.get("bg", "grey88"))
+
+    def update(self, **kwargs):
+        self.update_from_kwargs(**kwargs)
+        self.init_status_of_ctrls(**kwargs)
+
+       #---
+        ds=1
+        LEA = wx.ALIGN_LEFT | wx.EXPAND | wx.ALL
+
+        self.SplitterAB.Unsplit() # no PanelB
+       # -- update wx CTRLs
+        self.PanelA.SetTitle(v="Parameter / Flags")
+
+       #--- TOP
+        if self.ShowCommand:
+           self.CommandCtrl = JuMEG_wxArgvParserCMD(self.TopPanel, **kwargs)
+           self.TopPanel.GetSizer().Add(self.CommandCtrl,3,LEA,ds)
+        else:
+           command = { "function": self.function, "import_name": self.module, "fullfile": self.fullfile }
+           self.update_wx_argparser(command=command)
+        if self.ShowPBSHosts:
+           self.HostCtrl  = JuMEG_wxPBSHosts(self.TopPanel, prefix=self.GetName())
+           self.TopPanel.GetSizer().Add(self.HostCtrl,1, wx.ALIGN_RIGHT | wx.EXPAND | wx.ALL,ds)
+
+        self.Bind(wx.EVT_BUTTON,self.ClickOnButton)
+
+        if self.use_pubsub:
+           self.init_pubsub()
+           pub.subscribe(self.update_wx_argparser,'COMMAND_UPDATE')
+
+    def update_wx_argparser(self,command=None):
+       #--- update parser 
+        for child in self.PanelA.Panel.GetChildren():
+            child.Destroy()
+
+        if ( self.ShowFileIO or self.ShowParameter):
+              self._pnl_argparser = JuMEG_wxArgvParserIO(self.PanelA.Panel,**command)
+              self._pnl_argparser.update(ShowParameter=self.ShowParameter,ShowFileIO=self.ShowFileIO)
+              self.PanelA.Panel.GetSizer().Add(self._pnl_argparser,1,wx.ALIGN_CENTER|wx.EXPAND|wx.ALL,8)
+
+              self.PanelA.Panel.SetAutoLayout(1)
+              self._pnl_argparser.FitInside()
+              self.PanelA.Panel.Layout()
+
+        self.GetParent().Layout()
+
+
+
+
+    def ClickOnApply(self,evt):
+        """
+
+        :param evt: 
+        :return: 
+        """
+        try:
+            cmd = self._pnl_argparser.get_fullfile_command(ShowFileIO=self.ShowFileIO,ShowParameter=self.ShowParameter) #verbose=self.verbose)
+            if self.verbose:
+               wx.LogMessage(jb.pp_list2str(cmd, head="ArgParser Cmd: "))
+               wx.LogMessage(jb.pp_list2str(self.HostCtrl.HOST.GetHostInfo(),head="HOST Info"))
+            pub.sendMessage("SUBPROCESS.RUN.START",joblist=[cmd],hostinfo=self.HostCtrl.HOST.GetHostInfo(),verbose=self.verbose)
+
+        except Exception as e:
+            jb.pp(e,head="Error Exception")
+            pub.sendMessage("MAIN_FRAME.MSG.ERROR",data="press <UPDATE> button and select a command")
+
+
+    def ClickOnCancel(self,evt):
+        wx.LogMessage( "<Cancel> button is no in use" )
+        pub.sendMessage("MAIN_FRAME.MSG.INFO",data="<Cancel> button is no in use")
+
+    def ClickOnButton(self, evt):
+        obj = evt.GetEventObject()
+        if obj.GetName().startswith("APPLY"):
+           self.ClickOnApply()
+        else:
+           evt.Skip()
+        
+#----    
+class JuMEG_GUI_ArgvParserFrame(JuMEG_MainFrame):
+    """  """
+    def __init__(self,parent,id,title,pos=wx.DefaultPosition,size=wx.DefaultSize,name='JuMEG Argparser',*kargs,**kwargs):
+        style = wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
+        super(JuMEG_GUI_ArgvParserFrame,self).__init__(parent,id, title, pos, size, style, name,**kwargs)
+        self.Center()
+   #---
+    def update(self,**kwargs):    
+        """ 
+        Results
+        -------
+        wxPanel obj e.g. MainPanel
+        https://stackoverflow.com/questions/3104323/getting-a-wxpython-panel-item-to-expand  
+        """
+        return JuMEG_GUI_wxArgvParser(self,**kwargs )
+
+    def UpdateAboutBox(self):
+        self.AboutBox.description = "calling JuMEG python scripts with parsing arguments"
+        self.AboutBox.version     = __version__
+        self.AboutBox.copyright   = '(C) 2018 Frank Boers <f.boers@fz-juelich.de>'
+        self.AboutBox.developer   = 'Frank Boers'
+        self.AboutBox.docwriter   = 'Frank Boers'
+
+if __name__ == '__main__':
+   app    = wx.App()
+   frame  = JuMEG_GUI_ArgvParserFrame(None,-1,'ARG Parser',ShowAll=True,ShowLogger=True,ShowCmdButtons=True,debug=True,verbose=True)
+   app.MainLoop()
+   
+'''
+/usr/bin/python2 /home/fboers/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers-2018-11-19/jumeg/preproc/jumeg_preproc_noise_reducer.py --fif_filename=101716/MEG94T/121219_1310/1/101716_MEG94T_121219_1310_1_c,rfDC-raw.fif --fif_stage=/home/fboers/MEGBoers/data/exp/MEG94T/mne/ --exclude_artifacts --checkresults --verbose --run
+'''
+
+
+'''
+    def __wx_init(self):
       #--- clear wx stuff
        for child in self.GetChildren():
            child.Destroy()
@@ -1320,7 +1449,11 @@ class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
           self._pnl_container = wx.Panel(self)
        self._pnl_container.SetBackgroundColour("sky blue")
 
-    def _init_pubsub(self):
+    def init_pubsub(self, **kwargs):
+        pub.subscribe(self.update_wx_argparser,'COMMAND_UPDATE')
+        pub.subscribe(self.ClickOnApply,self.GetName().upper()+".BT_APPLY")
+
+    def __init_pubsub(self):
         """ """
        #--- APPLY
         pub.subscribe(self.ClickOnApply,'ARGV_PARSER.CLICK_ON_APPLY')
@@ -1331,43 +1464,33 @@ class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
        #---
         pub.subscribe(self.ShowHelp,"MAIN_FRAME.CLICK_ON_HELP")
         pub.subscribe(self.SetVerbose,"COMMAND_FRAME_VERBOSE")
-        pub.subscribe(self.update_wx_argparser,'COMMAND_UPDATE')
+        #pub.subscribe(self.update_wx_argparser,'COMMAND_UPDATE')
 
-    def SetVerbose(self, value=False):
-        self.verbose = value
+    def ___ApplyLayout(self):
+        ds1 = 3
+      
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
 
-    def ShowHelp(self):
-        print(self.__doc__)
+        if self._pnl_command:
+           self.Sizer.Add( self._pnl_command,0, wx.ALIGN_LEFT|wx.EXPAND|wx.ALL,ds1)
 
-    def _update_from_kwargs(self,**kwargs):
-        self.init_show_panel(**kwargs)
-        self._use_pubsub  = kwargs.get("use_pubsub", getattr(self.GetParent(),"use_pubsub",False) )
-        self.module_stage = kwargs.get("stage",os.environ['JUMEG_PATH']) #os.environ['PWD']
-        self.module       = kwargs.get("module")
-        self.function     = kwargs.get("function","get_args")
-        self.fullfile     = kwargs.get("fullfile",self.fullfile)
-        self.SetBackgroundColour(kwargs.get("bg","grey88"))
+       #--- split the window
+        if self.ShowLogger:
+           self._splitter.SplitHorizontally(self._pnl_container,self._pnl_logger,-100 )#self._pnl_container.GetSize()[0] )
+           self.Sizer.Add( self._splitter,1,wx.ALIGN_CENTER_HORIZONTAL|wx.EXPAND|wx.ALL,3)
+        elif self.ShowParameter:
+             self.Sizer.Add(self._pnl_container,1,wx.ALIGN_CENTER|wx.EXPAND|wx.ALL, ds1)
 
-    def update(self,**kwargs):
-        self._update_from_kwargs(**kwargs) 
-        self._wx_init()
-        jb.pp(kwargs,head=" AP update ")
-        if self.ShowCommand:
-           self._pnl_command = JuMEG_wxArgvParserCMD(self,**kwargs)
-        else:
-           command={"function":self.function,"import_name": self.module,"fullfile":self.fullfile}
-           self.update_wx_argparser(command=command)
+        if self._pnl_buttons:
+            self.Sizer.Add(self._pnl_buttons, 0, wx.BOTTOM | wx.EXPAND | wx.ALL, ds1)
 
-        if self.use_pubsub:
-           self._init_pubsub()
-           pub.subscribe(self.SetVerbose,"COMMAND_FRAME_VERBOSE")
-           pub.subscribe(self.update_wx_argparser,'COMMAND_UPDATE')
-           
-        if self.ShowButtons:
-           self._pnl_buttons = JuMEG_wxArgvParserButtons(self,**kwargs)
-   
-    def update_wx_argparser(self,command=None):               
-       #--- update parser 
+        self.SetSizer(self.Sizer)
+        self.Fit()
+        self.SetAutoLayout(1) 
+        self.GetParent().Layout()
+        
+ def __update_wx_argparser(self,command=None):
+       #--- update parser
         for child in self._pnl_container.GetChildren():
             child.Destroy()
         jb.pp(command,head="update_wx_argparser command")
@@ -1375,305 +1498,17 @@ class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
         if ( self.ShowFileIO or self.ShowParameter):
               self._pnl_argparser = JuMEG_wxArgvParserIO(self._pnl_container,**command)
               self._pnl_argparser.update(ShowParameter=self.ShowParameter,ShowFileIO=self.ShowFileIO)
-           
+
               vbox = wx.BoxSizer(wx.VERTICAL)
               vbox.Add(self._pnl_argparser,1,wx.ALIGN_CENTER|wx.EXPAND|wx.ALL,8)
               self._pnl_container.SetSizer(vbox)
-              self._pnl_container.SetAutoLayout(1) 
+              self._pnl_container.SetAutoLayout(1)
               self._pnl_argparser.FitInside()
               self._pnl_container.Layout()
         #except Exception as e:
         #     jb.pp(e,head="Error Exception in <JuMEG_GUI_wxArgvParser.update_wx_argparser>")
         #     pub.sendMessage("MAIN_FRAME.MSG.ERROR",msgtxt="in <UPDATE> command")
-     
+
         self.GetParent().Layout()
-
-    def _ApplyLayout(self):
-        ds1 = 3
-      
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-
-        if self._pnl_command:
-           self.Sizer.Add( self._pnl_command,0, wx.ALIGN_LEFT|wx.EXPAND|wx.ALL,ds1)
-
-       #--- split the window
-        if self.ShowLogger:
-           self._splitter.SplitHorizontally(self._pnl_container,self._pnl_logger,-100 )#self._pnl_container.GetSize()[0] )
-           self.Sizer.Add( self._splitter,1,wx.ALIGN_CENTER_HORIZONTAL|wx.EXPAND|wx.ALL,3)
-        elif self.ShowParameter:
-             self.Sizer.Add(self._pnl_container,1,wx.ALIGN_CENTER|wx.EXPAND|wx.ALL, ds1)
-
-        if self._pnl_buttons:
-            self.Sizer.Add(self._pnl_buttons, 0, wx.BOTTOM | wx.EXPAND | wx.ALL, ds1)
-
-        self.SetSizer(self.Sizer)
-        self.Fit()
-        self.SetAutoLayout(1) 
-        self.GetParent().Layout()     
-
-
-    def ClickOnApply(self,evt):     
-        try:
-            cmd = self._pnl_argparser.get_fullfile_command(ShowFileIO=self.ShowFileIO,ShowParameter=self.ShowParameter) #verbose=self.verbose)
-            if self.verbose: jb.pp(cmd,head="CMD")
-            pub.sendMessage("SUBPROCESS.RUN.LOCAL",joblist=joblist)
-        except Exception as e:
-            jb.pp(e,head="Error Exception")
-            pub.sendMessage("MAIN_FRAME.MSG.ERROR",data="press <UPDATE> button and select a command")
-                    
-    def ClickOnCancel(self,evt):
-        wx.LogMessage( "<Cancel> button is no in use" )
-        pub.sendMessage("MAIN_FRAME.MSG.INFO",data="<Cancel> button is no in use")
         
-#----    
-class JuMEG_GUI_ArgvParserFrame(JuMEG_MainFrame):
-    """  """
-    def __init__(self,parent,id,title,pos=wx.DefaultPosition,size=wx.DefaultSize,name='JuMEG Argparser',*kargs,**kwargs):
-        style = wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
-        super(JuMEG_GUI_ArgvParserFrame,self).__init__(parent,id, title, pos, size, style, name,**kwargs)
-        self.Center()
-   #--- 
-    def _init_AboutBox(self):
-        self.AboutBox.name        = self.GetName() #"JuMEG MEEG Merger INM4-MEG-FZJ"
-        self.AboutBox.description = self.GetName()#"JuMEG MEEG Merger"
-        self.AboutBox.version     = __version__
-        self.AboutBox.copyright   = '(C) 2018 Frank Boers'
-        self.AboutBox.developer   = 'Frank Boers'
-        self.AboutBox.docwriter   = 'Frank Boers'
-
-    def wxInitMainMenu(self):
-        """
-        overwrite
-        add change of LoggerWindow position horizontal/vertical
-        """
-        self.MenuBar.DestroyChildren()
-        self._init_MenuDataList()
-        self._update_menubar()
-        self.AddLoggerMenu(pos=1,label="Logger")
-   #---
-    def update(self,**kwargs):    
-        """ 
-        Results
-        -------
-        wxPanel obj e.g. MainPanel
-        https://stackoverflow.com/questions/3104323/getting-a-wxpython-panel-item-to-expand  
-        """
-
-        ARG_PARSER = JuMEG_GUI_wxArgvParser(self,**kwargs )
-
-        if self.use_pubsub:  # verbose,debug
-            pub.sendMessage('MAIN_FRAME.VERBOSE', value=kwargs.get("verbose"))
-            pub.sendMessage('MAIN_FRAME.DEBUG',   value=kwargs.get("debug"))
-
-        return ARG_PARSER
-   #--- 
-    def wxInitStatusbar(self):
-        self.STB = self.CreateStatusBar(4)
-        #self.STB.SetStatusStyles([wx.SB_RAISED,wx.SB_SUNKEN,wx.SB_RAISED,wx.SB_SUNKEN])
-        self.STB.SetStatusWidths([-1,1,-1,4])
-        self.STB.SetStatusText('Experiment',0)
-        self.STB.SetStatusText('Path',2)
-         
- 
-if __name__ == '__main__':
-   app    = wx.App()
-   frame  = JuMEG_GUI_ArgvParserFrame(None,-1,'ARG Parser',ShowAll=True,debug=True,verbose=True)
-   #log=wx.LogWindow(frame,"LOOGER", show=TG857
-   # rue, passToOld=True) # logger wxdemo
-   app.MainLoop()
-
-'''
-class JuMEG_GUI_wxArgvParser(wx.Panel):# JuMEG_wxArgvParserBase):
-    """
-    JuMEG_GUI_wxArgvParser, a wxGUI CLS to show arguments from a python-script,e.g. executable command (CMD),
-    parsed by <argparse> module.
-
-    Parameters:
-    ----------
-    ShowAll
-    ShowCommand
-    ShowFileIO
-    ShowParameters
-    ShowButtons
-
-    Results:
-    --------
-    wx.Panel
-
-    """
-    def __init__(self,parent,**kwargs):
-        super(JuMEG_GUI_wxArgvParser, self).__init__(parent)  
-        self._param  = { "show":{"All":False,"Command":False,"FileIO":False,"Parameter":False,"Logger":False,"Buttons":False} }
-        self.SubProcess = JuMEG_IoUtils_SubProcess() # init and use via pubsub
-
-        self.fullfile = None
-        self.update(**kwargs)
-        self._ApplyLayout()
-     
-    def _get_param(self,k1,k2):
-        return self._param[k1][k2]
-    def _set_param(self,k1,k2,v):
-        self._param[k1][k2]=v
-      
-    @property        
-    def ShowCommand(self):   return self._get_param("show","Command")
-    @property        
-    def ShowFileIO(self):    return self._get_param("show","FileIO")
-    @property        
-    def ShowParameter(self): return self._get_param("show","Parameter")
-    @property        
-    def ShowButtons(self):   return self._get_param("show","Buttons")
-    @property
-    def ShowLogger(self):    return self._get_param("show","Logger")
-    @property
-    def ArgvParser(self):
-        if self._pnl_argparser:
-           return  self._pnl_argparser.parser
-
-    @property
-    def use_pubsub(self):   return self._use_pubsub
-    @use_pubsub.setter
-    def use_pubsub(self,v): self._use_pubsub = v
-
-    def init_show_panel(self,**kwargs):
-        """
-        select panel to show 
-        name,value
-        all: if no <None> select all
-        """
-        if kwargs.get("ShowAll",False):
-           for k in self._param["show"].keys():
-               self._param["show"][k]=True
-        else:
-           for k in self._param["show"].keys():
-               self._param["show"][k] = kwargs.get("Show"+k,False)   
-
-    def _wx_init(self):
-      #--- clear wx stuff
-       for child in self.GetChildren():
-           child.Destroy()
-
-       self._pnl_command   = None
-       self._pnl_argparser = None
-       self._pnl_container = None
-       self._pnl_buttons   = None
-       self._pnl_logger    = None
-       self._splitter      = None
-       self._pnl_container = wx.Panel(self, -1)
-
-      #--- show log stdout/stderr window
-       if self.ShowLogger:
-          self._splitter      = JuMEG_wxSplitterWindow(self,label="LOGGER") # from submenu Settings-> Looger
-          self._pnl_logger    = JuMEG_wxLogger(self._splitter)
-          self._pnl_container = wx.Panel(self._splitter)
-       else:
-          self._pnl_container = wx.Panel(self)
-       self._pnl_container.SetBackgroundColour("sky blue")
-
-    def _init_pubsub(self):
-        """ """
-       #--- APPLY
-        pub.subscribe(self.ClickOnApply,'ARGV_PARSER.CLICK_ON_APPLY')
-       #--- CANCEL
-        pub.subscribe(self.ClickOnCancel,'ARGV_PARSER.CLICK_ON_CANCEL')
-       #--- verbose
-        pub.subscribe(self.SetVerbose,'MAIN_FRAME.VERBOSE')
-       #---
-        pub.subscribe(self.ShowHelp,"MAIN_FRAME.CLICK_ON_HELP")
-        pub.subscribe(self.SetVerbose,"COMMAND_FRAME_VERBOSE")
-        pub.subscribe(self.update_wx_argparser,'COMMAND_UPDATE')
-
-    def SetVerbose(self, value=False):
-        self.verbose = value
-
-    def ShowHelp(self):
-        print(self.__doc__)
-
-    def _update_from_kwargs(self,**kwargs):
-        self.init_show_panel(**kwargs)
-        self._use_pubsub  = kwargs.get("use_pubsub", getattr(self.GetParent(),"use_pubsub",False) )
-        self.module_stage = kwargs.get("stage",os.environ['JUMEG_PATH']) #os.environ['PWD']
-        self.module       = kwargs.get("module")
-        self.function     = kwargs.get("function","get_args")
-        self.fullfile     = kwargs.get("fullfile",self.fullfile)
-        self.SetBackgroundColour(kwargs.get("bg","grey88"))
-
-    def update(self,**kwargs):
-        self._update_from_kwargs(**kwargs) 
-        self._wx_init()
-        jb.pp(kwargs,head=" AP update ")
-        if self.ShowCommand:
-           self._pnl_command = JuMEG_wxArgvParserCMD(self,**kwargs)
-        else:
-           command={"function":self.function,"import_name": self.module,"fullfile":self.fullfile}
-           self.update_wx_argparser(command=command)
-
-        if self.use_pubsub:
-           self._init_pubsub()
-           pub.subscribe(self.SetVerbose,"COMMAND_FRAME_VERBOSE")
-           pub.subscribe(self.update_wx_argparser,'COMMAND_UPDATE')
-           
-        if self.ShowButtons:
-           self._pnl_buttons = JuMEG_wxArgvParserButtons(self,**kwargs)
-   
-    def update_wx_argparser(self,command=None):               
-       #--- update parser 
-        for child in self._pnl_container.GetChildren():
-            child.Destroy()
-        jb.pp(command,head="update_wx_argparser command")
-        #try:
-        if ( self.ShowFileIO or self.ShowParameter):
-              self._pnl_argparser = JuMEG_wxArgvParserIO(self._pnl_container,**command)
-              self._pnl_argparser.update(ShowParameter=self.ShowParameter,ShowFileIO=self.ShowFileIO)
-           
-              vbox = wx.BoxSizer(wx.VERTICAL)
-              vbox.Add(self._pnl_argparser,1,wx.EXPAND|wx.ALL,8)
-              self._pnl_container.SetSizer(vbox)
-              self._pnl_container.SetAutoLayout(1) 
-              self._pnl_argparser.FitInside()
-              self._pnl_container.Layout()
-        #except Exception as e:
-        #     jb.pp(e,head="Error Exception in <JuMEG_GUI_wxArgvParser.update_wx_argparser>")
-        #     pub.sendMessage("MAIN_FRAME.MSG.ERROR",msgtxt="in <UPDATE> command")
-     
-        self.GetParent().Layout()
-
-    def _ApplyLayout(self):
-        ds1 = 3
-      
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-
-        if self._pnl_command:
-           self.Sizer.Add( self._pnl_command,0, wx.ALIGN_LEFT|wx.EXPAND|wx.ALL,ds1)
-
-       #--- split the window
-        if self.ShowLogger:
-           self._splitter.SplitHorizontally(self._pnl_container,self._pnl_logger,-100 )#self._pnl_container.GetSize()[0] )
-           self.Sizer.Add( self._splitter,1,wx.ALIGN_CENTER_HORIZONTAL|wx.EXPAND|wx.ALL,3)
-        elif self.ShowParameter:
-             self.Sizer.Add(self._pnl_container,1,wx.ALIGN_CENTER|wx.EXPAND|wx.ALL, ds1)
-
-        if self._pnl_buttons:
-            self.Sizer.Add(self._pnl_buttons, 0, wx.BOTTOM | wx.EXPAND | wx.ALL, ds1)
-
-        self.SetSizer(self.Sizer)
-        self.Fit()
-        self.SetAutoLayout(1) 
-        self.GetParent().Layout()     
-       
-    def ClickOnApply(self,evt):     
-        try:
-            cmd = self._pnl_argparser.get_fullfile_command(ShowFileIO=self.ShowFileIO,ShowParameter=self.ShowParameter) #verbose=self.verbose)
-            if self.verbose: jb.pp(cmd,head="CMD")
-            pub.sendMessage("SUBPROCESS.RUN.LOCAL",cmd=cmd)
-        except Exception as e:
-            jb.pp(e,head="Error Exception")
-            pub.sendMessage("MAIN_FRAME.MSG.ERROR",msgtxt="press <UPDATE> button and select a command")
-                    
-    def ClickOnCancel(self,evt):     
-        pub.sendMessage("MAIN_FRAME.MSG.INFO",msgtxt=" <Cancel> button is no in use")
-        
-
-
-
 '''
