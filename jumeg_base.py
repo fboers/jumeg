@@ -86,31 +86,45 @@ class AccessorType(type):
 
 '''
 
-#-- logger
-# https://docs.python.org/3/howto/logging-cookbook.html
-# https://stackoverflow.com/questions/44522676/including-the-current-method-name-when-printing-in-python
-def create_logger(app_name=None):
-    logger = logging.getLogger(app_name or __name__)
-    logger.setLevel(logging.DEBUG)
-    log_format = '[%(asctime)-15s] [%(levelname)08s] (%(funcName)s %(message)s'
-    logging.basicConfig(format=log_format)
-    return logger
+class JuMEG_Logger(object):
+   """
+    logger
+    https://docs.python.org/3/howto/logging-cookbook.html
+    https://stackoverflow.com/questions/44522676/including-the-current-method-name-when-printing-in-python
+   """
+   def __init__( self, app_name=None,**kwargs):
+       super(JuMEG_Logger, self).__init__(**kwargs)
+       self.logger = logging.getLogger(app_name or __name__)
+       self.logger.setLevel(logging.DEBUG)
+       self.log_format = '[%(asctime)-15s] [%(levelname)08s] (%(funcName)s %(message)s'
+       logging.basicConfig(format=self.log_format)
 
+   def info( self,msg ):
+       self.logger.info(msg)
+   def warning( self,msg ):
+       self.logger.warning(msg)
+   def error( self,msg ):
+       self.logger.error(msg)
+   def debug( self, msg ):
+       self.logger.debug(msg)
 
-class bcolors:
-    """
-    cls for printing in colors
-    https://stackoverflow.com/questions/287871/print-in-terminal-with-colors
-    """
-    HEADER = '\033[95m'
-    OKBLUE = '\033[94m'
-    OKGREEN = '\033[92m'
-    WARNING = '\033[93m'
-    ERROR = '\033[91m'
-    ENDC = '\033[0m'
-    BOLD = '\033[1m'
-    UNDERLINE = '\033[4m'
-    
+'''
+class bcolors():
+  """
+  cls for printing in colors
+  https://stackoverflow.com/questions/287871/print-in-terminal-with-colors
+  """
+  def __init__ (self):
+      super(bcolors, self).__init__()
+      HEADER = '\033[95m'
+      OKBLUE = '\033[94m'
+      OKGREEN = '\033[92m'
+      WARNING = '\033[93m'
+      ERROR = '\033[91m'
+      ENDC = '\033[0m'
+      BOLD = '\033[1m'
+      UNDERLINE = '\033[4m'
+'''
 
 class JuMEG_Base_Basic(object):
     def __init__ (self):
@@ -124,12 +138,12 @@ class JuMEG_Base_Basic(object):
         self._do_plot       = False
 
         self._pp = PrettyPrinter(indent=4)
-        self.logger = create_logger()
+        self.Hlog = JuMEG_Logger()
 
     @property
     def python_version(self):
         self.line()
-        print("---> python sys version: " + sys.version_info)
+        self.Hlog.info("---> python sys version: " + sys.version_info)
         #try:
         #   print("---> wx version: " + wx.version)   
         #except:
@@ -177,13 +191,16 @@ class JuMEG_Base_Basic(object):
         msg : strig
         head: like title <None>
         """
-        print( bcolors.WARNING)
-        self.line(char="*")
-        if head: print(head)
-        print( msg )
-        self.line(char="*")
-        print(bcolors.ENDC)
-            
+
+        #print( bcolors.WARNING)
+
+        m=[self.line(char="*")]
+        if head: m.append(head)
+        m.append( msg )
+        m.append(self.line(char="*"))
+        #print(bcolors.ENDC)
+        self.Hlog.warning( "\n".join(m) )
+
     def print_error(self,msg,head=None,file=sys.stderr):
         """
         print error msg in red 
@@ -193,13 +210,15 @@ class JuMEG_Base_Basic(object):
         msg : strig
         head: like title <None>
         """
-        print(bcolors.ERROR + bcolors.BOLD,file=file)
-        self.line(char="! . ",n=10,file=file)
-        if head: print(head,file=file)
-        print( msg,file=file )
-        self.line(char=". ! ",n=10,file=file)
-        print(bcolors.ENDC,file=file)
-    
+        #print(bcolors.ERROR + bcolors.BOLD,file=file)
+
+        #self.line(char="! . ",n=10,file=file)
+        #if head: print(head,file=file)
+        #print( msg,file=file )
+        #self.line(char=". ! ",n=10,file=file)
+        #print(bcolors.ENDC,file=file)
+        self.Hlog.error(msg)
+
     def line(self,n=40,char="-",file=None):
         """ line: prints a line for nice printing  and separate
         Parameters:
@@ -221,7 +240,7 @@ class JuMEG_Base_Basic(object):
         xxxxxxxxxx
         """
         if file:
-            print(char * n, file=file)
+            print(char * n)#, file=file)
         else:
             print(char * n)
 
@@ -275,15 +294,15 @@ class JuMEG_Base_Basic(object):
         jb.pp( param,head="HelloWorld")
         
         """
-        if l1  : self.line(n=n,char=char,file=file)
-        if head: print(head,file=file)
+        if l1  : self.line(n=n,char=char)#,file=file)
+        if head: print(head)#,file=file)
         
         # self._pp.pprint(param)
         for line in self._pp.pformat(param).split('\n'):
-            print(line,file=file)
+            print(line)#,file=file)
 
-        if l2  : self.line(n=n,char=char,file=file)
-        print("",flush=True,file=file)
+        if l2  : self.line(n=n,char=char)#,file=file)
+        #print("",flush=True,file=file)
         
     def is_number(self,n):
         """ 
