@@ -140,6 +140,10 @@ class JuMEG_Base_Basic(object):
         self._pp = PrettyPrinter(indent=4)
         self.Hlog = JuMEG_Logger()
 
+    
+    def get_function_name(self):
+        return sys._getframe(2).f_code.co_name
+
     @property
     def python_version(self):
         self.line()
