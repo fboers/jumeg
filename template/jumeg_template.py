@@ -1,39 +1,42 @@
+"""
+JuMEG Template Class
+---------------------------------------------------------------------
+ set env variables to the path of your templates files
+ JUMEG_PATH_TEMPLATE
+ JUMEG_PATH_TEMPLATE_EXPERIMENTS
+ JUMEG_PATH_TEMPLATE_EPOCHER
+----------------------------------------------------------------------
+ r/w jumeg experiment template files in json format
+ r/w jumeg epocher    template files in json format
+----------------------------------------------------------------------
+ file name:
+ <experiment>_jumeg_experiment_template.json
+ <experiment>_jumeg_epocher_template.json
+----------------------------------------------------------------------
+ default_jumeg_experiment_template.json
+ default_jumeg_epocher_template.json
+----------------------------------------------------------------------
+from jumeg.template.jumeg_template import JuMEG_Template_Experiments
+
+"""
+
+#--------------------------------------------
+# Authors: Frank Boers <f.boers@fz-juelich.de>
+#
+#--------------------------------------------
+# Date: 21.11.18
+#--------------------------------------------
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+# 21.11.18
+#--------------------------------------------
+
 import glob, os, re, sys
 import json
 from jumeg.jumeg_base import JuMEG_Base_Basic
 
-
-'''
-----------------------------------------------------------------------
---- JuMEG Template Class            ----------------------------------
----------------------------------------------------------------------- 
- autor      : Frank Boers 
- email      : f.boers@fz-juelich.de
- last update: 05.11.2014
- version    : 0.0114
-
----------------------------------------------------------------------- 
- set env variables to the path of your templates files
- JUMEG_PATH_TEMPLATE
- JUMEG_PATH_TEMPLATE_EXPERIMENTS
- JUMEG_PATH_TEMPLATE_Averager
----------------------------------------------------------------------- 
- r/w jumeg experiment template files in json format
- r/w jumeg averager   template files in json format
-----------------------------------------------------------------------
- file name:
- <experiment>_jumeg_experiment_template.json
- <experiment>_jumeg_averager_template.json
----------------------------------------------------------------------- 
- default_jumeg_experiment_template.json
- default_jumeg_averager_template.json
-----------------------------------------------------------------------
-
-from jumeg.template.jumeg_template import experiment,averager
-
-'''
-
-__version__ = 0.003141
+__version__='2018-11-21.001'
 
 class dict2obj(dict):
     def __init__(self, dict_):
@@ -103,40 +106,10 @@ def _decode_dict(data):
     return rv
 
 
-'''
- Helper Class +++ thnx to 
- http://stackoverflow.com/questions/1305532/convert-python-dict-to-object
- dict2obj_new expample
-''' 
-class dict2obj_old(dict):
-    def __init__(self, dict_):
-        super(dict2obj, self).__init__(dict_)
-        for key in self:
-            #if isinstance(key, unicode):
-            #   print key 
-            #   key = key.encode('utf-8')
-            #   print key
-            item = self[key]
-            if isinstance(item, list):
-               for idx, it in enumerate(item):
-                    if isinstance(it, dict):
-                        item[idx] = dict2obj(it)
-                    #elif isinstance(it, unicode):
-                    #     it = it.encode('utf-8')
-
-            elif isinstance(item, dict):
-                self[key] = dict2obj(item)
-
-    def __getattr__(self, key):
-        # Enhanced to handle key not found.
-        if self.has_key(key):
-            return self[key]
-        else:
-            return None
 
 class JuMEG_Template(JuMEG_Base_Basic):
     def __init__ (self,template_name='DEFAULT'):
-        super(JuMEG_Template, self).__init__()
+        super().__init__()
 
         self._template_path     = "123"#None  # os.getenv('JUMEG_PATH_TEMPLATE',self.__JUMEG_PATH_TEMPLATE)
         self._template_name     = template_name
@@ -203,22 +176,27 @@ class JuMEG_Template(JuMEG_Base_Basic):
            return args[0]._template_name_list
    #---
     def template_update_name_list(self):
-         """ read experiment template dir & update experiment names """
+         """ read experiment template dir & update experiment names
+         Result
+         ------
+          template_name_list
+         """
          self.template_name_list = []
 
          flist = glob.glob( self.template_path + '/*' + self.template_postfix + self.template_suffix)
          pat   = re.compile( (self.template_path + '|/|'+ '_' + self.template_postfix + self.template_suffix) )
          self.template_name_list = pat.sub('', str.join(',',flist) ).split(',')
-   #---
+        #---
+         self.template_data = dict()
+         return self.template_name_list
+
     def template_update_file(self):
-          self.template_data = dict()
           self._template_isUpdate = False
 
           try:
               with open(self.template_full_filename) as FH: # PY3
                    self.template_data = json.load(FH) # close  anyway
 
-              #self.template_data = _decode_dict(self.template_data) PY2
               self.template_data = dict2obj(self.template_data)
               self._template_isUpdate = True
           except ValueError as e:
@@ -298,10 +276,36 @@ class JuMEG_Template(JuMEG_Base_Basic):
              FOUT.close()
 
 class JuMEG_Template_Experiments(JuMEG_Template):
-    def __init__ (self):
-        super(JuMEG_Template_Experiments, self).__init__()
+    """
+    class to work with <jumeg experiment templates>
+    overwrite _init(**kwargs) for you settings
+
+    Example
+    -------
+     from jumeg.template.jumeg_template import JuMEG_Template_Experiments
+
+     class JuMEG_ExpTemplate(JuMEG_Template_Experiments):
+        def __init__(self,**kwargs):
+            super().__init__()
+
+        def update_from_kwargs(self,**kwargs):
+           self.template_path = kwargs.get("template_path",self.template_path)
+
+        def _init(self,**kwargs):
+            self.update_from_kwargs(**kwargs)
+
+     TMP = JuMEG_ExpTemplate()
+     print(TMP.template_path)
+
+    """
+    def __init__ (self,**kwargs):
+        super().__init__()
         self.template_path    = os.getenv('JUMEG_PATH_TEMPLATE_EXPERIMENTS',self.template_path_default + '/jumeg_experiments')
         self.template_name    = 'default'
         self.template_postfix = 'jumeg_experiment_template'
+        self._init(**kwargs)
+
+    def _init(self,**kwargs):
+        pass
 
 experiment = JuMEG_Template_Experiments()
