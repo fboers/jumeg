@@ -313,7 +313,8 @@ class JuMEG_wxMainPanel(JuMEG_wxMainPanelBase):
         self.SplitterAB.SplitVertically(self.PanelA, self.PanelB)
        #---
         if self.ShowCmdButtons:
-           self.CmdButtons = JuMEG_wxCMDButtons(self.MainPanel,prefix=self.GetName())
+           self.CmdButtons = JuMEG_wxCMDButtons(self.MainPanel,prefix=self.GetName(),
+                                                ShowClose=True,ShowCancel=True,ShowApply=True)
 
        #--- make a BoxSizer to pack later CTRLs
         self.FitBoxSizer(self.PanelA.Panel)

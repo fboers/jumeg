@@ -140,18 +140,28 @@ class JuMEG_wxSplitterWindow(wx.SplitterWindow):
 
 
 class JuMEG_wxCMDButtons(wx.Panel):
-      ''' panel with Close,Cancel,Apply Buttons '''
+      ''' panel with Close,Cancel,Apply Buttons'''
 
       def __init__(self, parent,**kwargs):
+          """
+
+          :param parent:
+          :param **kwargs:
+           bg   : wx.Colour([230,230,230])
+           bg_bt: wx.Colour([180,200,200])
+           prefix:"CMD_BUTTONS"
+           ShowClose:True,ShowCancel:True,ShowApply:True
+           verbose: False, debug: False
+          """
           super(JuMEG_wxCMDButtons,self).__init__(parent=parent, id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
           self._init(**kwargs)
 
       @property
       def CallClickOnApply(self):
-          return self.prefix.upper() + ".BT_APPLY".upper()
+          return self.prefix.upper() + ".BT.APPLY".upper()
       @property
       def CallClickOnCancel(self):
-          return self.prefix.upper() + ".BT_CANCEL".upper()
+          return self.prefix.upper() + ".BT.CANCEL".upper()
 
       def SetVerbose(self,value=False):
           self.verbose = value
@@ -160,6 +170,11 @@ class JuMEG_wxCMDButtons(wx.Panel):
           self.verbose = kwargs.get("verbose", False)
           self.debug   = kwargs.get("debug", False)
           self.prefix  = kwargs.get("prefix","CMD_BUTTONS")
+          self.ShowClose  = kwargs.get("ShowClose" ,True)
+          self.ShowCancel = kwargs.get("ShowCancel",True)
+          self.ShowApply  = kwargs.get("ShowAppply",True)
+          self._bg        = kwargs.get("bg",   wx.Colour([230,230,230]))
+          self._bg_bt     = kwargs.get("bg_bt",wx.Colour([180,200,200]))
 
       def init_pubsub(self):
         """"
@@ -172,12 +187,17 @@ class JuMEG_wxCMDButtons(wx.Panel):
           #self.SetBackgroundColour(wx.Colour([200,200,200] ))
         #--- BTs
           ctrls = []
-          ctrls.append(["CLOSE" ,"BT_CLOSE", wx.ALIGN_LEFT,"Close program",  self.ClickOnCTRL])
-          ctrls.append(["CANCEL","BT_CANCEL",wx.ALIGN_LEFT,"Cancel progress",self.ClickOnCTRL])
-          ctrls.append(["APPLY","BT_APPLY",wx.ALIGN_RIGHT,"Apply command",self.ClickOnCTRL])
+          if self.ShowClose:
+             ctrls.append(["CLOSE" ,"BT.CLOSE", wx.ALIGN_LEFT,"Close program",  None])
+          if self.ShowCancel:
+             ctrls.append(["CANCEL","BT.CANCEL",wx.ALIGN_LEFT,"Cancel progress",None])
+          if self.ShowApply:
+             ctrls.append(["APPLY", "BT.APPLY", wx.ALIGN_RIGHT,"Apply command", None])
           self._PNL_BTN = JuMEG_wxControlButtonPanel(self,label=None,control_list=ctrls)
-          self.SetBackgroundColour( wx.Colour([230,230,230]) )
-          self._PNL_BTN.SetBackgroundColour(wx.Colour([180,200,200]))
+          self.SetBackgroundColour(self._bg)
+          self._PNL_BTN.SetBackgroundColour(self._bg_bt)
+
+          self.Bind(wx.EVT_BUTTON, self.ClickOnCtrl)
 
       def update(self, **kwargs):
           pass
@@ -189,21 +209,18 @@ class JuMEG_wxCMDButtons(wx.Panel):
           self.init_pubsub()
           self.update(**kwargs)
           self._ApplyLayout()
-
-      def ClickOnCTRL(self,evt):
+     #---
+      def ClickOnCtrl(self,evt):
           obj=evt.GetEventObject()
-          if obj.GetName().upper().startswith("BT_CLOSE"):
+          if obj.GetName().upper().startswith("BT.CLOSE"):
              pub.sendMessage("MAIN_FRAME.CLICK_ON_CLOSE",evt=evt)
-          elif not obj.GetName().upper().startswith("WXSPINCTRL"):
-             #print("JuMEG_wxCMDButtons.ClickOnCTRL: ")
-             print("  --> PubSub Call: "+ self.prefix.upper() + "." + obj.GetName().upper())
-             pub.sendMessage(self.prefix.upper() + "." + obj.GetName().upper())
+          else:
+             evt.Skip()
 
       def _ApplyLayout(self):
           """" default Layout Framework """
           ds=1
           self.Sizer = wx.BoxSizer(wx.HORIZONTAL)
-          #self.Sizer.Add((0,0), 1, wx.ALIGN_LEFT | wx.EXPAND | wx.ALL, ds)
           self.Sizer.Add(self._PNL_BTN, 1, wx.ALIGN_RIGHT | wx.EXPAND | wx.ALL, ds)
           self.SetSizer(self.Sizer)
           self.Fit()
@@ -211,96 +228,13 @@ class JuMEG_wxCMDButtons(wx.Panel):
           self.GetParent().Layout()
 
 
-class _JuMEG_wxControlButtons_Old(wx.Panel):
-    def __init__(self, parent,boxsizer=wx.HORIZONTAL):
-        """"""
-        super(JuMEG_wxControlButtons,self).__init__(parent=parent, id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
-        
-        self.label    = 'Buttons'
-        self.boxsizer = boxsizer       
-        self.SetBackgroundColour('white')
-        
-        self.BtApply= wx.Button(self,id=wx.ID_APPLY,label='Apply')
-        self.BtApply.Bind(wx.EVT_BUTTON, self.ClickOnBtApply)
-        
-        self.BtExit         = wx.Button(self,id=wx.ID_EXIT)
-        self.BtCloseDisplay = wx.Button(self,id=wx.ID_ANY,label='CloseDisplay')
-        self.BtInitDisplay  = wx.Button(self,id=wx.ID_ANY,label='InitDisplay')
-        
-        self.__btlist2disable=[self.BtExit,self.BtCloseDisplay,self.BtInitDisplay]
-    
-        self.__ApplyLayout()
-        
-    def ClickOnBtApply(self,evt):
-        if evt:
-           #self.BtApply.GetId() == wx.ID_APPLY
-           self.BtApply.SetId(wx.ID_STOP)
-           self.BtApply.SetLabel('Stop')
-           evt.Skip()
-        else:
-           self.BtApply.SetId(wx.ID_APPLY)
-           self.BtApply.SetLabel('Apply')
-    
-    def SetButtonState(self,state):
-        for bt in self.__btlist2disable:
-           if state:
-              bt.Enable()
-           else:
-              bt.Disable()
-    
-    def __ApplyLayout(self):
-        self.Sizer = wx.BoxSizer(self.boxsizer)
-        self.Sizer.Add(self.BtApply,1, wx.ALIGN_LEFT|wx.ALL, 5)
-        self.Size.Add(self.BtInitDisplay,1,wx.ALIGN_LEFT|wx.ALL, 5)
-        self.Size.Add(self.BtCloseDisplay,1,wx.ALIGN_LEFT|wx.ALL, 5)
-        self.Size.Add((0,0),1,wx.ALIGN_LEFT|wx.EXPAND|wx.ALL, 5)
-        self.Sizer.Add(self.BtExit,1,wx.ALIGN_RIGHT|wx.ALL, 5)
-          
-        self.SetSizer(self.Sizer)
-
-class JuMEG_wxControlButtons(object):
-    def __init__(self, parent,prefix="CONTROL_BUTON",AddGrowableCol=None,list=None,init=True):
-        """ wx.Button in a panel """
-        super(JuMEG_wxControlButtons,self).__init__() #parent=parent, id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
-        self._parent        = parent
-        self.prefix         = prefix
-        self.AddGrowableCol = AddGrowableCol
-        self._isInit        = False
-        self.label          = None
-        self._control_panel = None
-
-        if list:
-           self._wxctrl_list = list
-        else:
-            self.init_wxcltr_list()
-        if init:
-           self._init_control_panel()
-
-    @property
-    def ControlPanel(self):
-        if not self._isInit:
-           self._init_control_panel()
-        return self._control_panel
-
-    def _init_control_panel(self):
-        self._control_panel = JuMEG_wxControlButtonPanel(self._parent,label=self.label,control_list=self._wxctrl_list,AddGrowableCol=self.AddGrowableCol)
-        self._isInit = True
-
-    def init_wxcltr_list(self):
-        self._wxctrl_list =[]
-        self._wxctrl_list.append(["CLOSE","Close",wx.ALIGN_LEFT,"Close program",self.ClickOnButon])
-        self._wxctrl_list.append(["CANCEL","Cancel",wx.ALIGN_LEFT,"Cancel progress",self.ClickOnButon])
-        self._wxctrl_list.append([None,None,wx.ALIGN_LEFT|wx.EXPAND,None,None])
-        self._wxctrl_list.append(["APPLY","Apply",wx.ALIGN_RIGHT,"Apply command",self.ClickOnButon])
-
-    def ClickOnButon(self,evt):
-        obj=evt.GetEventObject()
-        # print("JuMEG_wxControlButtons CTL Button: {}".format(self.prefix +"."+ obj.GetName().upper()))
-        pub.sendMessage(self.prefix +"."+ obj.GetName().upper() )
-
 class JuMEG_wxControlUtils(object):
     def __init__(self, parent):
         super (JuMEG_wxControlUtils,self).__init__()
+        # self._init()
+
+    #def __init(self):
+    #    self.separator="."
     # ---
     def get_button_txtctrl(self, obj):
         """ finds the textctr related to the button event
@@ -313,10 +247,10 @@ class JuMEG_wxControlUtils(object):
         wx textctrl obj
 
         """
-        return self.FindWindowByName(obj.GetName().replace("BT_", ""))
+        return self.FindWindowByName(obj.GetName().replace("BT","TXT",1))
 
     # ---
-    def FindControlByObjName(self, obj, prefix="", seperator="_"):
+    def FindControlByObjName(self, obj, prefix="", sep=None):
         """
         finds a obj ctrl by an other object and prefix to change
 
@@ -338,7 +272,9 @@ class JuMEG_wxControlUtils(object):
         FindControlByObjName(obj_bt,"COMBO")
 
         """
-        s = obj.GetName().split(seperator)[0]
+        if not sep:
+           sep = self.separator
+        s = obj.GetName().split(sep)[0]
         return self.FindWindowByName(obj.GetName().replace(s, prefix, 1))
 
 
@@ -408,7 +344,9 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
      drawline    : draw a line on top as separator <True>
      bg          : background color <"grey90">
      boxsizer    : [wx.VERTICAL,wx.HORIZONTAL] <wx.VERTICAL>
-     
+     separator   : "."
+     set_ctrl_prefix : adds prefix [BT,COMBO,TXT,...] to  ctrl name <True>
+
      FlexGridSizer parameter:
       AddGrowableCol : int or list    <None> 
       AddGrowableRow : int or list    <None>
@@ -451,11 +389,14 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
      self.add_controls(vbox)  
      
     """
-    def __init__(self, parent,control_list=None,label='TEST',drawline=True,bg="grey90",boxsizer=wx.VERTICAL,AddGrowableCol=None,AddGrowableRow=None,cols=4,rows=1):
-        super (JuMEG_wxControlBase,self).__init__(parent,id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
+    def __init__(self, parent,control_list=None,label='TEST',drawline=True,bg="grey90",boxsizer=wx.VERTICAL,
+                 AddGrowableCol=None,AddGrowableRow=None,cols=4,rows=1,separator = ".",set_ctrl_prefix=True):
+        super ().__init__(parent,id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
         self.box = wx.BoxSizer(boxsizer)
         self.SetBackgroundColour(bg)
-       
+        self.separator = separator
+        self.set_ctrl_prefix = set_ctrl_prefix
+
         self._obj   = None   
         self._rows  = rows
         self._cols  = cols
@@ -529,7 +470,11 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
     
     def _gs_add_init_last_obj(self,d,evt=None):
         """ helper fct: init last obj to add """
-        self._obj[-1].SetName(d[1])
+        if self.set_ctrl_prefix:
+           n = (d[0]+self.separator+d[1]).replace(" ","-").upper()
+        else:
+           n = d[1].replace(" ", "-").upper()
+        self._obj[-1].SetName( n )
         
         if isinstance(d[-2],str):
            self._obj[-1].SetToolTip(wx.ToolTip(d[-2]))
@@ -539,12 +484,21 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
     
     def _gs_add_Button(self,d):
         """ add Button"""
-        self._obj.append(wx.Button(self,wx.NewId(),label=d[2],style=wx.BU_EXACTFIT))
+        try:
+           style= d[5]
+        except:
+            style=wx.BU_EXACTFIT
+        self._obj.append(wx.Button(self,wx.NewId(),label=d[2],style=style))
         self._gs_add_init_last_obj(d,evt=wx.EVT_BUTTON)
 
     def _gs_add_FlatButton(self,d):
         """ add FlatButton"""
-        self._obj.append(wx.Button(self,wx.NewId(),label=d[2],style=wx.BU_EXACTFIT|wx.NO_BORDER))
+        try:
+           style= d[5]
+        except:
+            style=wx.BU_EXACTFIT|wx.NO_BORDER
+
+        self._obj.append(wx.Button(self,wx.NewId(),label=d[2],style=style))
         self._gs_add_init_last_obj(d,evt=wx.EVT_BUTTON)
 
     def _gs_add_CheckBox(self,d):
@@ -581,7 +535,7 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
         """ add wx.SpinCtrl """
         self._obj.append( wx.SpinCtrl(self,wx.NewId(),style=wx.SP_ARROW_KEYS|wx.SP_WRAP|wx.TE_PROCESS_ENTER|wx.ALIGN_RIGHT))
         self._obj[-1].SetLabel(d[1])
-        self._obj[-1].SetName("SP_"+d[1].upper())
+        self._obj[-1].SetName("SP"+self.separator+d[1].upper()) if self.set_ctrl_prefix else self._obj[-1].SetName(d[1].upper())
         self._obj[-1].SetToolTip("Min: " + str(d[2][0]) +"  Max: " + str(d[2][1]) )
         self._obj[-1].SetRange(d[2][0],d[2][1])
         self._obj[-1].SetValue(d[3])
@@ -594,7 +548,7 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
         """ add wx.FloatSpin """
         self._obj.append( FS.FloatSpin(self,wx.NewId(),min_val=d[2][0],max_val=d[2][1],increment=d[2][2],value=1.0,agwStyle=FS.FS_RIGHT) )   
         self._obj[-1].SetLabel(d[1])
-        self._obj[-1].SetName("FSP_"+d[1].upper())
+        self._obj[-1].SetName("FSP"+self.seperator+d[1].upper()) if self.set_ctrl_prefix else self._obj[-1].SetName(d[1].upper())
         self._obj[-1].SetFormat("%f")
         self._obj[-1].SetDigits(3)
         self._obj[-1].SetValue(d[3])
@@ -602,7 +556,7 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
         #self.GS.Add(self._obj[-1],0,wx.LEFT|wx.EXPAND,self.gap)
         self.GS.Add(self._obj[-1],0,wx.LEFT,self.gap)
 
-    def add_controls(self):
+    def add_controls(self,**kwargs):
        #--- Label + line 
         gap=1
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
@@ -744,7 +698,7 @@ class JuMEG_wxControls(JuMEG_wxControlBase):
         super(JuMEG_wxControls, self).__init__(parent,**kwargs) 
         
        #--- add controls 
-        self.add_controls() 
+        self.add_controls(**kwargs)
              
     def _gs_add_add_last_obj(self):
         """ helper fct: add last obj to add """
@@ -774,7 +728,7 @@ class JuMEG_wxControlGrid(JuMEG_wxControlBase):
        super(JuMEG_wxControlGrid,self).__init__(parent,**kwargs)
        
       #--- add controls 
-       self.add_controls() 
+       self.add_controls(**kwargs)
     
     
     def _gs_add_add_first_text_info(self,d):
@@ -806,7 +760,7 @@ class JuMEG_wxControlIoDLGButtons(JuMEG_wxControlBase):
         super (JuMEG_wxControlIoDLGButtons,self).__init__(parent,**kwargs)
       #--- add controls 
         self.cols = 2
-        self.add_controls() 
+        self.add_controls(**kwargs)
     
     def _gs_add_add_first_text_info(self,d):
         """ add text in front of control """
@@ -855,9 +809,9 @@ class JuMEG_wxControlButtonPanel(JuMEG_wxControlBase):
        self.SetBackgroundColour("grey40")      
 
       #--- add controls 
-       self.add_controls() 
+       self.add_controls(**kwargs)
     
-    def add_controls(self):
+    def add_controls(self,**kwargs):
        #--- Label + line 
         sbox = wx.BoxSizer(wx.VERTICAL)
         if self.label:

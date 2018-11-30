@@ -1,7 +1,13 @@
 import wx,sys,io
 from wx.lib.pubsub import pub
-
+from jumeg.jumeg_base  import jumeg_base as jb
 __version__= "2018-11-15-001"
+
+# change formatter
+#log_fh = logging.FileHandler("error.log")
+#formatter = logging.Formatter("%(asctime)s - %(name)s - %(message)s")
+#log_fh.setFormatter(formatter)
+
 
 class JuMEG_wxLog(wx.Log):
     '''
@@ -20,12 +26,24 @@ class JuMEG_wxLog(wx.Log):
 
     '''
     def __init__(self, textCtrl, logTime=0):
-        wx.Log.__init__(self)
+        super().__init__()
         self._txtctrl         = textCtrl
         self.logTime          = logTime
         self._LogLevels       = [wx.LOG_Info, wx.LOG_Message, wx.LOG_Trace, wx.LOG_Warning, wx.LOG_Debug, wx.LOG_Error,wx.LOG_FatalError]
         self._LogLevelColours = [wx.BLACK, wx.BLACK, wx.BLACK, wx.GREEN, wx.BLUE, wx.RED,wx.RED]
         self.colour           = wx.BLACK
+
+    def _scroll_to_end(self):
+        """
+        scrolls the txtctrl to the end
+        https://stackoverflow.com/questions/47960619/set-insertionpoint-to-end-of-current-line-in-wxpython-wx-textctrl
+        """
+        curPos = self._txtctrl.GetInsertionPoint()
+        curVal,curCol,curRow = self._txtctrl.PositionToXY(curPos)
+        lineNum = curRow
+        lineText = self._txtctrl.GetLineText(lineNum)
+        newPos = self._txtctrl.XYToPosition(len(lineText), curRow)
+        self._txtctrl.SetInsertionPoint(newPos)
 
     def LogLevelColour(self,level):
         idx = self._LogLevels.index(level)
@@ -37,16 +55,16 @@ class JuMEG_wxLog(wx.Log):
         """
         writing loglevel message with spcial loglevel-colour to text ctrl
         :param level: wx-loglevel [wx.LOG_Info, wx.LOG_Message,...]
-        :param msg:
+        :param msg: message to display
+        :param info: wx.LogRecordInfo
         :return:
         """
+
         if self._txtctrl:
            self._txtctrl.SetDefaultStyle(wx.TextAttr(self.LogLevelColour(level)))
            self._txtctrl.AppendText(msg + '\n')
            self._txtctrl.SetDefaultStyle(wx.TextAttr(wx.NullColour))
-           self._txtctrl.ShowPosition(self._txtctrl.GetLastPosition()) # scroll to end
-          #self._txtctrl.SetScrollPos(wx.VERTICAL,-1)
-          #self._txtctrl.SetInsertionPoint(-1)
+           self._scroll_to_end()
            self._txtctrl.Refresh()
            self.Flush()
         else:
@@ -131,11 +149,11 @@ class JuMEG_wxLogger(wx.Panel):
         self._txt_head.SetBackgroundColour("grey70")
 
         stl = wx.BU_EXACTFIT | wx.BU_NOTEXT  # | wx.BORDER_NONE
-        self._BtClear = wx.Button(self._pnl, -1, name=self.PubSubListener + ".BUTTON.CLEAR", style=stl)
+        self._BtClear = wx.Button(self._pnl, -1, name=self.PubSubListener + ".BT.CLEAR", style=stl)
         self._BtClear.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_DELETE, wx.ART_MENU, (12, 12)))
         self.Bind(wx.EVT_BUTTON, self.ClickOnButton, self._BtClear)
 
-        self._BtMinimize = wx.Button(self._pnl, -1, name=self.PubSubListener + ".BUTTON.MINIMIZE", style=stl)
+        self._BtMinimize = wx.Button(self._pnl, -1, name=self.PubSubListener + ".BT.MINIMIZE", style=stl)
         self._BtMinimize.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK, wx.ART_MENU, (12, 12)))
         self.Bind(wx.EVT_BUTTON, self.ToggleMinimize, self._BtMinimize)
 
@@ -147,8 +165,10 @@ class JuMEG_wxLogger(wx.Panel):
     def _init_logger(self):
         """ """
         self.__isInit = False
+        formatter=wx.LogFormatter("%(asctime)s - %(name)s - %(message)s")
         wx.Log.SetActiveTarget(self.Logger)
-        wx.Log.SetTimestamp('%Y-%m-%d %H:%M:%S')
+        wx.Log.SetFormatter(formatter)
+        #wx.Log.SetTimestamp('%Y-%m-%d %H:%M:%S')
         wx.Log.SetLogLevel(self.LogLevel)
         self.__isInit = True
 
@@ -166,7 +186,7 @@ class JuMEG_wxLogger(wx.Panel):
 
     def ClickOnButton(self, evt):
         obj = evt.GetEventObject()
-        if obj.GetName().startswith(self.PubSubListener + ".BUTTON.CLEAR"):
+        if obj.GetName().startswith(self.PubSubListener + ".BT.CLEAR"):
             self._txtctrl.Clear()
 
     def _ApplyLayout(self):
@@ -354,11 +374,11 @@ class _JuMEG_wxLogger(wx.Panel):
         self._txt_head.SetBackgroundColour("grey70")
 
         stl = wx.BU_EXACTFIT|wx.BU_NOTEXT# | wx.BORDER_NONE
-        self._BtClear = wx.Button(self._pnl,-1,name=self.PubSubListener+".BUTTON.CLEAR",style=stl)
+        self._BtClear = wx.Button(self._pnl,-1,name=self.PubSubListener+".BT.CLEAR",style=stl)
         self._BtClear.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_DELETE, wx.ART_MENU,(12,12)))
         self.Bind(wx.EVT_BUTTON, self.ClickOnButton, self._BtClear)
 
-        self._BtMinimize = wx.Button(self._pnl,-1,name=self.PubSubListener+".BUTTON.MINIMIZE",style=stl)
+        self._BtMinimize = wx.Button(self._pnl,-1,name=self.PubSubListener+".BT.MINIMIZE",style=stl)
         self._BtMinimize.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK, wx.ART_MENU,(12,12)))
         self.Bind(wx.EVT_BUTTON,self.ToggleMinimize,self._BtMinimize)
 
@@ -410,7 +430,7 @@ class _JuMEG_wxLogger(wx.Panel):
 
     def ClickOnButton(self,evt):
         obj = evt.GetEventObject()
-        if obj.GetName().startswith(self.PubSubListener+".BUTTON.CLEAR"):
+        if obj.GetName().startswith(self.PubSubListener+".BT.CLEAR"):
            self._txtctrl.Clear()
 
     def _ApplyLayout(self):

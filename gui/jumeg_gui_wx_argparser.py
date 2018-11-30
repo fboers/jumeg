@@ -185,7 +185,9 @@ class JuMEG_ArgParserBase(JuMEG_IoUtils_FunctionParserBase):
 
         try:
            if not os.path.isfile( self.fullfile ):
-              pub.sendMessage("MAIN_FRAME.MSG.ERROR",msgtxt="JuMEG_ArgParserBase:import_parser_arguments_from_function : python module not exist: \n ---> "+self.fullfile)
+              msg = "JuMEG_ArgParserBase:import_parser_arguments_from_function : python module not exist: \n ---> " + self.fullfile
+              wx.LogError(msg)
+              pub.sendMessage("MAIN_FRAME.MSG.ERROR",msgtxt=msg)
               return
            self.JFunctionParser.fullfile = self.fullfile
            self.JFunctionParser.function = self.function
@@ -368,7 +370,7 @@ class JuMEG_ArgParser(JuMEG_ArgParserBase):
    #--- 
     def get_metavar_array(self,obj):
         if not obj.metavar  : return
-        meta = obj.metavar.split('_') # MEG_STAGE 
+        meta = obj.metavar.split('_') # MEG_STAGE
         if (len(meta) < 2)  : return
         return meta 
    #---
@@ -392,7 +394,7 @@ class JuMEG_ArgParser(JuMEG_ArgParserBase):
         
         Parameters:
         -----------
-        obj: should habe something like metavar="MEG_FILENAME"
+        obj: should has something like metavar="MEG_FILENAME"
         
         Results:
         ---------
@@ -405,7 +407,7 @@ class JuMEG_ArgParser(JuMEG_ArgParserBase):
         """
         key = name.split('_')[0].lower() + "_file_extention" # meg_file_extention
         return self.get_args_dict(key)
-         
+
    #---
     def set_cmd_parameter_file_io(self,obj):
         """
@@ -492,9 +494,9 @@ class JuMEG_ArgParser(JuMEG_ArgParserBase):
            
         if obj.choices:
            if v == '': v = obj.choices[0] 
-           return ["COMBO",str(obj.dest),v,obj.choices,obj.help,self.ClickOnComboBox]
+           return ["COMBO",str(obj.dest).upper(),v,obj.choices,obj.help,self.ClickOnComboBox]
         else:   
-           return ["TXT",str( obj.dest ),v,obj.help,None]
+           return ["TXT",str( obj.dest ).upper(),v,obj.help,None]
        
    #---
     def groups_to_ctrl_lists(self):
@@ -523,7 +525,7 @@ class JuMEG_ArgParser(JuMEG_ArgParserBase):
        
         return control_list,flag_list
     
-  #---  
+   #---
     def groups_to_io_ctrl_list(self,k):
         """ 
         groups_to_io_ctrl_list
@@ -533,12 +535,10 @@ class JuMEG_ArgParser(JuMEG_ArgParserBase):
             obj_dict = self.get_cmd_parameter_file_io(key=k,idx=idx) # get dict {key: obj} e.g. {FILENAME:_StoreAction( ... )}
             for option_name in obj_dict: # should be only one {key: obj}
                 obj = self.get_cmd_parameter_file_io(key=k,idx=idx,option=option_name) #  get the obj
-               #--- Button  : ( control type,name,label,help,callback)  
-               # io_list.append(["BT","BT_"+str(obj.metavar),option_name,obj.help,self.ClickOnFileIOButton ])
-                io_list.append(["BT","BT_"+str(obj.dest),option_name,obj.help,self.ClickOnFileIOButton ])
+               #--- Button  : ( control type,name,label,help,callback)
+                io_list.append(["BT",str(obj.dest).upper(),option_name,obj.help,self.ClickOnFileIOButton ])
                #--- TxtCtrl : ( control type,name,label,help,callback) 
-                #io_list.append(["TXT",str(obj.metavar),self.get_obj_default(obj),obj.help,None]) 
-                io_list.append(["TXT",str(obj.dest),self.get_obj_default(obj),obj.help,None])
+                io_list.append(["TXT",str(obj.dest).upper(),self.get_obj_default(obj),obj.help,None])
     
         return io_list       
     
@@ -558,7 +558,8 @@ class JuMEG_ArgParser(JuMEG_ArgParserBase):
         cmd["io"]     = []
         cmd["txt"]    = []
         cmd["flags"]  = []
-        
+        jb.pp(self.args_dict.items())
+
         for k,v in self.args_dict.items():
             if k.upper().replace("_","").endswith(tuple( self.default_bad_key_list )): continue
            #--- ck file io 
@@ -663,8 +664,7 @@ class JuMEG_wxArgvParserBase(wx.Panel): ##scrolled.ScrolledPanel):
        
     """
     def __init__(self,*kargs,**kwargs):
-        super(JuMEG_wxArgvParserBase,self).__init__(*kargs,id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
-        #super(JuMEG_wxArgvParserBase,self).__init__(*kargs,id=wx.ID_ANY,style=wx.TAB_TRAVERSAL|wx.SUNKEN_BORDER)
+        super().__init__(*kargs,id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
         self.use_pubsub = None
         self.debug      = False
         self.verbose    = False
@@ -720,64 +720,7 @@ class JuMEG_wxArgvParserBase(wx.Panel): ##scrolled.ScrolledPanel):
         self.clear_parameter()
        #--- clear wx stuff
         self.clear_children(self)
-        
-class JuMEG_wxArgvParserButtons(wx.Panel):
-    """
-    ArgvParser Buttons sending pubsub messages
-      
-    APPLY : pubsub MSG => ARGV_PARSER_CLICK_ON_APPLY
-    CANCEL: pubsub MSG => ARGV_PARSER_CLICK_ON_CANCEL
-    CLOSE : pubsub MSG => MAIN_FRAME_CLICK_ON_CLOSE
-      
-    """
- #---     
-    def __init__(self,parent,**kwargs):
-        super(JuMEG_wxArgvParserButtons, self).__init__(parent)   
-        self.update()
- #---  
-    def _update_buttons(self):
-        """ generation wx.Button in a panel"""
-        self._wxctrl_list_of_buttons =[]
-        self._wxctrl_list_of_buttons.append(["CLOSE","Close",wx.ALIGN_LEFT,"Close program",self.ClickOnButton ])
-        self._wxctrl_list_of_buttons.append(["CANCEL","Cancel",wx.ALIGN_LEFT,"Cancel progress",self.ClickOnButton ])
-        self._wxctrl_list_of_buttons.append(["APPLY","Apply",wx.ALIGN_RIGHT,"Apply command",self.ClickOnButton ])
-        self._pnl_buttons = JuMEG_wxControlButtonPanel(self,label=None,control_list=self._wxctrl_list_of_buttons) 
- #--- 
-    def _update_kwargs(self,**kwargs):
-        self.use_pubsub    = kwargs.get("pubsub",True)
-        self.verbose       = kwargs.get("verbose",False)               
- #---   
-    def update(self,function=None,module=None,package=None,**kwargs):
-        """ update """
-        self._update_kwargs(**kwargs)
-        self._update_buttons()
-        self._ApplyLayout()
- #---      
-    def _ApplyLayout(self):
-        """set button panel"""
-       
-        # split the window
-        self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self._pnl_buttons,0,wx.EXPAND,2)
-        self.SetSizer(self.Sizer)
-        self.Sizer.Fit(self)
-        self.SetAutoLayout(1)
- #--- 
-    def ClickOnButton(self,evt):
-      """ """
-      obj = evt.GetEventObject()
-      if obj.Label == "APPLY":
-         if self.use_pubsub: pub.sendMessage('ARGV_PARSER.CLICK_ON_APPLY',evt=evt)
-            
-      elif obj.Label == "CANCEL":
-         if self.use_pubsub: pub.sendMessage('ARGV_PARSER.CLICK_ON_CANCEL',evt=evt)
-      
-      elif obj.Label == "CLOSE":
-         if self.use_pubsub: pub.sendMessage('MAIN_FRAME.CLICK_ON_CLOSE',evt=evt)
-         #elif callable(self.GetParent().ClickOnClose):
-         #     self.GetParent().ClickOnClose(evt)
-      else: evt.Skip()
- 
+
         
 class JuMEG_wxArgvParserIO(ScrolledPanel):
     """
@@ -793,7 +736,8 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
      function: function name wthin the module <get_argv>
      pubsub  : use pubsub <False>
      bg      : background color <blue>
-     
+     ShowCloseButton: False
+
     Example:
     --------    
      from jumeg.gui.jumeg_gui_wx_argparser import JuMEG_GUI_ArgvParserFrame
@@ -829,12 +773,11 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
           
     """
     def __init__(self,parent,**kwargs):
-        #pubsub=False,function=None,module=None,package=None,show_buttons=False):  #*kargs, **kwargs):
-        super(JuMEG_wxArgvParserIO, self).__init__(parent)  
+        super().__init__(parent)
         self.verbose       = False
         self.ShowParameter = False
         self.ShowFileIO    = False
-        
+
        #--- arg parser   
         self.parser = JuMEG_ArgParser(**kwargs)
         
@@ -843,7 +786,7 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
            pub.subscribe(self._pubsClickOnComboBox,    self.parser.pub_message_call_combobox)
            pub.subscribe(self._pubsClickOnCheckBox,    self.parser.pub_message_call_checkbox)
            pub.subscribe(self._pubsClickOnFileIOButton,self.parser.pub_message_call_fileiobutton)
-           pub.subscribe(self.SetVerbose,"MAIN_FRAME_VERBOSE") 
+           pub.subscribe(self.SetVerbose,"MAIN_FRAME.VERBOSE")
            
        #--- WX stuff 
         self.SetBackgroundColour( kwargs.get("bg","grey20") )
@@ -864,17 +807,15 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
    #--- 
     def _update_kwargs(self,**kwargs):
         """ update kwargs"""
-        #self.use_pubsub    = kwargs.get("pubsub",True)
-        self.verbose       = kwargs.get("verbose",False)
-        self.ShowParameter = kwargs.get("ShowParameter",self.ShowParameter)
-        self.ShowFileIO    = kwargs.get("ShowFileIO",self.ShowFileIO)
+        self.verbose        = kwargs.get("verbose",False)
+        self.ShowParameter  = kwargs.get("ShowParameter",self.ShowParameter)
+        self.ShowFileIO     = kwargs.get("ShowFileIO",self.ShowFileIO)
    #---   
     def update(self,**kwargs):
         """ update """
         self._update_kwargs(**kwargs)
         
        #---  update coltrol lists with argparser obj  
-        #self.parser.update(function=function,module=module,package=package,fullfile=fullfile)
         self.parser.update(**kwargs)
         self._wxctrl_list_of_controls,self._wxctrl_list_of_flags = self.parser.groups_to_ctrl_lists()
        
@@ -888,8 +829,8 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
         self._pnl_parameter = wx.Panel(self, -1,style=wx.SUNKEN_BORDER)
         hbox = wx.BoxSizer(wx.HORIZONTAL)
        #--- get wx.GridSizers for Controls and CheckBoxes  
-        pnl_controls = JuMEG_wxControls(   self._pnl_parameter,label="Parameter",control_list=self._wxctrl_list_of_controls,AddGrowableCol=2)  
-        pnl_flags    = JuMEG_wxControlGrid(self._pnl_parameter,label="Flags",    control_list=self._wxctrl_list_of_flags,cols=1)  
+        pnl_controls = JuMEG_wxControls(   self._pnl_parameter,label="Parameter",control_list=self._wxctrl_list_of_controls,AddGrowableCol=2,set_ctrl_prefix=False)
+        pnl_flags    = JuMEG_wxControlGrid(self._pnl_parameter,label="Flags",    control_list=self._wxctrl_list_of_flags,cols=1,set_ctrl_prefix=False)
         
         hbox.Add(pnl_controls,1,wx.ALIGN_LEFT|wx.EXPAND|wx.ALL,4)
         hbox.Add(pnl_flags,   0,wx.ALIGN_RIGHT|wx.ALL,4)
@@ -907,8 +848,7 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
           #---  get list of io-controls definition
             io_list = self.parser.groups_to_io_ctrl_list(k)
          #--- io controls
-            pnl_io_ctrl = JuMEG_wxControlIoDLGButtons(self._pnl_file_io,label=k,control_list=io_list,AddGrowableCol=1)  
-            
+            pnl_io_ctrl = JuMEG_wxControlIoDLGButtons(self._pnl_file_io,label=k,control_list=io_list,AddGrowableCol=1)
             vbox.Add(pnl_io_ctrl,0,wx.ALIGN_LEFT|wx.EXPAND|wx.ALL,ds)
             vbox.Add((0,0),1,wx.ALIGN_LEFT|wx.EXPAND|wx.ALL,ds)
      
@@ -932,9 +872,9 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
         
         """
         if isinstance(bt,str):  # button name : meg_filename
-           bt_name = bt.replace("BT_","")
+           bt_name = bt.replace("BT.","")
         else:
-           bt_name = bt.GetName().replace("BT_","") # bt wx ctrl obj
+           bt_name = bt.GetName().replace("BT.","") # bt wx ctrl obj
         return bt_name,bt_name.split("_")[0].upper()    
    #---    
     def _get_io_txtctrl(self,s):
@@ -959,9 +899,12 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
         for p in ["stage","path"]:
             io_type = s.lower() +"_"+ p
             if io_type in self.parser.args_dict.keys():
-               stage_obj = self.FindWindowByName( s.lower() +"_"+ p )
+               stage_name  = "TXT."+s.upper() +"_"+ p.upper()
+               stage_obj   = self.FindWindowByName( stage_name )
+               file_name   = "TXT."+s.upper() + "_FILENAME"
+               file_obj    = self.FindWindowByName(file_name)
                continue
-        return stage_obj,self.FindWindowByName( s.lower()+'_filename' )   
+        return stage_obj,file_obj
    #---       
     def _get_button_txtctrl(self,obj):
         """ finds the textctr related to the button event 
@@ -974,7 +917,7 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
         wx textctrl obj
         
         """
-        return self.FindWindowByName( obj.GetName().replace("BT_","") )
+        return self.FindWindowByName( obj.GetName().replace("BT.","") )
    #---      
     def ClickOnFileIOButton(self,evt):
         """
@@ -985,11 +928,15 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
        #--- get caller button and find related txtctrl
         bt_obj            = evt.GetEventObject() 
         bt_label          = bt_obj.GetLabel()
+        #wx.LogMessage("936 bt: {} {}".format(bt_obj.GetLabel(), bt_obj.GetName() ))
         bt_name,io_type   = self._get_button_name(bt_obj)
         stage_obj,filename_obj = self._get_io_txtctrl(io_type)
-        
+
+        #wx.LogMessage("936 stage obj: {} {}".format(stage_obj, stage_obj.GetName() ))
+        #wx.LogMessage("936 file obj: {} {}".format(filename_obj, filename_obj.GetName()))
+
        #--- Stage  only DIR
-        if bt_label.title().startswith("Stage") or bt_obj.GetLabel().title().startswith("Path"):
+        if bt_label.title().startswith("Stage") or bt_label.title().startswith("Path"):
            dlg = wx.DirDialog(self,io_type +" : Choose Stage directory","",wx.DD_DEFAULT_STYLE|wx.DD_DIR_MUST_EXIST)
            dlg.SetPath( stage_obj.GetValue() )
            if (dlg.ShowModal() == wx.ID_OK):
@@ -1051,10 +998,10 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
         """ """
         obj = evt.GetEventObject()
         
-        if obj.Label == "APPLY":
+        if obj.GetName().startswith("BT.APPLY"):
            self.update_parameter()
            
-        if obj.Label == "CLOSE":
+        if obj.GetName().startswith("BT.CLOSE"):
            if self.parser.use_pubsub:
               pub.sendMessage('MAIN_FRAME.CLICK_ON_CLOSE',evt=evt)
            elif callable(self.GetParent().ClickOnClose):
@@ -1125,9 +1072,12 @@ class JuMEG_wxArgvParserIO(ScrolledPanel):
         
         """
         for k in self.parser.args_dict.keys():
-            obj = self.FindWindowByName(k)
+            obj = self.FindWindowByName(k.upper())
             if obj:  # no file io ctrl
-               self.parser.set_args_dict(k,obj.GetValue())      
+               self.parser.set_args_dict(k,obj.GetValue())
+            elif  k.upper().split("_")[-1] in set( self.parser.default_io_key_list ):
+                  obj = self.FindWindowByName("TXT."+k.upper())
+                  self.parser.set_args_dict(k,obj.GetValue())
    #---  
     def get_command(self,**kwargs):
         self._update_parser_dict()    
@@ -1165,8 +1115,8 @@ class JuMEG_wxArgvParserCMD(JuMEG_wxArgvParserBase):
         self.SetBackgroundColour(kwargs.get("bg", "grey60"))
 
         ctrl_list = []
-        ctrl_list.append(("BT", "BT_UPDATE", "UPDATE", "update command parameter", self.ClickOnCTRL))
-        ctrl_list.append(("COMBO", "COMBO_COMMAND", "COMMAND", [], "select a command / module", self.ClickOnCTRL))
+        ctrl_list.append(("BT", "UPDATE", "UPDATE", "update command parameter", self.ClickOnCTRL))
+        ctrl_list.append(("COMBO", "COMMAND", "COMMAND", [], "select a command / module", self.ClickOnCTRL))
         self.pnl_ctrls = JuMEG_wxControlGrid(self, label="Command", control_list=ctrl_list, cols=len(ctrl_list),AddGrowableCol=[1])
 
   #--- CMD ComboBox
@@ -1190,7 +1140,7 @@ class JuMEG_wxArgvParserCMD(JuMEG_wxArgvParserBase):
         refresh command list in ComboBox
         get exe py filenames from PYTHONPATH jumeg
         """
-        obj = self.FindWindowByName("COMBO_COMMAND")
+        obj = self.FindWindowByName("COMBO.COMMAND")
         if obj:
            self.pnl_ctrls.UpdateComBox(obj,self.JModule.ModuleNames())
            self.UpdateCommandComboBox()
@@ -1200,7 +1150,7 @@ class JuMEG_wxArgvParserCMD(JuMEG_wxArgvParserBase):
          update command combobox
         """
         # --- get exe py filenames from PYTHONPATH jumeg
-        obj = self.FindWindowByName("COMBO_COMMAND")
+        obj = self.FindWindowByName("COMBO.COMMAND")
         idx = obj.GetSelection()
 
         self.JCMD.name = self.JModule.ModuleNames(idx)
@@ -1217,11 +1167,11 @@ class JuMEG_wxArgvParserCMD(JuMEG_wxArgvParserBase):
         # --- click on CommandComboBox
         obj = evt.GetEventObject()
 
-        if obj.GetName().startswith("COMBO_COMMAND"):
-            self.module = self.FindWindowByName("COMBO_COMMAND").GetValue()
+        if obj.GetName().startswith("COMBO.COMMAND"):
+            self.module = self.FindWindowByName("COMBO.COMMAND").GetValue()
             self.UpdateCommandComboBox()
         # --- click on Command Update Button
-        elif obj.GetName().startswith("BT_UPDATE"):
+        elif obj.GetName().startswith("BT.UPDATE"):
             self._refresh()
         else:
             evt.Skip()
@@ -1253,8 +1203,9 @@ class JuMEG_GUI_wxArgvParser(JuMEG_wxMainPanel):
     """
     def __init__(self,parent,**kwargs):
         super().__init__(parent,name="JUMEG_ARGPARSER_PANEL")
-        #self._param     = { "show":{"All":False,"Command":False,"FileIO":False,"Parameter":False,"Logger":False,"Buttons":False,"PBSHosts":False} }
-        self._param     = { "show":{"All":False,"Command":False,"FileIO":False,"Parameter":False,"Buttons":False,"PBSHosts":False} }
+        self._param = { "show"   :{"All":False,"Command":False,"FileIO":False,"Parameter":False,"Buttons":True,"PBSHosts":False}}
+
+
         self.SubProcess = JuMEG_IoUtils_SubProcess() # init and use via pubsub
         self.fullfile   = None
         self._init(**kwargs)
@@ -1273,10 +1224,8 @@ class JuMEG_GUI_wxArgvParser(JuMEG_wxMainPanel):
     def ShowFileIO(self):    return self._get_param("show","FileIO")
     @property        
     def ShowParameter(self): return self._get_param("show","Parameter")
-    @property        
-    def ShowButtons(self):   return self._get_param("show","Buttons")
-    #@property
-    #def ShowLogger(self):    return self._get_param("show","Logger")\
+    @property
+    def ShowButtons(self):return self._get_param("show","Buttons")
     @property
     def ShowPBSHosts(self):  return self._get_param("show","PBSHosts")
     @property
@@ -1307,11 +1256,11 @@ class JuMEG_GUI_wxArgvParser(JuMEG_wxMainPanel):
 
     def update_from_kwargs( self, **kwargs ):
         self.init_status_of_ctrls(**kwargs)
-        self._use_pubsub = kwargs.get("use_pubsub", getattr(self.GetParent(), "use_pubsub", False))
+        self._use_pubsub  = kwargs.get("use_pubsub", getattr(self.GetParent(), "use_pubsub", False))
         self.module_stage = kwargs.get("stage", os.environ['JUMEG_PATH'])  # os.environ['PWD']
-        self.module = kwargs.get("module")
-        self.function = kwargs.get("function", "get_args")
-        self.fullfile = kwargs.get("fullfile", self.fullfile)
+        self.module       = kwargs.get("module")
+        self.function     = kwargs.get("function", "get_args")
+        self.fullfile     = kwargs.get("fullfile", self.fullfile)
         self.SetBackgroundColour(kwargs.get("bg", "grey88"))
 
     def update(self, **kwargs):
@@ -1349,45 +1298,44 @@ class JuMEG_GUI_wxArgvParser(JuMEG_wxMainPanel):
             child.Destroy()
 
         if ( self.ShowFileIO or self.ShowParameter):
-              self._pnl_argparser = JuMEG_wxArgvParserIO(self.PanelA.Panel,**command)
-              self._pnl_argparser.update(ShowParameter=self.ShowParameter,ShowFileIO=self.ShowFileIO)
-              self.PanelA.Panel.GetSizer().Add(self._pnl_argparser,1,wx.ALIGN_CENTER|wx.EXPAND|wx.ALL,8)
+              self.AP = JuMEG_wxArgvParserIO(self.PanelA.Panel,ShowCloseButton=True,**command)
+              self.AP.update(ShowParameter=self.ShowParameter,ShowFileIO=self.ShowFileIO,ShowCloseButton=True)
+              self.PanelA.Panel.GetSizer().Add(self.AP,1,wx.ALIGN_CENTER|wx.EXPAND|wx.ALL,8)
 
               self.PanelA.Panel.SetAutoLayout(1)
-              self._pnl_argparser.FitInside()
+              self.AP.FitInside()
               self.PanelA.Panel.Layout()
 
         self.GetParent().Layout()
 
-
-
-
     def ClickOnApply(self,evt):
         """
-
+        ClickOnApply button sends
         :param evt: 
         :return: 
         """
-        try:
-            cmd = self._pnl_argparser.get_fullfile_command(ShowFileIO=self.ShowFileIO,ShowParameter=self.ShowParameter) #verbose=self.verbose)
-            if self.verbose:
+        wx.LogMessage("ClickOnApply")
+        wx.LogMessage(jb.pp_list2str(self.HostCtrl.HOST.GetHostInfo(),head="HOST Info"))
+
+        cmd = self.AP.get_fullfile_command(ShowFileIO=self.ShowFileIO,ShowParameter=self.ShowParameter) #verbose=self.verbose)
+        if self.verbose:
                wx.LogMessage(jb.pp_list2str(cmd, head="ArgParser Cmd: "))
                wx.LogMessage(jb.pp_list2str(self.HostCtrl.HOST.GetHostInfo(),head="HOST Info"))
-            pub.sendMessage("SUBPROCESS.RUN.START",joblist=[cmd],hostinfo=self.HostCtrl.HOST.GetHostInfo(),verbose=self.verbose)
+        pub.sendMessage("SUBPROCESS.RUN.START",joblist=cmd,hostinfo=self.HostCtrl.HOST.GetHostInfo(),verbose=self.verbose)
 
-        except Exception as e:
-            jb.pp(e,head="Error Exception")
-            pub.sendMessage("MAIN_FRAME.MSG.ERROR",data="press <UPDATE> button and select a command")
+        #except Exception as e:
+        #    jb.pp(e,head="Error Exception")
+        #    pub.sendMessage("MAIN_FRAME.MSG.ERROR",data="press <UPDATE> button and select a command")
 
 
     def ClickOnCancel(self,evt):
-        wx.LogMessage( "<Cancel> button is no in use" )
-        pub.sendMessage("MAIN_FRAME.MSG.INFO",data="<Cancel> button is no in use")
+        pub.sendMessage("SUBPROCESS.RUN.CANCEL",joblist=[],hostinfo=self.HostCtrl.HOST.GetHostInfo(),verbose=self.verbose)
+        #pub.sendMessage("MAIN_FRAME.MSG.INFO",data="<Cancel> button is no in use")
 
     def ClickOnButton(self, evt):
         obj = evt.GetEventObject()
-        if obj.GetName().startswith("APPLY"):
-           self.ClickOnApply()
+        if obj.GetName().startswith("BT.APPLY"):
+           self.ClickOnApply(evt)
         else:
            evt.Skip()
         
@@ -1510,5 +1458,64 @@ if __name__ == '__main__':
         #     pub.sendMessage("MAIN_FRAME.MSG.ERROR",msgtxt="in <UPDATE> command")
 
         self.GetParent().Layout()
-        
+
+
+       
+class JuMEG_wxArgvParserButtons(wx.Panel):
+    """
+     shows Close,Cancel ... Apply button
+     skip event send to parrent
+    """
+ #---     
+    def __init__(self,parent,**kwargs):
+        super(JuMEG_wxArgvParserButtons, self).__init__(parent)   
+        self.update()
+ #---
+    def _update_buttons(self):
+        """ generation wx.Button in a panel"""
+        self._wxctrl_list_of_buttons =[]
+        self._wxctrl_list_of_buttons.append(["CLOSE","BT.CLOSE",wx.ALIGN_LEFT,"Close program",None])
+        self._wxctrl_list_of_buttons.append(["CANCEL","BT.CANCEL",wx.ALIGN_LEFT,"Cancel progress",None])
+        self._wxctrl_list_of_buttons.append(["APPLY","BT.APPLY",wx.ALIGN_RIGHT,"Apply command",None])
+        self._pnl_buttons = JuMEG_wxControlButtonPanel(self,label=None,control_list=self._wxctrl_list_of_buttons)
+        self.Bind(wx.EVT_BUTTON, self.ClickOnButton)
+ #--- 
+    def _update_kwargs(self,**kwargs):
+        self.use_pubsub    = kwargs.get("pubsub",True)
+        self.verbose       = kwargs.get("verbose",False)               
+ #---   
+    def update(self,function=None,module=None,package=None,**kwargs):
+        """ update """
+        self._update_kwargs(**kwargs)
+        self._update_buttons()
+        self._ApplyLayout()
+ #---      
+    def _ApplyLayout(self):
+        """set button panel"""
+       
+        # split the window
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.Sizer.Add(self._pnl_buttons,0,wx.EXPAND,2)
+        self.SetSizer(self.Sizer)
+        self.Sizer.Fit(self)
+        self.SetAutoLayout(1)
+ #--- 
+    def ClickOnButton(self,evt):
+      """ skip event, send to parent"""
+      obj = evt.GetEventObject()
+      evt.Skip()
+
+
+
+
+"cmd_buttons":{"All":False,"Close":False,"Cancel":True,"Apply":True}}     
+   
+      if kwargs.get("ShowCMDButtons",False):
+           for k in self._param["cmd_buttons"].keys():
+               self._param["cmd_buttons"][k]=True
+        self.ShowCMDClose = kwargs.get("ShowCloseButton", self.ShowCloseButton)
+  @property
+    def ShowCloseButton( self ): return self._get_param("cmd_buttons", "Close")
+
+      
 '''
