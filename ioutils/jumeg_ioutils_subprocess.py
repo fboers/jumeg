@@ -22,6 +22,7 @@ from subprocess       import Popen, PIPE
 from threading        import Thread
 from wx.lib.pubsub    import pub
 from jumeg.jumeg_base import jumeg_base as jb
+from jumeg.gui.wxlib.jumeg_gui_wxlib_pbshost  import JuMEG_PBSHostsParameter
 
 __version__="2010-11-15-001"
 
@@ -44,29 +45,296 @@ else:
 print result
 
 '''
-class JuMEG_IoUtils_SubProcThread(Thread):
+
+class JuMEG_IoUtils_SubProc_Base(object)
+   #__slots__ =["proc","args","cmd","use_shell","stdout","stdin"]
+   def __init__( self, **kwargs ):
+       super().__init__()
+       self._proc     = None
+       self._pid      = None
+       self._args     = None
+       self._cmd      = None
+       self._use_shell= True
+       self._stdout   = None
+       self._stderr   = None
+   
+   @property
+   def job_number(self): return self._jobnumber
+   #---
+   @property
+   def cmd(self): return self._cmd
+   #---
+   @property
+   def args(self): return self._args
+   #---
+   @property
+   def proc(self): return self.__proc
+ 
+
+class JuMEG_IoUtils_SubProc_LogMsg(object):
+   def __init__( self, **kwargs ):
+       super().__init__()
+       self._init(**kwargs)
+       
+   @property
+   def msg_prefix(self): return "  process -> {} -> Host: {} ->".format(self.name,self.hostname)
+   
+   def _update_from_kwargs(self,**kwargs):
+       self.name     = kwargs.get("name","RunOnLocal")
+       self.hostname = kwargs.get("hostname","local")
+       self.verbose  = kwargs.get("verbose",False)
+
+   def _init(self,**kwargs ):
+       self._update_from_kwargs(**kwargs)
+       
+   def msg_start(self):
+       wx.LogMessage("{} START\n".format(self.msg_prefix))
+    
+   def msg_stop(self):
+        wx.LogMessage("{} STOP\n".format(self.msg_prefix))
+    
+   def msg_cmd(self,cmd):
+       wx.LogMessage(jb.pp_list2str(cmd,head=self.msg_prefix + " cmd:"))
+  
+   def msg(self,msg,head=None):
+       if head:
+          head= self.msg_prefix + " "+ head
+       wx.LogMessage(jb.pp_list2str(msg,head=head))
+  
+   def msg_stdout(self):
+       if self._stdout:
+          s = str(self._stdout,'utf-8')
+          wx.LogMessage(self.msg_prefix + "  STDOUT:\n   " + re.sub(r'\n+',"\n",s).strip())
+       else:
+          wx.LogMessage(self.msg_prefix + "  STDOUT: None")
+    
+   def msg_stderr(self):
+       if self._stderr:
+          s = str(self._stderr,'utf-8')
+          wx.LogMessage(self.msg_prefix + "  STDERR:\n   " + re.sub(r'\n+',"\n",s).strip())
+       else:
+          wx.LogMessage(self.msg_prefix + "  STDERR: None")
+    
+   def post_event(self,message,data):
+       wx.CallAfter(lambda *a:pub.sendMessage(message,data=data))
+
+
+class JuMEG_IoUtils_SubProcThreadBase(Thread):
+    """
+    base cls
+    """
+    __slots__ = ["id","name","joblist","pid","verbose"]
+
+    def __init__( self, **kwargs ):
+        super().__init__()
+
+        self._proc      = None
+        self._args      = None
+        self._cmd       = None
+        self._stdout    = None
+        self._stderr    = None
+        self._use_shell = True
+        
+        self._isbusy    = False
+        self.Host       = JuMEG_PBSHostsParameter(kernels=1, maxkernels=1, maxnodes=1, name="local", nodes=1,
+                                                  cmd_prefix="/usr/bin/env",
+                                                  python_version="python3")
+        self.Log        = JuMEG_IoUtils_SubProc_LogMsg()
+        
+        self._evt_msg_key = {"error" : "MAIN_FRAME.MSG.ERROR",
+                             "isbusy": "MAIN_FRAME.STATUS.BUSY"}
+
+        self._init(**kwargs)
+
+        
+    @property
+    def isBusy(self): return self.__isbusy
+    
+    def check_joblist(self):
+        """
+        ck if joblist is not none,
+        post event msg if None
+        or converts to list if needed
+        
+        :return True/False
+        
+        todo raise exception if None
+        """
+        if not self.joblist:
+          s= jb.get_function_name() +" command or joblist not defined"
+          self.Log.post_event( self._evt_msg_key["error"],data=s)
+          return
+        
+        if not isinstance(self.joblist, list):
+           self.joblist = list(self.joblist)
+
+        else: return True
+        
+    def _set_isbusy(self,status):
+        self.__isbusy = status
+        self.Log.post_event(self.event_message["isbusy"],data=status)
+
+    def check_prefix_and_python_version(self):
+        cmd=[]
+        if self.Host.cmd_prefix:
+           cmd.append(self.Host.cmd_prefix)
+        if self.Host.python_version.startswith("python"):
+           cmd.append(self.Host.python_version)
+        if cmd:
+           return (" ".join(cmd)).strip()
+        return ""
+   
+    def _update_from_kwargs(self,**kwargs):
+        self.joblist = kwargs.get("joblist","ls -lisa")
+        self.name    = kwargs.get("name","RunOnLocal")
+        self.verbose = kwargs.get("verbose",False)
+
+        if kwargs.get("hostinfo"):
+           self.Host.update(**kwargs.get("hostinfo"))
+
+    def _init(self,**kwargs ):
+        self._update_from_kwargs(**kwargs)
+        self.update(**kwargs)
+        self.update_log()
+        
+    def update_log(self):
+        self.Log.name     = self.name
+        self.Log.hostname = self.Host.name
+        
+    def update(**kwargs):
+        """ overwrite"""
+        pass
+    
+    def run(self):
+        """Run Worker Thread overwrite"""
+        pass
+
+class JuMEG_IoUtils_SubProcThreadLocal(JuMEG_IoUtils_SubProcThreadBase):
+   """
+   runs on local machine in a new thread
+   """
+   def __init__(self,**kwargs):
+       super().__init__(JuMEG_IoUtils_SubProcThreadBase)
+
+   def run(self):
+       """
+       execute command on local host
+
+       Parameter
+       ---------
+       cmd: string <None>
+       """
+       self._pidlist = []
+       self._job_number = 0
+       self._cmd = None
+
+       if not self.chek_joblist: return
+       self._set_isbusy(True)
+     
+       if self.verbose:
+          self.Log.msg(self.joblist, head="Job list:")
+          self.Log.msg(self.Host.get_parameter(),head="Host Parameter" )
+       
+       for job in self.joblist:
+            if isinstance(job, list):
+               self._cmd = " ".join(job)
+            else:
+               self._cmd = job
+
+            #   self._args = shlex.split(job)
+            
+            #if not self.chek_args: return
+            
+            if self.verbose:
+               self.Log.msg_process()
+               self.Log.msg_start()
+               
+           cmd = self.check_prefix_and_python_version()
+           if cmd:
+              cmd +=  self._cmd
+           else:
+               cmd = self._cmd
+               
+               
+               
+       sdjksfdjkfdjkfdjksfda
+           
+           # --- init & start process
+            if self.Host.python_version.startswith("python"):
+               self._args[0] = self._cmd_prefix +" "+self.Host.python_version+" "+self._args[0]
+
+            arg_str= " ".join(self._args)
+            wx.LogMessage("158 subporc "+arg_str )
+            wx.LogMessage("159 subporc ".format( self.Host.get_parameter() ) )
+
+            #with Popen(["ifconfig"], stdout=PIPE) as proc:
+                 #log.write(proc.stdout.read())
+
+            self.__proc = Popen(arg_str, stdout=PIPE, stderr=PIPE,shell=True)
+            self._pidlist.append(self.__proc.pid)
+
+            self._job_number+=1
+            wx.LogMessage(" -->RUN SubProc Nr.: {}  PID: {}".format(self.job_number,self.__proc.pid))
+            self.post_event("MAIN_FRAME.STB.MSG",data=["RUN", self._args[0], "PID", str(self.__proc.pid)])
+
+            self._stdout, self._stderr = self.__proc.communicate()
+
+            if self.verbose:
+               self.log_info_stop_process()
+               #self.log_info_stdout()
+               #self.log_info_stderr()
+
+        self.post_event("MAIN_FRAME.STATUS.BUSY",data=False)
+        self.__isBusy = False
+
+
+
+
+class JuMEG_IoUtils_SubProcThreadSSH(JuMEG_IoUtils_SubProcThreadBase):
+   """
+   runs on remote machine via ssh
+   """
+   def __init__( self, **kwargs ):
+       super().__init__()
+
+class JuMEG_IoUtils_SubProcThreadPBS(JuMEG_IoUtils_SubProcThreadBase):
+   """
+   runs on a remote machine in a PBS environoment
+   e.g. cluster system
+   """
+   def __init__( self, **kwargs ):
+       super().__init__()
+
+
+class JuMEG_IoUtils_SubProcThread(JuMEG_IoUtils_SubProcThreadBase):
     """SubProc Worker Thread Class."""
 
    # ----------------------------------------------------------------------
-    def __init__(self,joblist=None,hostinfo={'kernels': 1, 'maxkernels': 1, 'maxnodes': 1, 'name': 'local', 'nodes': 1},verbose=False):
-        """Init Worker Thread Class."""
+    def __init__(self,**kwargs):
+        """
+        hostinfo: dict with keys of Host CLS
+        joblist : None the jobs/cmds to execute
+        verbose : False
+        """
         super().__init__()
-        self.joblist = joblist
-        self.hostinfo= hostinfo
+        self.Host = JuMEG_PBSHostsParameter(kernels=1, maxkernels=1, maxnodes=1, name="local", nodes=1,python_version="python3")
+
+        self._cmd_prefix = "/usr/bin/env"
+
         self._jobnumber = 0
         self._args    = None
         self._cmd     = None
+        self._use_shell=True
         self._stdout  = None
         self._stderr  = None
         self.__proc   = None
-        self.verbose  = verbose
-       # self.start()  # start the thread
+        self._init(**kwargs)
+
+    def _init( self, **kwargs ):
+        self._update_from_kwargs(**kwargs)
 
     @property
     def job_number(self): return self._jobnumber
-   #---
-    @property
-    def host(self): return self.hostinfo["name"]
    #---
     @property
     def cmd(self): return self._cmd
@@ -78,8 +346,10 @@ class JuMEG_IoUtils_SubProcThread(Thread):
     def proc(self): return self.__proc
    #---
     def _update_from_kwargs(self,**kwargs):
-        self.joblist = kwargs.get("joblist",self.joblist)
-        self.hostinfo= kwargs.get("hostinfo",self.hostinfo)
+        self.joblist = kwargs.get("joblist","ls -lisa")
+        self.verbose = kwargs.get("verbose", False)
+        if kwargs.get("hostinfo"):
+           self.Host.update(**kwargs.get("hostinfo"))
 
     def post_event(self,message,data):
         wx.CallAfter(lambda *a: pub.sendMessage(message,data=data))
@@ -87,17 +357,12 @@ class JuMEG_IoUtils_SubProcThread(Thread):
    # ----------------------------------------------------------------------
     def run(self): #,**kwargs):
         """Run Worker Thread."""
-        # self._update_from_kwargs(**kwargs)
         if not self.joblist: return
 
-        if self.host == "local":
+        if self.Host.name == "local":
            self.run_on_local()
         else:
            self.run_on_cluster()
-
-        #wx.CallAfter(self.postTime, i)
-        #time.sleep(5)
-        #wx.CallAfter(Publisher().sendMessage, "update", "Thread finished!")
 
    # ----------------------------------------------------------------------
     def run_on_local(self):
@@ -147,8 +412,17 @@ class JuMEG_IoUtils_SubProcThread(Thread):
                self.log_info_start_process()
 
            # --- init & start process
-            self._args = ['ls','-lisa']
-            self.__proc = Popen(self._args, stdout=PIPE, stderr=PIPE)
+            if self.Host.python_version.startswith("python"):
+               self._args[0] = self._cmd_prefix +" "+self.Host.python_version+" "+self._args[0]
+
+            arg_str= " ".join(self._args)
+            wx.LogMessage("158 subporc "+arg_str )
+            wx.LogMessage("159 subporc ".format( self.Host.get_parameter() ) )
+
+            #with Popen(["ifconfig"], stdout=PIPE) as proc:
+                 #log.write(proc.stdout.read())
+
+            self.__proc = Popen(arg_str, stdout=PIPE, stderr=PIPE,shell=True)
             self._pidlist.append(self.__proc.pid)
 
             self._job_number+=1
@@ -179,10 +453,10 @@ class JuMEG_IoUtils_SubProcThread(Thread):
         pass
 
     def log_info_start_process(self):
-        wx.LogMessage("  -> start process Host: {} \n".format(self.host))
+        wx.LogMessage("  -> start process Host: {}\n".format(self.Host.name))
 
     def log_info_stop_process(self):
-        wx.LogMessage("  -> stop  process Host: {} Time: {}\n".format(self.host))
+        wx.LogMessage("  -> stop  process Host: {}\n".format(self.Host.name))
 
     def log_info_process(self):
         wx.LogMessage(jb.pp_list2str(self.cmd,head=" -->SubProcess cmd:"))
@@ -207,34 +481,36 @@ class JuMEG_IoUtils_SubProcess(object):
     """
     jumeg subclass for subprocess module
     
-    local 
+    run on local machine
     
     ToDo
     -----
-    devel version
-    implement support for ssh to pc & ssh cluster via PBS protocoll
+    implement support for ssh to pc & ssh cluster via PBS protocol
     """
-    def __init__(self):
-        super(JuMEG_IoUtils_SubProcess,self).__init__()
-        self.verbose  = None
-        self._args    = None
-        self._cmd     = None
-        self._stdout  = None
-        self._stderr  = None
-        self._host    = "local"
+    def __init__(self,**kwargs):
+        super().__init__()
 
-        self._hostinfo_default = {'kernels': 1, 'maxkernels': 1, 'maxnodes': 1, 'name': 'local', 'nodes': 1}
-        self.hostinfo = self._hostinfo_default
+      # self.hostinfo_default={'kernels': 1, 'maxkernels': 1, 'maxnodes': 1, 'name': 'local', 'nodes': 1,'python_version':"python3"},
+      # self.hostinfo = self._hostinfo_default
+        #self.Thrd = JuMEG_IoUtils_SubProcThread()
 
-        self.__proc   = None
-        self.__isBusy = False
-        self.verbose  = True
+        self._args      = None
+        self._cmd       = None
+
+        self._stdout    = None
+        self._stderr    = None
+        self.__proc     = None
+        self.__isBusy   = False
+        self._thrd_list = []
+
+        #self._init(**kwargs)
+
         self._init_pubsub_messages()
-        self.SubProcTHRD = JuMEG_IoUtils_SubProcThread()
-        #self.host_choices=["local","ssh","cluster"]
-        
-        
-        # ToDo get list of PCs & clusters
+
+
+    #def _init(self,**kwargs):
+    #    self.verbose = kwargs.get("verbose", False)
+        #self.Host.update( kwargs.get("host", None) )
    #---
     @property
     def cmd(self): return self._cmd
@@ -247,12 +523,6 @@ class JuMEG_IoUtils_SubProcess(object):
    #---   
     @property
     def isBusy(self): return self.__isBusy
-   #---
-    @property
-    def host(self): return self._host
-    @host.setter
-    def host(self,v): self._host=v
-
 
     def _init_pubsub_messages(self):
         pub.subscribe(self.run,       'SUBPROCESS.RUN.START')
@@ -261,7 +531,7 @@ class JuMEG_IoUtils_SubProcess(object):
         #pub.subscribe(self.run_on_cluster,'SUBPROCESS.RUN.CLUSTER')
         pass
 
-    def run(self,joblist=None,hostinfo=None,verbose=False):
+    def run(self,joblist=None,hostinfo=None,verbose=None):
         """
         https://wiki.wxpython.org/LongRunningTasks
 
@@ -273,19 +543,20 @@ class JuMEG_IoUtils_SubProcess(object):
 
         self.__isBusy=True
 
-        if hostinfo:
-           self.hostinfo=hostinfo
+        if not isinstance(joblist, (list)):
+            joblist = [joblist]
 
-       #--- make new thrd
-       #--- https://www.tutorialspoint.com/python3/python_multithreading.htm
-        thrd = JuMEG_IoUtils_SubProcThread(joblist=joblist,hostinfo=self.hostinfo,verbose=verbose)
+        if hostinfo.host == "local":
+           thrd = JuMEG_IoUtils_SubProcThreadLocal(joblist=joblist,hostinfo=hostinfo,verbose=verbose)
+        elif hostinfo.host.endswith("cluster"):
+           thrd = JuMEG_IoUtils_SubProcThreadPBS(joblist=joblist,hostinfo=hostinfo, verbose=verbose)
+        else:
+           thrd = JuMEG_IoUtils_SubProcThreadPBS(joblist=joblist,hostinfo=hostinfo, verbose=verbose)
+
+        self._thrd_list.append(thrd)
+       #--- ToDo delete thrd from list vid idx id
+        thrd.id = len(self._thrd_list)
         thrd.start()
-       # thrd.join()  # this will wait till thrd ends
-
-       # if self.host == "local":
-       #    thread.start_new_thread( self.run_on_local() )
-       # else:
-        #   thread.start_new_thread( self.run_on_cluster() )
 
         self.__isBusy=False
     
@@ -449,4 +720,78 @@ subprocess.call(args, *, stdin=None, stdout=None, stderr=None, shell=False)
  
  s = subprocess.check_output(["echo", "Hello World!"])
 print("s = " + s)
+
+
+
+import subprocess
+import time
+import wx
+
+from threading import Thread
+
+
+class PingThread(Thread):
+
+    def __init__(self, text_ctrl):
+        Thread.__init__(self)
+        self.text_ctrl = text_ctrl
+        self.sentinel = True
+        self.start()
+
+    def run(self):            
+        proc = subprocess.Popen("ping www.google.com",
+                                     shell=True,
+                                     stdout=subprocess.PIPE)
+        while self.sentinel:
+            line = proc.stdout.readline()
+            if line.strip() == "":
+                pass
+            else:
+                wx.CallAfter(self.text_ctrl.write, line)
+
+            if not line: break
+
+        proc.kill()
+
+
+https://stackoverflow.com/questions/45289661/how-to-get-results-from-subprocess-stdout-and-display-them-realtime-in-textctrl
+class MyFrame(wx.Frame):
+
+    def __init__(self):
+        wx.Frame.__init__(self, None, title='Redirecter')
+        self.ping_thread = None
+
+        main_sizer = wx.BoxSizer(wx.VERTICAL)
+
+        panel = wx.Panel(self)
+
+        self.log = wx.TextCtrl(panel, style=wx.TE_MULTILINE)
+
+        ping_btn = wx.Button(panel, label='Ping')
+        ping_btn.Bind(wx.EVT_BUTTON, self.on_ping)
+
+        main_sizer.Add(self.log, 1, wx.ALL|wx.EXPAND, 5)
+        main_sizer.Add(ping_btn, 0, wx.ALL, 5)
+        panel.SetSizer(main_sizer)
+
+        self.Bind(wx.EVT_CLOSE, self.on_close)
+
+        self.Show()
+
+    def on_ping(self, event):
+        self.ping_thread = PingThread(self.log)
+
+    def on_close(self, event):
+        if self.ping_thread:
+            self.ping_thread.sentinel = False
+            self.ping_thread.join()
+        self.Destroy()
+
+
+if __name__ == '__main__':
+    app = wx.App(False)
+    frame = MyFrame()
+    app.MainLoop()
+
+
 """
