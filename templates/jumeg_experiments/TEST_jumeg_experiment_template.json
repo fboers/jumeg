@@ -1,22 +1,20 @@
 {
     "info": {
-        "time": "2019-01-16 12:34:49",
+        "time": "2019-02-06 10:20:42",
         "user": "fboers",
-        "version": "2019-01-16-0.001",
+        "version": "2019-02-06-0.001",
         "jumeg_template_version": "2018-12-13.001",
         "jumeg_gui_version": "2019-01-04.001"
     },
     "experiment": {
-        "name": "MEG94T",
+        "name": "TEST",
         "stages": [
             "${JUMEG_PATH_MOUNT_POINT}/meg_store1/exp",
             "${JUMEG_PATH_MOUNT_POINT}/meg_store2/exp",
             "${JUMEG_PATH_LOCAL_DATA}/exp"
         ],
         "scans": [
-            "MEG94T",
-            "MEG94T0T",
-            "MEG94T0T2"
+            "INTEXT01"
         ],
         "bads_list": [
             "MEG 007",
@@ -44,7 +42,8 @@
     "bti_export": {
         "bti_path": [
             "${JUMEG_PATH_BTI_EXPORT}",
-            "/data/MEG/meg_store2/megdaw_data21"
+            "/data/MEG/meg_store2/megdaw_data21",
+            "${JUMEG_PATH_LOCAL_DATA}/megdaw_data21"
         ],
         "pdf_name": "c,rfDC",
         "config_fname": "config",
@@ -53,8 +52,9 @@
         "translation": "None",
         "ecg_ch": "None",
         "eog_ch": "None",
-        "fif_file_extention": "-raw.fif",
-        "emptyroom": "-empty",
+        "fif_extention": "-raw.fif",
+        "fif_path_prefix": "INTEXT/mne",
+        "emptyroom": "-empty.fif",
         "overwrite": false,
         "fakesHS": false
     }
