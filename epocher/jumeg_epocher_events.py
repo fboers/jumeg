@@ -135,8 +135,7 @@ class JuMEG_Epocher_Basic(JuMEG_Base_Basic):
         
         self._stat_postfix = '-epocher-stats.csv'
         self._idx_bad      = -1
-        self.version       = __version__
-        
+       
 #---
     @property
     def idx_bad(self): return self._idx_bad

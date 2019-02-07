@@ -191,19 +191,20 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         
       #--- 
         if self.verbose:
-           print"\n ---> Export Events from HDF to MNE-Events for condition: " + condi
-           print"   -> number of original events   : {}".format(event_cnts)
-           print"   -> number of events            : {}".format( evt['events'].shape[0] )
-           self.line()
-           print"   -> check weights to skip first : {}".format(ck_weights_skip_first)
-           print"   -> check weights to equalize   : {}".format(ck_weights_equalize)
-           self.line()  
+           msg=[" ---> Export Events from HDF to MNE-Events for condition: " + condi,
+                "   -> number of original events   : {}".format(event_cnts),
+                "   -> number of events            : {}".format( evt['events'].shape[0]),
+                "-" * 40,
+                "   -> check weights to skip first : {}".format(ck_weights_skip_first),
+                "   -> check weights to equalize   : {}".format(ck_weights_equalize),
+                "-" * 40]
            bads = df[ self.marker.type_output ][ (df['bads']== self.idx_bad) ]
-           print"   -> bad events : " + str(bads.shape)
-           print bads
-           print"\nEvent Info:"
-           self.line()
-       
+           msg.append("   -> bad events : " + str(bads.shape))
+           msg.append( bads.to_string())
+           msg.append("Event Info:")
+           msg.append( "-"*40)
+           self.Log.info( msg )
+           
         return(df,evt,ep_param,info_param)
        
 #--- 
@@ -212,15 +213,12 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         self.event_id = dict()
         
         if not self.HDFobj:
-           print" --> ERROR  in <epocher_run> please call <apply_epocher> first"
+           self.Log.info(" --> ERROR  in <epocher_run> please call <apply_epocher> first")
            return
        #----
         for condi in self.condition_list:
-            print"\n"
-            self.line()
-            print"===> JuMEG EpocherEpochs Apply : "+  condi
-            self.line()
-     
+            msg=[ "-"*40,"===> JuMEG EpocherEpochs Apply : "+  condi, "-"*40 ]
+            self.Log.info(msg)
           #---
             df,evt,ep_param,info_param = self._epochs_get_events(condi,ck_weights_skip_first=True,ck_weights_equalize=False)
        
@@ -244,7 +242,7 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
       #--- "weights":{"mode":"equal","selection":"median","skipp_first":null},
         if self.weights:
            if self.weights.get('mode') == 'equal':
-              print "\n ---> Applying Weighted Export Events"     
+              self.Log.info("\n ---> Applying Weighted Export Events")
               
               self.weights['min_counts'] = self.event_id[ self.event_id.keys()[0] ]['trials'] 
               for condi in self.event_id.keys() :
@@ -298,13 +296,13 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         """       
      
         self.marker   = None
-      
-        print " ---> EPOCHER HDF to MNE events -> extract condition : " + condi
+
+        self.Log.info(" ---> EPOCHER HDF to MNE events -> extract condition : " + condi)
       
        #--- get hdf key make node  
         ep_key = self.hdf_get_hdf_key(condi)
-        if not ep_key : 
-           print"NO HDF-key found for condition: "+ condi +"\n" 
+        if not ep_key :
+           self.Log.info("NO HDF-key found for condition: "+ condi +"\n")
            return
         
        #--- get pandas data frame from HDF
@@ -359,16 +357,15 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
            # data.loc[data['name'] == 'fred', 'A'] = 0
        
         if self.verbose:
-           print"\n ---> epocher_hdf_data_get_event_index"
-           print"   -> marker type result: " + self.marker.type_result
-           print"   -> response matching : {}".format(self.response.matching)
-           print"   -> marker type value : %d" %(mkr_type)
-           # self.pp( event_idx,head="event index")
-           print"   -> number of events  : " + str( event_idx.size )
-           self.line()
-           
+           msg=["---> epocher_hdf_data_get_event_index",
+                "   -> marker type result: " + self.marker.type_result,
+                "   -> response matching : {}".format(self.response.matching),
+                "   -> marker type value : %d" %(mkr_type),
+                "   -> number of events  : " + str( event_idx.size ),
+                "-" * 40
+               ]
+           self.Log.info(msg)
         return df,event_idx
-
 
 #---
     def _epochs_check_weights_to_skip_first(self,df,events_idx,weights=None):
@@ -463,15 +460,15 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         events_idx = np.where( df['weighted_selected'] > 0 )[0] #.index
         
         if self.verbose:
-           print"---> Weighted Marker => event index => method:" + method
+           msg=["---> Weighted Marker => event index => method:" + method]
            if self.is_number(w_value):
-              print"   -> value           : %0.3f" % (w_value)
-           print"   -> number of events: {}".format( events_idx.shape[0] )
-           print"   -> min counts      : {}".format( self.weights['min_counts'] )
-           print"   -> type output     : " + self.marker.type_output
-           #if w_events_idx.any():
-           #   print df[self.marker.type_output][w_events_idx]
-           self.line()
+              msg.append("   -> value           : %0.3f" % (w_value))
+
+           msg.append("   -> number of events: {}".format( events_idx.shape[0] ))
+           msg.append("   -> min counts      : {}".format( self.weights['min_counts'] ))
+           msg.append("   -> type output     : " + self.marker.type_output)
+           msg.append( "-"*40 )
+           self.Log.info(msg)
         
         return df,events_idx
     
@@ -531,17 +528,16 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
               evt['bc']['event_id']     = evt['bc']['events'][:,2].min()
       #-----  
         if self.verbose:
-           self.line() 
-           print"\n ---> epocher init mne events & baseline-events"
-           # print" event dict: "           
-           # self.pp( evt )
-           print"  -> number of events         : " + str( evt["events"].shape )
+           msg=["-"*40,
+                "\n ---> epocher init mne events & baseline-events",
+                "  -> number of events         : " + str( evt["events"].shape )
+               ]
            if evt.get("bc"):
-              print"  -> number baseline of events: " + str( evt["bc"]["events"].shape )
+               msg.append("  -> number baseline of events: " + str( evt["bc"]["events"].shape ))
            else:
-              print"  -> baseline not defined"   
-           self.line()
-           
+               msg.append("  -> baseline not defined")
+           msg.append("-"*40)
+           self.Log.info(msg)
         return evt  
 #---   
     def _epochs_save_hdf_data(self,df,ep_param,info_param,condi) :
@@ -561,9 +557,9 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         """    
        #--- get hdf key make node  
         ep_key = self.hdf_get_hdf_key(condi)
-        if not ep_key : 
-           print" --> ERROR in <epocher_save_hdf_data> !!!"
-           print" --> no HDF-key found for condition: "+ condi +"\n" 
+        if not ep_key :
+           self.Log.info([" --> ERROR in <epocher_save_hdf_data> !!!",
+                          " --> no HDF-key found for condition: "+ condi])
            return
        
         storer_attrs = {'epocher_parameter': ep_param,'info_parameter':info_param} 
@@ -597,14 +593,14 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
                
             ep_bads_cnt1 = df['bads'][df['bads'] == self.idx_bad].size 
                
-            if self.verbose:         
-               print"\n---> Exclude artefacts " + condi + " : " + kbad
-               print"---> Tmin: %0.3f Tmax %0.3f" % (exclude_events[kbad]['tmin'],exclude_events[kbad]['tmax'])
-               print"---> bad epochs     : %d" %(ep_bads_cnt0)
-               print"---> artefact epochs: %d" %(ep_bads_cnt1 - ep_bads_cnt0)
-               print"---> excluded epochs: %d" %(ep_bads_cnt1)
-                  #if  (ep_bads_cnt1 - ep_bads_cnt0) > 0:
-                  #    assert "FOUND"
+            if self.verbose:
+               self.Log.info([
+                              "---> Exclude artefacts " + condi + " : " + kbad,
+                              "---> Tmin: %0.3f Tmax %0.3f" % (exclude_events[kbad]['tmin'],exclude_events[kbad]['tmax']),
+                              "---> bad epochs     : %d" %(ep_bads_cnt0),
+                              "---> artefact epochs: %d" %(ep_bads_cnt1 - ep_bads_cnt0),
+                              "---> excluded epochs: %d" %(ep_bads_cnt1)
+                             ])
                       
         df['selected']          = 1  
         df['weighted_selected'] = 1  
@@ -715,24 +711,26 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
            evt['epochs'] = ep
             
         if self.verbose:
-           print" ---> Epocher apply epoch and baseline -> mne epochs:" 
-           print"   -> fname : " + self.fname
-           print"      id: %d  <pre time>: %0.3f <post time>: %0.3f" % (evt['event_id'],self.marker.time_pre,self.marker.time_post)
-           print"  --> baseline correction : %r" %(evt['baseline_corrected'])
-           self.line()
-           print" --> epoch info: "
-           print"\n --> Epoch selection: {}".format( ep.selection.shape )
-           print ep.selection
-           self.line()
-           print"  -> MEG min   : %0.15f" %( meg_min )
-           print"  -> MEG min BC: %0.15f" %( evt['epochs']._data[:,meg_picks,:].min() )
-           print"  -> MEG max   : %0.15f" %( meg_max )
-           print"  -> MEG max BC: %0.15f" %( evt['epochs']._data[:,meg_picks,:].max() )
-           self.line()
+           msg=[" ---> Epocher apply epoch and baseline -> mne epochs:",
+                "   -> fname : " + self.fname,
+                "      id: %d  <pre time>: %0.3f <post time>: %0.3f" % (evt['event_id'],self.marker.time_pre,self.marker.time_post),
+                "  --> baseline correction : %r" %(evt['baseline_corrected']),
+                "-" * 40,
+                " --> epoch info: ",
+                "\n --> Epoch selection: {}".format( ep.selection.shape ),
+                np.array2string(ep.selection),
+                "-" * 40,
+                "  -> MEG min   : %0.15f" %( meg_min ),
+                "  -> MEG min BC: %0.15f" %( evt['epochs']._data[:,meg_picks,:].min() ),
+                "  -> MEG max   : %0.15f" %( meg_max ),
+                "  -> MEG max BC: %0.15f" %( evt['epochs']._data[:,meg_picks,:].max() ),
+                "-" * 40
+               ]
            if evt['baseline_corrected']:
-              print"  -> done -> baseline correction"
-              print"     bc id: %d  <pre time>: %0.3f <post time>: %0.3f" % (evt['bc']['event_id'],self.marker.time_pre,self.marker.time_post)
-              self.line() 
+              msg.append("  -> done -> baseline correction")
+              msg.append("     bc id: %d  <pre time>: %0.3f <post time>: %0.3f" % (evt['bc']['event_id'],self.marker.time_pre,self.marker.time_post))
+              msg.append("-"*40)
+           self.Log.info(msg)
         return evt
     
 #---
@@ -756,8 +754,7 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         default bbaseline correction type is <marker.baseline.method> or mean
         
         """
-        self.line()
-        print"  -> Epocher baseline correction for events"
+        self.Log.info("-"*40 +"\n  -> Epocher baseline correction for events")
         
         ep_bc_cor_values = np.array([])
         
@@ -795,19 +792,20 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
       
        #---Test for equal drops
         if self.verbose:
-           print " --> ck equal number of epoch events for epoch and baseline-epochs: "
+           self.Log.info(" --> ck equal number of epoch events for epoch and baseline-epochs: ")
            ck= (ep.selection - ep_bc.selection).max()
            if ck != 0:
-              print "ERROR no equal number of epoch events for epoch and baseline-epochs !!!\n"
-              print"EXIT in _calc_baseline_correction_for_events\n"
+              self.Log.info( ["ERROR no equal number of epoch events for epoch and baseline-epochs !!!\n",
+                              "EXIT in _calc_baseline_correction_for_events\n"])
               sys.exit()
-           else: print"  -> OK" 
+           else:
+              self.Log.info("  -> OK")
        
         ep._data[:,picks_bc,:] -= ep_bc_cor_values[:,:,np.newaxis]
        
-        print"  -> Done Epocher baseline correction for events"
-        print"  -> baseline intervall :[ %3.3f , %3.3f] " %(tmin,tmax)
-     
+        self.Log.info(["  -> Done Epocher baseline correction for events",
+                       "  -> baseline intervall :[ %3.3f , %3.3f] " %(tmin,tmax)
+                      ])
         return ep 
     
 #---
@@ -832,8 +830,8 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         default bbaseline correction type is <marker.baseline.method> or mean
         
         """
-        
-        print"  -> Epocher baseline correction for unique events"
+
+        self.Log.info("  -> Epocher baseline correction for unique events")
         
         ep_bc_cor_values = np.array([])
         
@@ -884,10 +882,10 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
             idx_bc+=1
     
         if self.verbose:                      
-           self.pp( ep,head=" --> Baseline correction for unique basline epochs" ) 
-        
-        print"  -> Done Epocher baseline correction for unique events"
-        print"  -> baseline intervall :[ %3.3f , %3.3f] " %(tmin,tmax)
+           self.pp( ep,head=" --> Baseline correction for unique basline epochs" )
+
+        self.Log.info(["  -> Done Epocher baseline correction for unique events",
+                       "  -> baseline intervall :[ %3.3f , %3.3f] " %(tmin,tmax)])
         return ep
     
 #---
@@ -978,16 +976,17 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
           fname = jumeg_base.get_fif_name(raw=self.raw,postfix=postfix,extention=".eve",update_raw_fname=False)
               
           mne.event.write_events( fname,evt['events'] )
-          print" ---> done jumeg epocher save events as => EVENTS :" +fname
-          print"   -> number of events : %d" %(evt['events'].shape[0]) 
-          self.line()
+          self.Log.info([" ---> done jumeg epocher save events as => EVENTS :" +fname,
+                         "   -> number of events : %d" %(evt['events'].shape[0]),
+                         "-" * 40
+                         ])
           
       #--- save epoch data
        if save_mode["epochs"]:
           fname = jumeg_base.get_fif_name(raw=self.raw,postfix=postfix,extention="-epo.fif",update_raw_fname=False)
           evt['epochs'].save( fname )
-          print" ---> done jumeg epocher save events as => EPOCHS :" +fname +"\n"
-          self.line()
+          self.Log.info(" ---> done jumeg epocher save events as => EPOCHS :" +fname +"\n"+"-"*40)
+          
       #--- save averaged data
           if save_mode["evoked"]:
              fname = jumeg_base.get_fif_name(raw=self.raw,postfix=postfix,extention="-ave.fif",update_raw_fname=False)
@@ -995,12 +994,11 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
              #print evt_avg
              #evt_avg.plot()
              mne.write_evokeds( fname,evt['epochs'].average( picks = jumeg_base.picks.all(self.raw) ) ) # in case avg only trigger or response              
-             print" ---> done jumeg epocher save events as => EVOKED (averaged) :" +fname +"\n"
+             self.Log.info(" ---> done jumeg epocher save events as => EVOKED (averaged) :" +fname +"\n")
              fname = jumeg_base.get_fif_name(raw=self.raw,postfix=postfix,extention="-ave",update_raw_fname=False)  
             #--- plot evoked
              fname = jplt.plot_evoked(evt['epochs'],fname=fname,condition=condition,show_plot=False,save_plot=True,plot_dir='plots')
-             print" ---> done jumeg epocher plot evoked (averaged) :" +fname +"\n"
-             self.line()
+             self.Log.info([" ---> done jumeg epocher plot evoked (averaged) :" +fname +"\n","-"*40])
 #---
     def __clear(self):
         """ clear all CLs parameter"""
@@ -1074,14 +1072,14 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         if not self.condition_list:
            self.condition_list = self.hdf_get_key_list(node=self.hdf_epocher_node_name,key_list=self.condition_list)
         
-        if self.verbose:   
-           print " ---> Epocher Epochs condition list form HDF:"
-           self.line()
-           print "  -> raw file: "+self.fname
-           print "  -> hdf file: "+self.hdf_filename
-           self.line()
-           print "  -> "+ ' '.join( self.condition_list ) +"\n"
-           self.line()
+        if self.verbose:
+           self.Log.info([" ---> Epocher Epochs condition list form HDF:",
+                         "-"*40,
+                         "  -> raw file: "+self.fname,
+                         "  -> hdf file: "+self.hdf_filename,
+                         "-"*40,
+                         "  -> "+ ' '.join( self.condition_list ) +"\n","-"*40
+                         ])
 
           
 jumeg_epocher_epochs = JuMEG_Epocher_Epochs()

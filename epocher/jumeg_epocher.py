@@ -1,11 +1,22 @@
-'''Class JuMEG_Epocher
+#!/usr/bin/env python3
+# -+-coding: utf-8 -+-
 
--> read template file 
+'''
+Class JuMEG_Epocher
+-> read template file
 -> extract event/epoch information and save to hdf5
--> 
-Author:
-         Frank Boers     <f.boers@fz-juelich.de>
-----------------------------------------------------------------
+
+#--------------------------------------------
+# Authors: Frank Boers <f.boers@fz-juelich.de>
+#
+#--------------------------------------------
+# Date: 21.11.18
+#--------------------------------------------
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+# 18.12.2018 use python3 logging instead of print()
+#--------------------------------------------
 extract mne-events per condition, save to HDF5 file
 
 Example:
@@ -45,7 +56,7 @@ import pandas as pd
 #from jumeg.jumeg_base import jumeg_base
 from jumeg.epocher.jumeg_epocher_epochs import JuMEG_Epocher_Epochs
 
-__version__="2018.06.19.001"
+__version__="2018.12.18.001"
 
 class JuMEG_Epocher(JuMEG_Epocher_Epochs):
     def __init__ (self,template_path=None,template_name="DEFAULT",verbose=False):
@@ -82,7 +93,7 @@ class JuMEG_Epocher(JuMEG_Epocher_Epochs):
         """
         raw,fname = self.events_store_to_hdf(fname=fname,raw=raw,**kwargs)
 
-        print "===> DONE  apply events to HDF: " + self.hdf_filename +"\n"
+        self.Log.info( "===> DONE  apply events to HDF: " + self.hdf_filename +"\n")
         self.line()
         return (raw,fname)
     
@@ -109,7 +120,7 @@ class JuMEG_Epocher(JuMEG_Epocher_Epochs):
 
         raw,fname = self.apply_hdf_to_epochs(fname=fname,raw=raw,**kwargs)
 
-        print "===> DONE apply epocher: " + self.hdf_filename +"\n"
+        self.Log.info("===> DONE apply epocher: " + self.hdf_filename +"\n")
         self.line()
         return (raw,fname)
      
