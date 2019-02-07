@@ -6,18 +6,18 @@ Created on Tue Mar 27 10:08:17 2018
 @author: fboers
 """
 
-import os,sys,re,textwrap 
+import os,sys,glob,re,textwrap
 import ast
 from types import ModuleType
 
-from glob import glob
+from pathlib import Path
+
 import numpy as np
 
 from jumeg.jumeg_base import JuMEG_Base_Basic
 jb = JuMEG_Base_Basic()
 
-__version__="v2018-11-13-001"
-
+__version__="2018-11-13-001"
 
 class JuMEG_UtilsIO_ModuleBase(object):
     """
@@ -43,7 +43,7 @@ class JuMEG_UtilsIO_ModuleBase(object):
                                "extention":".py","function":"get_args","package":None}   
     """
     def __init__(self,**kwargs):
-        super(JuMEG_UtilsIO_ModuleBase,self).__init__()
+        super().__init__()
         self.__command  = {"name":None,"prefix":"jumeg","fullfile":None,"extention":".py","function":"get_args","package":None} 
         self.__isLoaded = False
         self._update_kwargs(**kwargs)
@@ -103,8 +103,6 @@ class JuMEG_UtilsIO_ModuleBase(object):
    
     def info(self):
         jb.pp(self.command,head="JuMEG Function Command")
-
-       
 
 class JuMEG_UtilsIO_FunctionFromText(JuMEG_UtilsIO_ModuleBase):
     """
@@ -191,7 +189,7 @@ class JuMEG_UtilsIO_FunctionFromText(JuMEG_UtilsIO_ModuleBase):
         for l in lines:
             if find_start_pattern.match(l):
                l_idx_start = idx
-               breakp
+               break
             idx += 1                 
        #--- find intend pos first char
         idx = l_idx_start
@@ -434,25 +432,284 @@ class JuMEG_UtilsIO_JuMEGModule(object):
         self._module_list.sort()
         return self._module_list
     
-  
- #get_path_and_fiel
- #a,b=os.path.split()
+#===========================================================================
 
-class JuMEG_UtilsIO_Id(object):
+class JuMEG_UtilsIO_PDFBase(object):
     """
-     CLS find IDs in <stage> 
+    Base CLS to find Posted Data Files (PDFs) via pattern search on harddisk
+    default for 4D/BTi format
+
+    Parameters:
+    -----------
+    prefix     : <'*'>
+    postfix    : <'*c,rfDC'>
+    id         : <None>
+    scan       : <None>
+    session    : <None>
+    run        : <None>
+    data_type  : <'bti'>
+    verbose    : <False>
+
+    """
+    __slots__ =["id","scan","session","run","prefix","pdf_name","seperator","pattern","data_type","verbose","debug","_number_of_pdfs","_stage","_total_filesize"]
+    
+    def __init__(self,**kwargs):
+        self._init(**kwargs)
+
+    def _init(self,**kwargs):
+        """ init slots """
+        for k in self.__slots__:
+            self.__setattr__(k,None)
+
+        self.pdf_name   = "c,rfDC"
+        self.data_type  = "bti"
+        self.seperator  = "/"  # for glob.glob
+        self.verbose    = False
+        
+        self.__NO_MATCH      = -1
+        self._pdfs           = dict()
+        self._total_filesize = 0
+        self._update_from_kwargs(**kwargs)
+
+    
+    @property
+    def NO_MATCH(self): return self.__NO_MATCH
+    @property
+    def pdfs(self)    : return self._pdfs
+    @property
+    def ids(self)     : return [*self._pdfs] #.sorted()
+    @property
+    def number_of_ids(self): return len(self._pdfs.keys())
+    @property
+    def number_of_pdfs(self): return self._number_of_pdfs
+    @property
+    def matches(self) : return self._MATCHES
+    @property
+    def stage(self)   : return self._stage
+    @stage.setter
+    def stage(self,v):
+        if v:
+           self._stage = os.path.expandvars( os.path.expanduser(v) )
+
+    def GetTotalFileSize(self):
+        return self._total_filesize
+
+    def GetTotalFileSizeGB(self):
+        return self._total_filesize / 1024 ** 3
+
+    def GetTotalFileSizeMB(self):
+        return self._total_filesize / 1024 ** 2
+    
+    def GetIDs(self):
+        return sorted([*self._pdfs])
+    
+    def GetPDFsFromIDs(self,ids=None):
+        """
+         https://stackoverflow.com/questions/3129322/how-do-%20i-get-monitor-resolution-in-python
+        :param ids:
+        :return:
+        PDF dict for ids in idlist
+        {"pdf":fullfile reletive to <stage>,"size":file size,"hs_file":True/Faslse,"config":Ture/False}
+        """
+        return {x: self.pdfs[x] for x in ids if x in self.pdfs}
+    
+    def _update_from_kwargs(self,**kwargs):
+        for k in kwargs:
+            if k in self.__slots__:
+                self.__setattr__(k,kwargs.get(k,self.__getattribute__(k)))
+    
+        #for k in self.__slots__:
+        #    self.__setattr__(k,kwargs.get(k,self.__getattribute__(k)))
+        
+        if kwargs.get("stage"):
+           self.stage=kwargs.get("stage")
+        
+    def get_parameter(self,key=None):
+        """
+        get  parameter
+        :param key:
+        :return: parameter dict or value for parameter[key] or all keys
+        """
+        if key: return self.__getattribute__(key)
+        return { slot:self.__getattribute__(slot) for slot in self.__slots__ }
+
+    def update(self,**kwargs):
+        self._update_from_kwargs(**kwargs)
+        
+    def update_pattern(self,*args,**kwargs):
+        """
+        pattern for glob.glob
+        
+        "/mnt/meg_store2/megdaw_data21/204471/*EG*/*/c,rfDC"
+        
+        https://docs.python.org/3.5/library/glob.html?highlight=glob#glob.glob
+        
+        :return
+         pattern
+        """
+        self._update_from_kwargs(**kwargs)
+        #for k in kwargs:
+        #    if k in self.__slots__:
+        #       self.__setattr__(k,kwargs.get(k,self.__getattribute__(k)))
+        
+        l = []
+        if self.id:
+            l.append(self.id)
+        if self.scan:
+            l.append(self.scan)
+        if self.session:
+            l.append(self.session)
+        if self.run:
+            l.append(self.run)
+        if self.pdf_name:
+           l.append(self.pdf_name)
+        if len(l):
+           self.pattern = self.seperator.join(l)
+        else:
+           self.pattern = self.pdf_name
+        
+       #--- glob.glob
+        if self.pattern.find("/**/") < 0:
+           d = self.pattern.split("/")
+           d[-1]= "**/" + d[-1]
+           self.pattern = "/".join(d)
+       
+        return self.pattern
+
+    @property
+    def path(self):
+        if not self.stage.endswith("/"):
+           self.stage +="/"
+        return self.stage
+
+class JuMEG_UtilsIO_PDFBTi(JuMEG_UtilsIO_PDFBase):
+    """
+     CLS find BTi IDs in <stage>
+     for bti [meg] data along directory structure:
+     <stage/id/scan/session/run/
+     check for  <c,rfDC>,<config> and <hs_file>
+
+     from jumeg.gui.utils.jumeg_gui_utils_io  import JuMEG_UtilsIO_BTiPDFs
+     p="/mnt/meg_store2/megdaw_data21"
+     IDs=JuMEG_UtilsIO_Id(stage=p,data_type="bti",postfix="c,rfDC")
+     
+     Example:
+     -------
+      from jumeg import jumeg_base as jb
+      from jumeg.gui.utils.jumeg_gui_utils_io  import JuMEG_UtilsIO_BTiPDFs
+      p = os.getenv("JUMEG_PATH_BTI_EXPORT",default="/data/megdaw_data21")
+      
+      PDFs = JuMEG_UtilsIO_BTiPDFs(stage=p,postfix="c,rfDC",verbose=True)
+      PDFs.scan="INTEXT*"
+      PDFs.update()
+     
+      for id in  PDFs.pdfs:
+          print("id: ".format(id))
+          for pdf in PDFs.pdfs[id]:
+              # {"pdf":f,"size": fsize in byte,"hs_file":bol,"config":bol}
+              print(pdf)
+      
+      PDFs.info()
+    """
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+        self.data_type       = "bti"
+        self.hs_filename     = "hs_file"
+        self.config_filename = "config"
+
+    def info(self):
+        """
+        prints info stage,number of found ids and pdfs, total filesize
+        :return:
+        """
+        jb.Log.info(
+               ["BTi  PDF  Stage     : {}".format(self.stage),
+                "pdf name            : {}".format(self.pdf_name),
+                "scan                : {}".format(self.scan),
+                "hs filename         : {}".format(self.hs_filename),
+                "config filename     : {}".format(self.config_filename),
+                "Number of IDs       : {}".format(self.number_of_ids),
+                "Number of PDFS      : {}".format(self.number_of_pdfs),
+                "total file size[GB] : {0:.9f}".format( self.GetTotalFileSizeGB() ),
+                "last used pattern   : {}".format(self.pattern),"-"*50
+                ])
+         
+    def check_config_hs(self,fbti):
+        """
+        check filesize of hs_file and config file
+        :param full filename
+        
+        :return:
+        size of headshape file
+        size of config file
+        """
+        try:
+           size_hs=os.stat(os.path.dirname(fbti)+"/"+self.hs_filename).st_size
+        except:
+           size_hs=0
+        try:
+            size_cfg = os.stat(os.path.dirname(fbti) + "/" + self.config_filename).st_size
+        except:
+            size_cfg = 0
+     
+        return size_hs,size_cfg
+       
+    def update(self,**kwargs):
+        """
+        find under stage all IDs matching  <search pattern> e.g. 204471/INTEXT*/**/c,rfDC
+        https://stackoverflow.com/questions/50948391/whats-the-fastest-way-to-recursively-search-for-files-in-python
+        using glob.iglob
+        
+        :return
+        pdfs list of dict {"pdf":fullfile reletive to <stage>,"size":file size,"hs_file":True/Faslse,"config":Ture/False}
+        
+        """
+        self._pdfs = dict()
+        self._update_from_kwargs(**kwargs)
+        
+        self._number_of_pdfs=0
+        self._total_filesize=0.0
+        
+        # if not os.path.isdir(stage): return
+        with jb.working_directory(self.stage):
+             for id in os.listdir( "." ):
+                 lpdfs = []
+                 for f in glob.iglob(self.update_pattern(id=id),recursive=True):
+                     lpdfs.append(f)
+                     lpdfs.sort()
+
+                 if not lpdfs: continue
+                 if not self._pdfs.get(id):
+                    self._pdfs[id] = []
+                 for f in lpdfs:
+                     size_hs,size_cfg = self.check_config_hs(f)
+                     self._pdfs[id].append( {"pdf":f,"size":os.stat(f).st_size,"hs_file":size_hs,"config":size_cfg,"seleted":False} )
+                     self._total_filesize += size_hs + size_cfg + self._pdfs[id][-1]["size"]
+                     
+                 self._number_of_pdfs+=len(self._pdfs[id])
+                 
+                 
+        if self.debug:
+           for id in self.pdfs.keys():
+               print("ID: "+id)
+               for pdf in self.pdfs[id]:
+                  jb.pp(pdf)
+           self.info()
+
+
+class JuMEG_UtilsIO_IDs(object):
+    """
+     CLS find IDs in <stage>
      for mne [meg] data or eeg along directory structure:
      <stage/mne>   <stage/eeg>
-     
-    """ 
-    
+    """
     def __init__(self,stage=None,data_type='mne'):
-        super(JuMEG_UtilsIO_Id, self).__init__()
+        super().__init__()
         self._stage      = None
         self.stage       = stage
         self.data_type   = data_type
-        self.found_list  = []             
-        self.pdfs        = dict() 
+        self.found_list  = []
+        self.pdfs        = dict()
 
     @property
     def stage(self): return self._stage
@@ -462,20 +719,21 @@ class JuMEG_UtilsIO_Id(object):
            self._stage = os.path.expandvars( os.path.expanduser(v) )
 
     def __get_path(self):
-        jb.logger.error(self.stage)
+        jb.Log.error(self.stage)
         try:
             if not self.stage.endswith(self.data_type):
                return self.stage+"/"+self.data_type
             return self.stage
 
         except Exception as e:
-            msg="No such file or directory or not defined: <data_type>:{} <stage>: {}".format(self.data_type,self.stage)
+            msg="JuMEG_UtilsIO_PDFMEEG: No such file or directory or not defined: <data_type>:{} <stage>: {}".format(self.data_type,self.stage)
             jb.print_error(msg+"\n"+str(e),head="JuMEG_UtilsIO_Id.path")
-            jb.logger.error(e.args)
+            jb.Log.error(e.args)
             return None
 
-    path = property(__get_path)             
+    path = property(__get_path)
 
+   
     def update(self,data_type=None,scan=None):
         """
         update data type and call update for eeg  or meg
@@ -486,7 +744,7 @@ class JuMEG_UtilsIO_Id(object):
         scan     : name of scan <None>
         
         Results:
-        --------    
+        --------
         file list
         """
         if data_type:
@@ -494,9 +752,9 @@ class JuMEG_UtilsIO_Id(object):
         if self.data_type == 'mne':
            return self.update_mne(scan=scan)
         if self.data_type == 'eeg':
-            return self.update_eeg()    
+            return self.update_eeg()
     
-    def update_mne(self,path=None,scan=None): 
+    def update_mne(self,path=None,scan=None):
         """
         update meg file list
         Parameters:
@@ -504,7 +762,7 @@ class JuMEG_UtilsIO_Id(object):
         sacn: name of scan <None>
         
         Results:
-        --------    
+        --------
         file list
         """
         self.found_list = []
@@ -514,26 +772,26 @@ class JuMEG_UtilsIO_Id(object):
         if not self.path: return
         p = self.path
         if not os.path.isdir(p):
-           jb.print_error("ERROR in <JuMEG_UtilsIO_Id.update_mne> No directory: {}".format(p))
+           jb.print_error("ERROR in <JuMEG_UtilsIO_PDFMEEG.update_mne> No directory: {}".format(p))
            return None
        
         for f in os.listdir(p):
             if os.path.isdir(p+"/"+f ):
-               if f.isdigit(): 
+               if f.isdigit():
                   if scan:
                      if os.path.isdir(p+"/"+f+"/"+scan ):
                         self.found_list.append(f)
-                  else:   
+                  else:
                      self.found_list.append(f)
-        self.found_list.sort()         
+        self.found_list.sort()
         return self.found_list
     
-    def update_eeg(self): 
+    def update_eeg(self):
         """
         update eeg file list
         
         Results:
-        --------    
+        --------
         file list
         """
         self.found_list = []
@@ -546,15 +804,17 @@ class JuMEG_UtilsIO_Id(object):
         for f in os.listdir(p):
             if os.path.isdir(p+"/"+f ):
                if f.isdigit():
-                  self.found_list.append(f)  
+                  self.found_list.append(f)
                  
         self.found_list.sort()
-         
+        
         return self.found_list
  
-   
-         
-class JuMEG_UtilsIO_PDFPattern(object):
+
+
+
+        
+class JuMEG_UtilsIO_PDFMEEGBase(object):  # JuMEG_UtilsIO_PDFBase
     """ 
     Base CLS to find PosteddataFiles (MEG or EEG files) via pattern 
     
@@ -571,7 +831,7 @@ class JuMEG_UtilsIO_PDFPattern(object):
     
     """
     def __init__(self,prefix='*',postfix_meg='*c,rfDC-raw.fif',postfix_eeg='*.vhdr',id=None,scan=None,session=None,run=None,data_type='mne'):  
-        super(JuMEG_UtilsIO_PDFPattern, self).__init__() 
+        super().__init__()
                
         self._number_of_pdfs = {'mne':0,'eeg':0}
         self.verbose         = False
@@ -579,34 +839,34 @@ class JuMEG_UtilsIO_PDFPattern(object):
                    'pattern':None,'seperator':'_','data_type_mne':'mne','data_type_eeg':'eeg'   
                   }       
         
-    def _update(self,stage=None,id=None,scan=None,session=None,run=None,postfix=None,postfix_meg=None,postfix_eeg=None,prefix=None,data_type=None):
-        """ """
-        if stage:
-           self.stage = stage
-        if data_type: # mne / eeg
-           self.data_type = data_type  
-        if id:
-           self.id = id
-        if scan:
-           self.scan = scan
-        if session:
-           self.session = session
-        if run:
-           self.run = run
-        
-        if postfix:
-           self.postfix = postfix
-        if postfix_meg:
-           self.postfix_meg = postfix_meg
-        if postfix_eeg:
-           self.postfix_eeg = postfix_eeg
-           
-        if prefix:
-           self.prefix = prefix
+    def _update_from_kwargs(self,**kwargs):
+        """
+        :param stage:
+        :param id:
+        :param scan:
+        :param session:
+        :param run:
+        :param postfix:
+        :param postfix_meg:
+        :param postfix_eeg:
+        :param prefix:
+        :param data_type:
+        :return:
+        """
+        self.stage       = kwargs.get("stage",self.stage)
+        self.id          = kwargs.get("id",self.id)
+        self.data_type   = kwargs.get("data_type",self.data_type)# mne / eeg
+        self.scan        = kwargs.get("scan",self.scan)
+        self.session     = kwargs.get("session",self.session)
+        self.run         = kwargs.get("run",self.run)
+        self.postfix     = kwargs.get("postfix",self.postfix)
+        self.postfix_meg = kwargs.get("postfix_meg",self.postfix_meg)
+        self.postfix_eeg = kwargs.get("postfx_eeg",self.postfix_eeg)
+        self.prefix      = kwargs.get("prefix",self.prefix)
             
     def update_pattern(self,*args,**kwargs):
         """ """
-        self._update(*args,**kwargs)
+        self._update_from_kwargs(**kwargs)
             
         l=[]
         if self.id:
@@ -714,10 +974,9 @@ class JuMEG_UtilsIO_PDFPattern(object):
     def path(self):
         if not self.stage.endswith(self.data_type):
            return self.stage+"/"+self.data_type
-        return self.stage         
-    
-    
-class JuMEG_UtilsIO_PDFs(JuMEG_UtilsIO_PDFPattern):
+        return self.stage
+  
+class JuMEG_UtilsIO_PDFMEEG(JuMEG_UtilsIO_PDFMEEGBase):
     """
      CLS find IDs in <stage> 
      for mne [meg] data or eeg along directory structure:
@@ -725,7 +984,7 @@ class JuMEG_UtilsIO_PDFs(JuMEG_UtilsIO_PDFPattern):
      
     """     
     def __init__(self,stage='.', data_type='mne',experiment=None,scan=None,**kwargs):  
-        super(JuMEG_UtilsIO_PDFs, self).__init__(data_type=data_type,scan=scan,**kwargs)
+        super().__init__(data_type=data_type,scan=scan,**kwargs)
         self.stage       = stage
         self.experiment  = experiment
         #self.type        = data_type
@@ -736,8 +995,27 @@ class JuMEG_UtilsIO_PDFs(JuMEG_UtilsIO_PDFPattern):
         #self.scan        = scan
         #self.data_type   = data_type
         #self.pattern     = JuMEG_UtilsIO_PDFPattern()  
+   
+    def GetIDs(self):
+        return sorted([*self.pdfs[self.data_type_mne]])
         
-    def update(self,id_list=None,stage=None,scan=None,session=None,run=None,postfix_meg=None,postfix_eeg=None): 
+    def GetPDFsFromIDs(self,ids=None):
+        """
+         https://stackoverflow.com/questions/3129322/how-do-%20i-get-monitor-resolution-in-python
+        :param ids:
+        :return:
+        PDF dict for ids in idlist
+        {"pdf":fullfile reletive to <stage>,"size":file size,"hs_file":True/Faslse,"config":Ture/False}
+        """
+        print(self.pdfs)
+        return { x:self.pdfs[self.data_type_mne][x] for x in ids if x in self.pdfs[self.data_type_mne] }
+    
+    def updateIDs(self,**kwargs):
+        self.update(**kwargs)
+        print(self.pdfs)
+        return self.pdfs[self.data_type_mne]
+      
+    def update(self,**kwargs):
         """
         for each id in id-list find mne/meg and eeg data
         Parameter:
@@ -758,18 +1036,23 @@ class JuMEG_UtilsIO_PDFs(JuMEG_UtilsIO_PDFPattern):
 
         """
         
-        self.id_list = []
-        if isinstance(id_list,(list)):
-           self.id_list = id_list
-        elif id_list:
-           self.id_list.append( id_list ) 
+        self.id_list = kwargs.get("id_list",[])
+        if self.id_list:
+           if not isinstance(self.id_list,(list)):
+              self.id_list = list(self.id_list)
+        else:
+           self.id_list=[]
         
-        self._update(stage=stage,scan=scan,session=session,run=run,postfix_meg=postfix_meg,postfix_eeg=postfix_eeg)   
+        self._update_from_kwargs(**kwargs)
         
         self._update_data_type(data_type=self.data_type_mne)
    
         self._update_data_type(data_type=self.data_type_eeg)
         
+        print(self.stage)
+        print(self.scan)
+        print("pdfs")
+        print(self.pdfs)
         
       #--- search for matching scan and run  
         for id_item in self.pdfs[ self.data_type_mne ]:
@@ -787,7 +1070,7 @@ class JuMEG_UtilsIO_PDFs(JuMEG_UtilsIO_PDFPattern):
             uitems,uidx,uinv = np.unique(eeg_index,return_inverse=True,return_index=True)
             self.pdfs[self.data_type_mne][id_item]['eeg_idx'][uidx] = uitems
                    
-        return self.pdfs 
+        return self.pdfs
 
     def _match_meg_eeg_list(self,meg_list=None,eeg_list=None):
         """
@@ -855,25 +1138,30 @@ class JuMEG_UtilsIO_PDFs(JuMEG_UtilsIO_PDFPattern):
         for fmeg in meg_list:
             idxs = None
             f = os.path.basename(fmeg)
-            meg_pattern = np.array(f.replace('.', '_').split('_')[2:5],dtype=np.int)
+            try:
+          #--- error if run=2a
+               meg_pattern = np.array(f.replace('.', '_').split('_')[2:5],dtype=np.int)
+            
           #--- match run
-            if match_run:
-               idxs = np.where(eeg_pattern[:,-1]== meg_pattern[-1])[0]
-               if not idxs.size: continue
+               if match_run:
+                  idxs = np.where(eeg_pattern[:,-1]== meg_pattern[-1])[0]
+                  if not idxs.size: continue
           #--- match time
-            if match_time:
-               found_idxs = np.where(eeg_pattern[idxs, -2] == meg_pattern[-2])[0]
-               if not found_idxs.size: continue
-               idxs = idxs[found_idxs]
+               if match_time:
+                  found_idxs = np.where(eeg_pattern[idxs, -2] == meg_pattern[-2])[0]
+                  if not found_idxs.size: continue
+                  idxs = idxs[found_idxs]
          # --- match date
-            if match_date:
-               found_idxs = np.where(eeg_pattern[idxs, -3] == meg_pattern[-3])[0]
-               if not found_idxs.size: continue
-               idxs = idxs[found_idxs]
+               if match_date:
+                  found_idxs = np.where(eeg_pattern[idxs, -3] == meg_pattern[-3])[0]
+                  if not found_idxs.size: continue
+                  idxs = idxs[found_idxs]
 
-            if isinstance(idxs,(np.ndarray)):
-               if idxs.size:
-                  found_list[idx]=idxs[0]
+               if isinstance(idxs,(np.ndarray)):
+                  if idxs.size:
+                     found_list[idx]=idxs[0]
+            except:
+                pass
 
             idx+=1
         return found_list
@@ -889,11 +1177,12 @@ class JuMEG_UtilsIO_PDFs(JuMEG_UtilsIO_PDFPattern):
         for id_item in self.id_list:
             pattern = self.update_pattern(id=id_item,data_type=data_type)
             if self.verbose:
-               print("---> JuMEG_UtilsIO_PDFs._update_data_type:")
-               print(" --> Search     : {} -> {}".format(id_item,self.scan))
-               print("  -> data type  : {}".format(data_type))
-               print("  -> pattern    : {}".format(pattern))
-               print("  -> data path  : {}\n".format(data_path))
+               jb.Log.info(
+                   ["---> JuMEG_UtilsIO_PDFs._update_data_type:",
+                    " --> Search     : {} -> {}".format(id_item,self.scan),
+                    "  -> data type  : {}".format(data_type),
+                    "  -> pattern    : {}".format(pattern),
+                    "  -> data path  : {}\n".format(data_path)])
           #--- https://stackoverflow.com/questions/18394147/recursive-sub-folder-search-and-return-files-in-a-list-python
             r=[y for x in os.walk(data_path) for y in glob(os.path.join(x[0], pattern))]
             if r :
@@ -910,4 +1199,235 @@ class JuMEG_UtilsIO_PDFs(JuMEG_UtilsIO_PDFPattern):
            
            
           
+'''
+
+class JuMEG_UtilsIO_PDFPattern(object):
+    """
+    Base CLS to find PosteddataFiles (MEG or EEG files) via pattern
+
+    Parameters:
+    -----------
+    prefix     : <'*'>
+    postfix_meg: <'*c,rfDC-raw.fif'>
+    postfix_eeg: <'*.vhdr'>
+    id         : <None>
+    scan       : <None>
+    session    : <None>
+    run        : <None>
+    data_type  : <'mne'>
+
+    """
     
+    def __init__(self,prefix='*',postfix_meg='*c,rfDC-raw.fif',postfix_eeg='*.vhdr',id=None,scan=None,session=None,
+                 run=None,data_type='mne'):
+        super(JuMEG_UtilsIO_PDFPattern,self).__init__()
+        
+        self._number_of_pdfs = { 'mne':0,'eeg':0 }
+        self.verbose = False
+        self._pdf = { 'id'         :id,'scan':scan,'session':session,'run':run,'postfix_meg':postfix_meg,
+                      'postfix_eeg':postfix_eeg,'prefix':prefix,'data_type':data_type,
+                      'pattern'    :None,'seperator':'_','data_type_mne':'mne','data_type_eeg':'eeg'
+                      }
+    
+    def _update(self,stage=None,id=None,scan=None,session=None,run=None,postfix=None,postfix_meg=None,postfix_eeg=None,
+                prefix=None,data_type=None):
+        """ """
+        if stage:
+            self.stage = stage
+        if data_type:  # mne / eeg
+            self.data_type = data_type
+        if id:
+            self.id = id
+        if scan:
+            self.scan = scan
+        if session:
+            self.session = session
+        if run:
+            self.run = run
+        
+        if postfix:
+            self.postfix = postfix
+        if postfix_meg:
+            self.postfix_meg = postfix_meg
+        if postfix_eeg:
+            self.postfix_eeg = postfix_eeg
+        
+        if prefix:
+            self.prefix = prefix
+    
+    def update_pattern(self,*args,**kwargs):
+        """ """
+        self._update(*args,**kwargs)
+        
+        l = []
+        if self.id:
+            l.append(self.id)
+        if self.scan:
+            l.append(self.scan)
+        if self.session:
+            l.append(self.session)
+        if self.run:
+            l.append(self.run)
+        if len(l):
+            l.append(self.postfix)
+            self.pattern = self.prefix + self.seperator.join(l)
+        else:
+            self.pattern = self.postfix
+        return self.pattern
+    
+    #---
+    @property
+    def number_of_pdfs(self):
+        return self._number_of_pdfs[self.data_type]
+    
+    #---
+    @property
+    def number_of_pdfs_mne(self):
+        return self._number_of_pdfs['mne']
+    
+    #---
+    @property
+    def number_of_pdfs_eeg(self):
+        return self._number_of_pdfs['eeg']
+    
+    #---
+    @property
+    def data_type(self):
+        return self._pdf['data_type']
+    
+    @data_type.setter
+    def data_type(self,v):
+        self._pdf['data_type'] = v
+    
+    #---
+    @property
+    def data_type_mne(self):
+        return self._pdf['data_type_mne']
+    
+    @data_type_mne.setter
+    def data_type_mne(self,v):
+        self._pdf['data_type_mne'] = v
+    
+    #---
+    @property
+    def data_type_eeg(self):
+        return self._pdf['data_type_eeg']
+    
+    @data_type_eeg.setter
+    def data_type_eeg(self,v):
+        self._pdf['data_type_eeg'] = v
+    
+    #---
+    @property
+    def pattern(self):
+        return self._pdf['pattern']
+    
+    @pattern.setter
+    def pattern(self,v):
+        self._pdf['pattern'] = v
+    
+    #---
+    @property
+    def seperator(self):
+        return self._pdf['seperator']
+    
+    @seperator.setter
+    def seperator(self,v):
+        self._pdf['seperator'] = v
+    
+    #---
+    @property
+    def id(self):
+        return self._pdf['id']
+    
+    @id.setter
+    def id(self,v):
+        self._pdf['id'] = v
+    
+    #---
+    @property
+    def scan(self):
+        return self._pdf['scan']
+    
+    @scan.setter
+    def scan(self,v):
+        self._pdf['scan'] = v
+    
+    #---
+    @property
+    def session(self):
+        return self._pdf['session']
+    
+    @session.setter
+    def session(self,v):
+        self._pdf['session'] = v
+    
+    #---
+    @property
+    def run(self):
+        return self._pdf['run']
+    
+    @run.setter
+    def run(self,v):
+        self._pdf['run'] = v
+    
+    #---
+    @property
+    def data_type(self):
+        return self._pdf['data_type']
+    
+    @data_type.setter
+    def data_type(self,v):
+        self._pdf['data_type'] = v
+    
+    #---
+    @property
+    def prefix(self):
+        return self._pdf['prefix']
+    
+    @prefix.setter
+    def prefix(self,v):
+        self._pdf['prefix'] = v
+    
+    #---
+    @property
+    def postfix_meg(self):
+        return self._pdf['postfix_meg']
+    
+    @postfix_meg.setter
+    def postfix_meg(self,v):
+        self._pdf['postfix_meg'] = v
+    
+    #---
+    @property
+    def postfix_eeg(self):
+        return self._pdf['postfix_eeg']
+    
+    @postfix_eeg.setter
+    def postfix_eeg(self,v):
+        self._pdf['postfix_eeg'] = v
+    
+    #---
+    @property
+    def postfix(self):
+        if self.data_type == 'mne':
+            return self.postfix_meg
+        return self.postfix_eeg
+    
+    @postfix.setter
+    def postfix(self,v):
+        if self.data_type == 'mne':
+            self.postfix_meg = v
+        else:
+            self.postfix_eeg = v
+            #---
+    
+    @property
+    def path(self):
+        if not self.stage.endswith(self.data_type):
+            return self.stage + "/" + self.data_type
+        return self.stage
+
+
+
+'''

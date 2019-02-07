@@ -34,14 +34,14 @@ import wx.lib.scrolledpanel as scrolled
 #from jumeg.jumeg_base                                     import jumeg_base as jb
 
 #--- jumeg wx stuff
-from jumeg.gui.wxlib.jumeg_gui_wxlib_main_frame           import JuMEG_MainFrame
+from jumeg.gui.wxlib.jumeg_gui_wxlib_main_frame           import JuMEG_wxMainFrame
 from jumeg.gui.wxlib.jumeg_gui_wxlib_main_panel           import JuMEG_wxMainPanel
 #---
-from jumeg.gui.jumeg_gui_experiment_template              import JuMEG_wxExperimentTemplatePanel
+from jumeg.gui.jumeg_gui_experiment_template              import JuMEG_wxTemplatePanel
+from jumeg.gui.jumeg_gui_import_to_fif                    import JuMEG_wxImportToFIFPanel
 from jumeg.gui.jumeg_gui_meeg_merger                      import JuMEG_wxMEEGMergerPanel
 
-__version__="2018-11-18-001"
-
+__version__="2019-02-07-001"
 
 class JuMEG_wxPreProcPanel(JuMEG_wxMainPanel):
     """
@@ -55,10 +55,13 @@ class JuMEG_wxPreProcPanel(JuMEG_wxMainPanel):
     def __init__(self,parent,**kwargs):
         super().__init__(parent)
      #--- wxPanel CLS
-        self._proc_list  =["Export To FIF","Experiment Template","MEEG Merger","Noisy Channels","Noise Reducer","ICA","Epocher","Tools"]
-       # self._color_list =[wx.RED,wx.BLUE,wx.GREEN,wx.LIGHT_GREY,wx.CYAN,wx.YELLOW]
+        self._proc_list    = ["Experiment Template","Import To FIF","MEEG Merger"]
+        self._NB           = None
         self._init(**kwargs)
 
+    @property
+    def NB(self): return self._NB
+    
     @property
     def process_list(self): return self._proc_list
 
@@ -71,28 +74,25 @@ class JuMEG_wxPreProcPanel(JuMEG_wxMainPanel):
         print(self.__doc__)
 
     def update( self, **kwargs ):
-
         self.PanelA.SetTitle(v="PreProc Tools")
-      #--- Notebook
-        self.NB = wx.Notebook(self.PanelA,-1,style=wx.BK_DEFAULT)
-
+       #--- Notebook
+        if self._NB:
+           self._NB.DeleteAllPages()
+        else:
+           self._NB = wx.Notebook(self.PanelA.Panel,-1,style=wx.BK_DEFAULT)
+           
         i=1
         self._proc_pnl=dict()
-        for p in self.process_list:
-            self._proc_pnl[p]=None
-        self._proc_pnl["MEEG Merger"]         = JuMEG_wxMEEGMergerPanel(self.NB,**kwargs)
-        self._proc_pnl["Experiment Template"] = JuMEG_wxExperimentTemplatePanel(self.NB,**kwargs)
+        self._proc_pnl["Experiment Template"] = JuMEG_wxTemplatePanel(   self.NB,ShowLogger=False)
+        self._proc_pnl["Import To FIF"]       = JuMEG_wxImportToFIFPanel(self.NB,ShowLogger=False)
+        self._proc_pnl["MEEG Merger"]         = JuMEG_wxMEEGMergerPanel( self.NB,ShowLogger=False,ShowCmdButtons=True,ShowParameter=True)
 
         for p in self.process_list:
-            if not self._proc_pnl[p]:
-               self._proc_pnl[p] = wx.Panel(self.NB,name=p)
-               self._proc_pnl[p].SetBackgroundColour(wx.Colour([128+i*10, 128-i*10,128]))
-               i += 1
             self.NB.AddPage(self._proc_pnl[p],p)
 
         self.PanelA.Panel.GetSizer().Add(self.NB,1,wx.ALIGN_CENTER|wx.EXPAND|wx.ALL,3)
         self.SplitterAB.Unsplit()
-
+        
     def init_pubsub( self, **kwargs ):
         """ init pubsub call overwrite """
         pass
@@ -105,7 +105,7 @@ class JuMEG_wxPreProcPanel(JuMEG_wxMainPanel):
     #    self.SetBackgroundColour(kwargs.get("bg","grey88"))
 
 #----
-class JuMEG_GUI_PreProcFrame(JuMEG_MainFrame):
+class JuMEG_GUI_PreProcFrame(JuMEG_wxMainFrame):
     def __init__(self,parent,id,title,pos=wx.DefaultPosition,size=[1024,768],name='JuMEG_PreProc',*kargs,**kwargs):
         style = wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
         super().__init__(parent,id, title, pos, size, style, name,**kwargs)

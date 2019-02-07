@@ -16,8 +16,6 @@ frame work
 #--------------------------------------------
 
 
-
-
 #--- wx Phoenix Version 4.03.01
 import os,wx
 from wx.lib.pubsub        import pub
@@ -28,7 +26,7 @@ try:
 except:
    from wx import AboutBox,AboutDialogInfo
    
-__version__="2018-11-15-001"
+__version__="2019-02-07-001"
 
 class JuMEG_wxAboutBox(object):
     def __init__(self):
@@ -64,7 +62,7 @@ class JuMEG_wxAboutBox(object):
         info.AddArtist(self.artist)
         AboutBox(info) #,self.parent)
         
-class JuMEG_MainFrame(wx.Frame):
+class JuMEG_wxMainFrame(wx.Frame):
     """ 
     basic Main Frame CLS
     
@@ -74,8 +72,7 @@ class JuMEG_MainFrame(wx.Frame):
     """ 
     def __init__(self,*kargs,**kwargs):
         super().__init__(*kargs)
-        self.Center()
-        self.verbose    = kwargs.get("verbose",False)      
+        self.verbose    = kwargs.get("verbose",False)
         self.debug      = kwargs.get("debug",False)   
         self.use_pubsub = kwargs.get("pubsub",True)
         self.title_postfix = "   *** JuMEG MEG Data Analysis @ INM4-MEG-FZJ ***        user: " +os.getlogin()+"@"+os.uname()[1]
@@ -83,6 +80,9 @@ class JuMEG_MainFrame(wx.Frame):
         self.StatusBar  = None 
         self.Sizer      = None
         self.AboutBox   = JuMEG_wxAboutBox()
+        w,h = wx.GetDisplaySize()
+        self.SetSize(w/1.1,h/1.3)
+        self.Center()
        #--- Menue 
         self.MenuBar = wx.MenuBar()  
         self.init_frame(**kwargs) 
@@ -417,12 +417,12 @@ class JuMEG_MainFrame(wx.Frame):
         return menuItem.IsChecked(),menuItem.GetItemLabelText()
 
 #----    
-class JuMEG_MainFrameDemo(JuMEG_MainFrame):
+class JuMEG_wxMainFrameDemo(JuMEG_wxMainFrame):
     """
     Example
     --------
     import wx
-    from jumeg.gui.wxlib.jumeg_gui_wxlib_main_frame           import JuMEG_MainFrameDemo
+    from jumeg.gui.wxlib.jumeg_gui_wxlib_main_frame           import JuMEG_wxMainFrameDemo
 
     app    = wx.App()
     frame  = JuMEG_MainFrameDemo(None,-1,'JuMEG Main Frame Demo FZJ-INM4',debug=True)
@@ -431,7 +431,7 @@ class JuMEG_MainFrameDemo(JuMEG_MainFrame):
     """
     def __init__(self,parent,id,title,pos=wx.DefaultPosition,size=wx.DefaultSize,name='JuMEG_MAIN_FRAME_DEMO',*kargs,**kwargs):
         style = wx.DEFAULT_FRAME_STYLE | wx.NO_FULL_REPAINT_ON_RESIZE
-        super(JuMEG_MainFrameDemo,self).__init__(parent,id, title, pos, size, style, name,**kwargs)
+        super().__init__(parent,id, title, pos, size, style, name,**kwargs)
         self.SetBackgroundColour("blue")
         self.Center()
    #---

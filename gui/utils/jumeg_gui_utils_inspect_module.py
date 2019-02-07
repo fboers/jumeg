@@ -6,23 +6,21 @@ Created on Tue Mar 27 10:08:17 2018
 @author: fboers
 """
 
-import os,sys,re,textwrap 
+import os,sys,glob,re,textwrap
 import ast
 from types import ModuleType
+
 from pathlib import Path
 
-from glob import glob
 import numpy as np
 
 from jumeg.jumeg_base import JuMEG_Base_Basic
 jb = JuMEG_Base_Basic()
 
-__version__="2019-02-07-001"
+__version__="2018-11-13-001"
 
-
-class JuMEG_IoUtils_FunctionParserBase(object):
+class JuMEG_Utils_Inspect_ModuleBase(object):
     """
-    Base CLS to read function from a python
     
      Paremeters:
      -----------    
@@ -45,21 +43,24 @@ class JuMEG_IoUtils_FunctionParserBase(object):
                                "extention":".py","function":"get_args","package":None}   
     """
     def __init__(self,**kwargs):
-        super(JuMEG_IoUtils_FunctionParserBase,self).__init__()
-        self.__command = {"module_name":None,"prefix":"jumeg","fullfile":None,"extention":".py","function":"get_args","package":None}
-        self._isLoaded = False
+        super().__init__()
+        self.__command  = {"name":None,"prefix":"jumeg","fullfile":None,"extention":".py","function":"get_args","package":None} 
+        self.__isLoaded = False
         self._update_kwargs(**kwargs)
-        self.verbose = False
-    
+        
     @property
     def command(self): return self.__command
     
-    def _get_module_name(self)  : return self.__command["module_name"]
-    def _set_module_name(self,v): self.__command["module_name"]=v
-    name        = property(_get_module_name,_set_module_name)
-    module      = property(_get_module_name,_set_module_name)
-    module_name = property(_get_module_name,_set_module_name)
-
+    @property
+    def name(self)  : return self.__command["name"]
+    @name.setter
+    def name(self,v): self.__command["name"]=v
+    
+    @property
+    def module(self)  : return self.__command["name"]
+    @module.setter
+    def module(self,v): self.__command["name"]=v
+   
     @property
     def prefix(self)  : return self.__command["prefix"]
     @prefix.setter
@@ -74,14 +75,14 @@ class JuMEG_IoUtils_FunctionParserBase(object):
     def fullfile(self)  : return self.__command["fullfile"]
     @fullfile.setter
     def fullfile(self,v): 
-        self._isLoaded = False
+        self.__isLoaded = False
         self.__command["fullfile"]=v
     
     @property        
     def function(self)  : return self.__command["function"]
     @function.setter        
     def function(self,v): 
-        self._isLoaded = False
+        self.__isLoaded = False
         self.__command["function"]=v
    
     @property        
@@ -99,16 +100,12 @@ class JuMEG_IoUtils_FunctionParserBase(object):
     def _update_kwargs(self,**kwargs):
         for k in self.__command.keys():
             self.__command[k] = kwargs.get(k,self.__command[k])
-        self.module = kwargs.get("module",self.module)
-
+   
     def info(self):
         jb.pp(self.command,head="JuMEG Function Command")
 
-       
-
-class JuMEG_IoUtils_FunctionParser(JuMEG_IoUtils_FunctionParserBase):
+class JuMEG_UtilsIO_Inspect_Module_FunctionFromText(JuMEG_UtilsIO_Inspect_Module_Base):
     """
-    parse a function from a python text file 
     special issue
     extract a function from a text file e.g. <get_arg> in <jumeg_filter.py>
     and compile it in a new module e.g. for argparser gui
@@ -130,30 +127,27 @@ class JuMEG_IoUtils_FunctionParser(JuMEG_IoUtils_FunctionParserBase):
      
     Example
     -------
-     from jumeg.ioutils.jumeg_ioutils_function_parser import JuMEG_IoUtils_FunctionParser
-     JFP          = JuMEG_IoUtils_FunctionParser()
-     JFP.fullfile = os.environ["JUMEG_PATH"]+"/jumeg/filter/jumeg_filter.py"
-     JFP.function = "get_args"
-     opt,parser   = JFP.apply() 
+     from jumeg.gui.utils.jumeg_gui_utils_io import JuMEG_UtilsIO_FunctionFromText
+     JFT          = JuMEG_UtilsIO_FunctionFromText()
+     JFT.fullfile = os.environ["JUMEG_PATH"]+"jumeg/filter/jumeg_filter.py"
+     JFT.function = "get_args"
+     opt,parser   = JFT.apply() 
 
      parser.print_help()
 
     """
     def __init__(self,**kwargs):
-        super(JuMEG_IoUtils_FunctionParser,self).__init__(**kwargs)
-        self.__command = {"module_name":None,"fullfile":None,"extention":".py","function":"get_args","start_pattern":"def","stop_pattern":"return" }
-        self.__text    = None
-        self._isLoaded = False
+        super().__init__(**kwargs)
+        self.__command = {"name":None,"fullfile":None,"extention":".py","function":"get_args","start_pattern":"def","stop_pattern":"return" }
+        self.__text     = None
+        self.__isLoaded = False
         self._update_kwargs(**kwargs)
    
-    @property
-    def function_parser_name(self)  : return "JuMEG_IoUtils_FunctionParser_" + self.function
-    
     @property
     def function_text(self)  : return self.__text
    
     @property
-    def isLoaded(self)  : return self._isLoaded
+    def isLoaded(self)  : return self.__isLoaded
     
     @property        
     def start_pattern(self)  : return self.__command["start_pattern"]
@@ -217,14 +211,12 @@ class JuMEG_IoUtils_FunctionParser(JuMEG_IoUtils_FunctionParserBase):
         lines=[]
         return self.__text 
 
-    def clear(self):
+    def _clear(self):
         """
         clear function module space
         """
-        self._isLoaded = False
-        while sys.getrefcount( self.function_parser_name ):
-              del sys.modules[self.function_parser_name]
-         
+        self.__isLoaded = False
+        
     def load_function(self):
         """
          load function from source code (text file)
@@ -235,17 +227,17 @@ class JuMEG_IoUtils_FunctionParser(JuMEG_IoUtils_FunctionParserBase):
          return function results
          
         """
-        if self.isLoaded: self.clear()    
-        self._isLoaded = False
+        if self.isLoaded: self._clear()    
+        self.__isLoaded = False
        
         if not self._get_function_code_from_text(): return
        
         self.__ModuleType = ModuleType(self.function)
-        sys.modules[self.function_parser_name] = self.__ModuleType
+        sys.modules[self.function] = self.__ModuleType
         exec( textwrap.dedent( self.function_text), self.__ModuleType.__dict__)
-        self._isLoaded = True
+        self.__isLoaded = True
    
-    def apply(self,*args,**kwargs):
+    def apply(self):
         """
          if not loaded load function from source code (text file)
          and create a new module and execupte code
@@ -258,12 +250,13 @@ class JuMEG_IoUtils_FunctionParser(JuMEG_IoUtils_FunctionParserBase):
         if not self.isLoaded:
            self.load_function()
         if self.isLoaded:  
-           return getattr(self.__ModuleType,self.function)(*args,**kwargs) #opt,parser
+           # print("OK loaded {}".format(sys.modules[self.function] )) 
+           return getattr(self.__ModuleType,self.function)() #opt,parser
                   
         return None
     
        
-class JuMEG_IoUtils_JuMEGModule(object):
+class JuMEG_UtilsIO_Inpect_Module(object):
     """
     CLS find jumeg modules under jumeg sub folders in PYTHONOATH 
     
@@ -282,9 +275,8 @@ class JuMEG_IoUtils_JuMEGModule(object):
         
     """ 
     def __init__(self,stage_prefix="jumeg",prefix="jumeg",postfix=None,extention=".py",permission=os.X_OK|os.R_OK,function="get_args",**kwargs):  
-        super(JuMEG_IoUtils_JuMEGModule, self).__init__(**kwargs)
-        #super().__init__()
-        
+        super().__init__(**kwargs)
+      
         self.stage_prefix  = stage_prefix
         self.prefix        = prefix
         self.postfix       = postfix
@@ -338,7 +330,8 @@ class JuMEG_IoUtils_JuMEGModule(object):
         self._jumeg_path_list = list( set(l) ) # exclude double
         self._jumeg_path_list.sort()
         return self._jumeg_path_list 
-
+        
+    
     def ModuleListItem(self,idx):
         """  jumeg.my subdirs.<jumeg_function name>"""
       
@@ -354,7 +347,7 @@ class JuMEG_IoUtils_JuMEGModule(object):
         index
         """
         return self._module_list[idx]
-
+    
     def ModuleNames(self,idx=None):
         """
         get module name from file list
@@ -362,18 +355,16 @@ class JuMEG_IoUtils_JuMEGModule(object):
         -----------
         idx: if defined return only this filename from list <None>
              else return list of filenames
-        """
+        """   
         if jb.is_number(idx):
            return os.path.basename( self._module_list[idx] ).replace(self.extention,"")
-
         l=[]
         for f in self.module_list:
             l.append(os.path.basename(f).replace(self.extention,""))
-        return l
+        return l    
            
         #--- get_path_and_file
         # p,f=os.path.split( self.file_list[idx] )
-
     def FindModules(self,**kwargs):
         """
         find modules /commands under jumeg with defined permissions
@@ -391,7 +382,7 @@ class JuMEG_IoUtils_JuMEGModule(object):
         ---------
         list of module names 
         """
-        self._find_modules(**kwargs)
+        self._walk(**kwargs)
         return self.ModuleNames()
     
     def update(self,**kwargs):
@@ -422,14 +413,12 @@ class JuMEG_IoUtils_JuMEGModule(object):
         list of executable modules, full filename
         """
         self.update(**kwargs)
-
-        print(self._jumeg_path_list)
-
+         
         skip_dir_set = set(self.skip_dir_list)
-        for p in  ( self._jumeg_path_list ): # PROB: path or . or link pointing to one dir or sub, parent dir
+        for p in  ( self._jumeg_path_list ):
             for root, dirs, files in os.walk(p):
                 if (set(root.split(os.sep)) & skip_dir_set): continue
-                for f in set(files):
+                for f in files:
                     if self.prefix:
                        if not f.startswith(self.prefix): continue
                     if self.extention:
@@ -437,63 +426,8 @@ class JuMEG_IoUtils_JuMEGModule(object):
                     if os.access(root+"/"+f,self.permission): 
                        fmodule = os.path.join(root,f)
                        if self._is_function_in_module(fmodule):
-                          self._module_list.append(fmodule)
-
+                          self._module_list.append(fmodule) 
+                     
         self._module_list.sort()
-        print(self._module_list)
         return self._module_list
-
-    def _find_modules(self,**kwargs):
-        """
-        search recursive for executable modules
-        exclude doubles due to e.g links
-
-        Parameters:
-        -----------
-         stage_prefix : stage prefix <jumeg>
-         prefix    : file prefix     <jumeg>
-         postfix   : file postfix    <None>
-         extention : file extention  <".py>
-         permission: file permission <os.X_OK|os.R_OK>
-
-        Results:
-        --------
-        list of modules,full filename, exclude doubles
-        """
-        self.update(**kwargs)
-
-        fdict = {}
-
-        skip_dir_set = set(self.skip_dir_list)
-
-        for pstart in  ( self._jumeg_path_list ): # PROB: path or . or link pointing to one dir or sub, parent dir
-            for p in list(Path(pstart).glob('**/*' + self.extention)):
-                if not p.is_file(): continue
-
-                f  = os.fspath(p.resolve()) # abs path
-
-               #--- is executable
-                if not os.access(f,self.permission): continue
-               #--- not in ../gui  ../test ...
-                if (set(f.split(pstart)[-1].split(os.sep)) & skip_dir_set): continue
-               #--- starts with jumeg
-                if self.prefix:
-                   if not os.path.basename(f).startswith(self.prefix): continue
-               #--- if module has <get_args> function
-                if self._is_function_in_module(f):
-                  #--- get fsize for dict key
-                   sz = p.stat().st_size
-                   if not fdict.get(sz): fdict[sz]={}
-                   fdict[sz][ p.stat().st_mtime ] = f  # st_inoino
-
-       # --- ck double items
-       # --- exclude same files dueto links or  start path differences
-        for sz in fdict.keys():
-            for mt in fdict[sz].keys():
-                self._module_list.append( fdict[sz][mt] )
-
-        self._module_list.sort()
-
-        return self._module_list
-
-
+ 

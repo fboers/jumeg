@@ -15,8 +15,81 @@ from wx.lib.pubsub import pub
 
 import wx.lib.agw.floatspin as FS
 
-__version__='2018-08-22-001'
+__version__='2019-01-04.001'
 
+class JuMEG_wxMultiChoiceDialog(wx.Dialog):
+    """
+    :param: parent
+    :param: message
+    :param: caption
+    :param: choices=[]
+    
+    code modified from:
+    https://stackoverflow.com/questions/9361939/creating-a-custom-dialog-that-allows-me-to-select-all-files-at-once-or-a-single
+    modify <update> with customize ctrls
+    
+    Example:
+    ---------
+    l = ['AND', 'OR', 'XOR', 'NOT']
+    app = wx.PySimpleApp()
+    dlg = JuMEG_wxMultiChoiceDialog(None, 'Choose as many as you wish', 'MCD Title', choices = l)
+    if dlg.ShowModal() == wx.ID_OK:
+       result = dlg.GetSelections()
+       wx.MessageBox(str(result) + ' were chosen')
+    dlg.Destroy()
+    
+    """
+    def __init__(self, parent, message, caption, choices=[],**kwargs):
+        super().__init__(parent, -1,size=(600,480),style=wx.DEFAULT_DIALOG_STYLE|wx.RESIZE_BORDER|wx.CLOSE_BOX|wx.STAY_ON_TOP)
+        self._wx_init(message, caption, choices)
+        self.update(**kwargs)
+        self._ApplyLayout()
+   
+    @property
+    def CtrlBox(self): return self._ctrlbox
+    
+    def _wx_init(self,message, caption, choices):
+        self.SetTitle(caption)
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.message = wx.StaticText(self, -1, message)
+        self.clb = wx.CheckListBox(self, -1, choices = choices)
+        
+        self.tgbt = wx.ToggleButton(self, -1,label='De/Select All',name="BT.DESELECT_ALL")
+        self.tgbt.SetValue(False)
+        
+      #--- horizontal box to add user ctrls used in update
+        self._ctrlbox = wx.BoxSizer(wx.HORIZONTAL)
+        self._ctrlbox.Add(self.tgbt,         0,wx.LEFT|wx.ALL|wx.EXPAND, 5)
+     
+        self.btns = self.CreateSeparatedButtonSizer(wx.OK | wx.CANCEL)
+        self.Bind(wx.EVT_TOGGLEBUTTON,self.ClickOnCtrl)
+    
+    def update(self,**kwargs):
+        """
+        overwrite
+        add user ctrls into self.CtrlBox (hbox sizer)
+        
+        :param kwargs:
+        :return:
+        """
+        pass
+    
+    def GetSelections(self):
+        return self.clb.GetCheckedItems() # GetChecked()
+  
+    def ClickOnCtrl(self,evt):
+        obj = evt.GetEventObject()
+        if obj.GetName() == "BT.DESELECT_ALL":
+           for i in range(self.clb.GetCount()):
+               self.clb.Check(i, self.tgbt.GetValue())
+    
+    def _ApplyLayout(self):
+        self.Sizer.Add(self.message, 0, wx.ALL | wx.EXPAND, 5)
+        self.Sizer.Add(self.clb, 1, wx.ALL | wx.EXPAND, 5)
+        self.Sizer.Add(self._ctrlbox, 0, wx.ALL | wx.EXPAND, 5)
+        self.Sizer.Add(self.btns, 0, wx.LEFT|wx.ALL | wx.EXPAND, 5 )
+        self.SetSizer(self.Sizer)
+        
 
 class JuMEG_wxSplitterWindow(wx.SplitterWindow):
     def __init__(self, parent,**kwargs):
@@ -29,7 +102,7 @@ class JuMEG_wxSplitterWindow(wx.SplitterWindow):
          listener      : name of pubsub listener to subscribe <SPLITTER>
          flip_position : key word for pubsub listener to flip position <FLIP_POSITION>
          split_min_max : key word for pubsub listener to reise windows <SPLIT_MIN_MAX>
-
+        
          pubsub calls:
           <listener>.<flip_position> : change window position left7/right or up/down
           <listener>.<split_min_max> : rezise shrink/enlarge one window
@@ -188,11 +261,11 @@ class JuMEG_wxCMDButtons(wx.Panel):
         #--- BTs
           ctrls = []
           if self.ShowClose:
-             ctrls.append(["CLOSE" ,"BT.CLOSE", wx.ALIGN_LEFT,"Close program",  None])
+             ctrls.append(["CLOSE" ,self.prefix+".BT.CLOSE", wx.ALIGN_LEFT,"Close program",  None])
           if self.ShowCancel:
-             ctrls.append(["CANCEL","BT.CANCEL",wx.ALIGN_LEFT,"Cancel progress",None])
+             ctrls.append(["CANCEL",self.prefix+".BT.CANCEL",wx.ALIGN_LEFT,"Cancel progress",None])
           if self.ShowApply:
-             ctrls.append(["APPLY", "BT.APPLY", wx.ALIGN_RIGHT,"Apply command", None])
+             ctrls.append(["APPLY",self.prefix+".BT.APPLY",  wx.ALIGN_RIGHT,"Apply command", None])
           self._PNL_BTN = JuMEG_wxControlButtonPanel(self,label=None,control_list=ctrls)
           self.SetBackgroundColour(self._bg)
           self._PNL_BTN.SetBackgroundColour(self._bg_bt)
@@ -313,6 +386,7 @@ class JuMEG_wxControlUtils(object):
         sort : will sort list <True>
         """
         # if not cb: return
+        if not cb: return
         cb.Enable(False)
         cb.Clear()
         if vlist:
@@ -352,8 +426,8 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
       AddGrowableRow : int or list    <None>
       -> col[i] or row[i] will grow/expand  use full to display long textfields
       
-      cols           : number of cols in FGS <4>, may will be ignored due to task  
-      rows           : number of rows in FGS <1>, may will be ignored due to task
+      cols  : number of cols in FGS <4>, may will be ignored due to task
+      rows  : number of rows in FGS <1>, may will be ignored due to task
      
         
      Results:
@@ -641,7 +715,7 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
                self.gs_add_empty_cell()
                #self.GS.Add(wx.StaticText(self,-1,label="NOT A CONTROLL"),wx.EXPAND,self.gap)
                #self.gs_add_empty_cell()
-                
+          # print(self._obj[-1].GetName())
         return self.GS                    
 
     def OnClickMinMax(self,evt): 
@@ -795,13 +869,13 @@ class JuMEG_wxControlButtonPanel(JuMEG_wxControlBase):
      Example:   
      --------
        Button  : (label,name,pack option,wx-event,help,callback) 
-                 (["CLOSE","Close",wx.ALIGN_LEFT,"Close program",self.ClickOnButton ],
-                  ["CANCEL","Cancel",wx.ALIGN_LEFT,"Cancel progress",self.ClickOnButton],
-                  ["APPLY","Apply",wx.ALIGN_RIGHT,"Apply command",self.ClickOnButton])
+       control_list = (["CLOSE","Close",wx.ALIGN_LEFT,"Close program",self.ClickOnButton ],
+                       ["CANCEL","Cancel",wx.ALIGN_LEFT,"Cancel progress",self.ClickOnButton],
+                       ["APPLY","Apply",wx.ALIGN_RIGHT,"Apply command",self.ClickOnButton])
               
     """
     def __init__(self,parent,**kwargs):
-       super(JuMEG_wxControlButtonPanel,self).__init__(parent,**kwargs)
+       super().__init__(parent,**kwargs)
        self.gap   = 3
        self.vgap  = 5
        self.hgap  = 4

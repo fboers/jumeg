@@ -36,7 +36,9 @@ from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxControl
 from jumeg.ioutils.jumeg_ioutils_function_parser          import JuMEG_IoUtils_FunctionParser,JuMEG_IoUtils_FunctionParserBase,JuMEG_IoUtils_JuMEGModule
 from jumeg.ioutils.jumeg_ioutils_subprocess               import JuMEG_IoUtils_SubProcess
 
-__version__='2019-01-04.001'
+#from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_property_grid import JuMEG_wxPropertyGridPageBase,JuMEG_wxPropertyGridPageNotebookBase,JuMEG_wxPropertyGridSubProperty
+
+__version__='2019-02-07.001'
 
 
 class JuMEG_ArgParserBase(JuMEG_IoUtils_FunctionParserBase):
@@ -321,10 +323,6 @@ class JuMEG_ArgParser(JuMEG_ArgParserBase):
        
       #--- pubsub  
         self.use_pubsub = pubsub
-        #self.pub_message_call_combobox     = "CLICK_ON_COMBO_BOX"
-        #self.pub_message_call_checkbox     = "CLICK_ON_CHECK_BOX"
-        #self.pub_message_call_fileiobutton = "CLICK_ON_FILE_IO_BUTTON"
-       
         if self.use_pubsub:
            pub.subscribe(self.SetVerbose,'MAIN_FRAME.VERBOSE')
    #--- 
@@ -1207,10 +1205,10 @@ class JuMEG_wxArgvParserCMD(JuMEG_wxArgvParserBase):
         obj = self.FindWindowByName("COMBO.COMMAND")
         idx = obj.GetSelection()
 
-        self.JCMD.name = self.JModule.ModuleNames(idx)
-        self.JCMD.fullfile = self.JModule.ModuleFileName(idx)
-        self.JCMD.prefix = self.JModule.stage_prefix
-        self.JCMD.function = self.JModule.function
+        self.JCMD.module_name = self.JModule.ModuleNames(idx)
+        self.JCMD.fullfile    = self.JModule.ModuleFileName(idx)
+        self.JCMD.prefix      = self.JModule.stage_prefix
+        self.JCMD.function    = self.JModule.function
 
         if self.verbose:  self.JCMD.info()
 
@@ -1258,8 +1256,6 @@ class JuMEG_GUI_wxArgvParser(JuMEG_wxMainPanel):
     def __init__(self,parent,name="JUMEG_ARGPARSER_PANEL",**kwargs):
         super().__init__(parent,name=name)
         self._param = { "show"   :{"All":False,"Command":False,"FileIO":False,"Parameter":False,"Buttons":True,"PBSHosts":False}}
-
-
         self.SubProcess = JuMEG_IoUtils_SubProcess() # init and use via pubsub
         self.fullfile   = None
         self._init(**kwargs)
@@ -1340,7 +1336,7 @@ class JuMEG_GUI_wxArgvParser(JuMEG_wxMainPanel):
            self.CommandCtrl = JuMEG_wxArgvParserCMD(self.TopPanel, **kwargs)
            self.TopPanel.GetSizer().Add(self.CommandCtrl,3,LEA,ds)
         else:
-           command = { "function": self.function, "import_name": self.module, "fullfile": self.fullfile }
+           command = { "function": self.function, "module_name": self.module, "fullfile": self.fullfile }
            self.update_wx_argparser(command=command)
         if self.ShowPBSHosts:
            self.HostCtrl  = JuMEG_wxPBSHosts(self.TopPanel, prefix=self.GetName())
@@ -1356,7 +1352,7 @@ class JuMEG_GUI_wxArgvParser(JuMEG_wxMainPanel):
        #--- update parser 
         for child in self.PanelA.Panel.GetChildren():
             child.Destroy()
-      
+        
         if ( self.ShowFileIO or self.ShowParameter):
               self.AP = JuMEG_wxArgvParserIO(self.PanelA.Panel,name=self.GetName()+".IO",ShowCloseButton=True,**command)
               self.AP.update(ShowParameter=self.ShowParameter,ShowFileIO=self.ShowFileIO,ShowCloseButton=True)

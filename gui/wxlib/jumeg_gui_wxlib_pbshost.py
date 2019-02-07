@@ -13,7 +13,7 @@ from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxControl
 
 __version__="2018-11-26-001"
 
-class JuMEG_PBSHostParameter(object):
+class JuMEG_PBSHostsParameter(object):
    """
 
    class to acces host parameter:
@@ -34,21 +34,34 @@ class JuMEG_PBSHostParameter(object):
    def get_parameter(self,key=None):
        """
        get  host parameter
-       :param key:
+       :param key:)
        :return: parameter dict or value of  parameter[key]
        """
-       if key: return self.__slots__[key]
-       return {slot: getattr(self, slot) for slot in self.__slots__}
+       if key: return self.__getattribute__(key)
+       return {slot: self.__getattribute__(slot) for slot in self.__slots__}
+  
+   def _init(self,**kwargs):
+      #--- init slots
+       for k in self.__slots__:
+           self.__setattr__(k,None)
+       self._update_from_kwargs(**kwargs)
 
    def update(self,**kwargs):
        self._update_from_kwargs(**kwargs)
 
    def _update_from_kwargs(self,**kwargs):
        for k in self.__slots__:
-           self.__setattr__(k,kwargs.get(k))
-
-   def _init(self,**kwargs):
-       self._update_from_kwargs(**kwargs)
+           self.__setattr__(k,kwargs.get(k,self.__getattribute__(k)))
+          
+       
+   def info(self):
+       wx.LogMessage(
+                     " ==> PBS HOST Info: " + self.hostname +
+                     "\nHOST Nodes  : {}  Max Nodes  : {}".format(self.nodes,self.maxnodes) +
+                     "\nHOST Kernels: {}  Max Kernels: {}".format(self.kernels,self.maxkernels) +
+                     "\nHost Python Version: {}".format(self.python_version) +
+                     "\nHost cmd prefix    : {}".format(self.cmd_prefix)
+                    )
 
 class JuMEG_PBSHosts(object):
     def __init__(self,**kwargs):
@@ -61,6 +74,7 @@ class JuMEG_PBSHosts(object):
                     }
                 }
 
+
         self._host = "local"
         self._template_path = os.getenv("JUMEG_PATH_TEMPLATE",os.getcwd())
         self._template_name = "jumeg_host_template.json"
@@ -68,9 +82,14 @@ class JuMEG_PBSHosts(object):
 
     def hostlist(self): return list(self._template["hosts"].keys())
 
-    def GetHostInfo(self,key=None):
+    def GetParameter(self,key=None):
         if key:  return self._template["hosts"][self._host][key]
         return  self._template["hosts"][self._host]
+    
+    def GetObj(self,key=None):
+        """ do not use for pubsub calls"""
+        if key:  return self._template["hosts"][key]
+        return  JuMEG_PBSHostsParameter(**self._template["hosts"][self._host])
 
     def _set_param( self, key, v ):
         self._template["hosts"][self._host][key] = v
@@ -170,7 +189,6 @@ class JuMEG_PBSHosts(object):
 
         tmp_hosts = self._template["hosts"]
         for h in tmp_hosts.keys():
-            print(h)
             if not tmp_hosts.get("python_version",None):
                tmp_hosts[h]["python_version"]=self.python_versions[-1]
 
@@ -244,7 +262,7 @@ class JuMEG_wxPBSHosts(wx.Panel):
         ctrls.append(("COMBO","HOST", self.HOST.hostlist()[0],  self.HOST.hostlist(), "select a host",None))
         ctrls.append(("BT", "PARAMETER", "Parameter", "change parameter", None,wx.BU_EXACTFIT|wx.BU_NOTEXT))
 
-        self.pnl = JuMEG_wxControlGrid(self,label=None, drawline=False,control_list=ctrls, cols=len(ctrls) + 4,AddGrowableCol=[1])
+        self.pnl = JuMEG_wxControlGrid(self,label=None, drawline=False,control_list=ctrls, cols=len(ctrls),AddGrowableCol=[1])
         self.pnl.SetBackgroundColour(self.bg_pnl)
         self.FindWindowByName("COMBO.HOST").SetValue(self.HOST.hostname)
 
@@ -273,14 +291,6 @@ class JuMEG_wxPBSHosts(wx.Panel):
         sz =  btn.GetSize()
         wxNK.Position(pos, (0, sz[1]))
         wxNK.Popup()
-
-    def info(self):
-        wx.LogMessage(
-        " ==> PBS HOST Info: " +self.HOST.hostname+
-        "\nHOST Nodes: {}  Kernels: {}".format(self.HOST.nodes,self.HOST.kernels)+
-        "\nHOST Nodes Max: {}  Kernels Max: {}".format(self.HOST.maxnodes,self.HOST.maxkernels)+
-        "\nHost Python Version: "+ self.HOST.python_version
-        )
 
     def ClickOnCtrl(self, evt):
         obj = evt.GetEventObject()

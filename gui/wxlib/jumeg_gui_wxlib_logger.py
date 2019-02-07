@@ -3,6 +3,7 @@ from wx.lib.pubsub import pub
 from jumeg.jumeg_base  import jumeg_base as jb
 __version__= "2018-11-15-001"
 
+
 # change formatter
 #log_fh = logging.FileHandler("error.log")
 #formatter = logging.Formatter("%(asctime)s - %(name)s - %(message)s")
@@ -17,12 +18,6 @@ class JuMEG_wxLog(wx.Log):
     ----------
     wx.TextCtrl
     logTime: 0
-
-    ToDo filter warnings e.g.
-     import warnings
-     with warnings.catch_warnings():
-     warnings.filterwarnings("ignore",category=DeprecationWarning)
-     import mne
 
     '''
     def __init__(self, textCtrl, logTime=0):
@@ -59,10 +54,10 @@ class JuMEG_wxLog(wx.Log):
         :param info: wx.LogRecordInfo
         :return:
         """
-
+        
         if self._txtctrl:
            self._txtctrl.SetDefaultStyle(wx.TextAttr(self.LogLevelColour(level)))
-           self._txtctrl.AppendText(msg + '\n')
+           self._txtctrl.AppendText(msg + '\n\n')
            self._txtctrl.SetDefaultStyle(wx.TextAttr(wx.NullColour))
            self._scroll_to_end()
            self._txtctrl.Refresh()
@@ -70,6 +65,10 @@ class JuMEG_wxLog(wx.Log):
         else:
            print(msg)
 
+class JuMEG_LogFormatter(wx.LogFormatter):
+    def Format(level, msg, info):
+        return "\n---> JuMEG LOG: %s(%d line: %d) : %s" %  (info.filename, info.func,info.line, msg)
+    
 class JuMEG_wxLogger(wx.Panel):
     """
      panel with wx.textCtrl and a wx.Log obj
@@ -85,7 +84,7 @@ class JuMEG_wxLogger(wx.Panel):
 
     def __init__(self, parent, name="LOGGER", **kwargs):
         super().__init__(parent, name=name)
-        self._font        = wx.Font(10, wx.MODERN, wx.NORMAL, wx.NORMAL, False, u'Arial', wx.FONTENCODING_ISO8859_1)
+        self._font        = wx.Font(10,wx.FONTFAMILY_TELETYPE,wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_NORMAL)
         self._listener    = name
         self.__isInit     = False
         self.__isMinimize = False
@@ -165,13 +164,16 @@ class JuMEG_wxLogger(wx.Panel):
     def _init_logger(self):
         """ """
         self.__isInit = False
-        formatter=wx.LogFormatter("%(asctime)s - %(name)s - %(message)s")
+        #formatter=wx.LogFormatter("%(asctime)s - %(name)s - %(message)s")
         wx.Log.SetActiveTarget(self.Logger)
-        wx.Log.SetFormatter(formatter)
-        #wx.Log.SetTimestamp('%Y-%m-%d %H:%M:%S')
+        #formatter=JuMEG_LogFormatter()
+        #wx.Log.SetFormatter(JuMEG_LogFormatter)
+        wx.Log.SetTimestamp('%Y-%m-%d %H:%M:%S')
         wx.Log.SetLogLevel(self.LogLevel)
+        #self.fmt_info  = 'JuMEG LOG %(asctime)s %(message)s'
+        #logging.basicConfig(format=self.fmt_info,datefmt='%Y/%m/%d %I:%M:%S')
         self.__isInit = True
-
+    
     def ToggleMinimize(self, evt):
         """
         toggle min/max size of logger window
@@ -181,8 +183,8 @@ class JuMEG_wxLogger(wx.Panel):
             self.__isMinimize = False
         else:
             self.__isMinimize = True
-        pub.sendMessage(self.cmd_update_min_max, name=self.GetName(),
-                        size=self._BtMinimize.GetSize() * 2)  # two buttons to show
+        wx.CallAfter(pub.sendMessage , self.cmd_update_min_max, name=self.GetName(),
+                        size=self._BtMinimize.GetSize() * 2 ) # two buttons to show
 
     def ClickOnButton(self, evt):
         obj = evt.GetEventObject()
@@ -426,7 +428,7 @@ class _JuMEG_wxLogger(wx.Panel):
            self.__isMinimize = False
         else:
            self.__isMinimize = True
-        pub.sendMessage(self.cmd_update_min_max,name=self.GetName(),size=self._BtMinimize.GetSize()*2) # two buttons to show
+        wx.CallAfter( pub.sendMessage(self.cmd_update_min_max,name=self.GetName(),size=self._BtMinimize.GetSize()*2))# two buttons to show
 
     def ClickOnButton(self,evt):
         obj = evt.GetEventObject()
@@ -451,3 +453,68 @@ class _JuMEG_wxLogger(wx.Panel):
         self.Fit()
         self.SetAutoLayout(1)
         self.GetParent().Layout()
+
+'''
+
+rederict logging to wx.Logger
+
+https://stackoverflow.com/questions/2819791/how-can-i-redirect-the-logger-to-a-wxpython-textctrl-using-a-custom-logging-hand
+
+import logging
+import random
+import sys
+import wx
+
+logger = logging.getLogger(__name__)
+
+class WxTextCtrlHandler(logging.Handler):
+    def __init__(self, ctrl):
+        logging.Handler.__init__(self)
+        self.ctrl = ctrl
+
+    def emit(self, record):
+        s = self.format(record) + '\n'
+        wx.CallAfter(self.ctrl.WriteText, s)
+
+LEVELS = [
+    logging.DEBUG,
+    logging.INFO,
+    logging.WARNING,
+    logging.ERROR,
+    logging.CRITICAL
+]
+
+class Frame(wx.Frame):
+
+    def __init__(self):
+        TITLE = "wxPython Logging To A Control"
+        wx.Frame.__init__(self, None, wx.ID_ANY, TITLE)
+
+        panel = wx.Panel(self, wx.ID_ANY)
+        log = wx.TextCtrl(panel, wx.ID_ANY, size=(300,100),
+                          style = wx.TE_MULTILINE|wx.TE_READONLY|wx.HSCROLL)
+        btn = wx.Button(panel, wx.ID_ANY, 'Log something!')
+        self.Bind(wx.EVT_BUTTON, self.onButton, btn)
+
+        sizer = wx.BoxSizer(wx.VERTICAL)
+        sizer.Add(log, 1, wx.ALL|wx.EXPAND, 5)
+        sizer.Add(btn, 0, wx.ALL|wx.CENTER, 5)
+        panel.SetSizer(sizer)
+        handler = WxTextCtrlHandler(log)
+        logger.addHandler(handler)
+        FORMAT = "%(asctime)s %(levelname)s %(message)s"
+        handler.setFormatter(logging.Formatter(FORMAT))
+        logger.setLevel(logging.DEBUG)
+
+    def onButton(self, event):
+        logger.log(random.choice(LEVELS), "More? click again!")
+
+if __name__ == "__main__":
+    app = wx.PySimpleApp()
+    frame = Frame().Show()
+    app.MainLoop()
+
+
+
+
+'''

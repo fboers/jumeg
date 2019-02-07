@@ -9,9 +9,9 @@
 import wx
 from wx.lib.pubsub import pub
 from jumeg.gui.wxlib.jumeg_gui_wxlib_logger               import JuMEG_wxLogger
-from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxSplitterWindow,JuMEG_wxCMDButtons #,JuMEG_wxControlButtonPanel,JuMEG_wxControls,JuMEG_wxControlIoDLGButtons,JuMEG_wxControlGrid,
+from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxSplitterWindow,JuMEG_wxCMDButtons
 
-version="2018.11.21.001"
+version="2019.02.07.001"
 
 
 class JuMEG_wxMainPanelBase(wx.Panel):
@@ -91,11 +91,14 @@ class JuMEG_wxMainPanelBase(wx.Panel):
         self.verbose    = False
         self._param     = {}
 
-        self.__isInit   =    False
+        self.__isInit       = False
         self.__isMinimize   = False
         self._show_logger   = False
         self._show_minmax_bt= False
         self._show_cmd_bts  = False
+        self._show_top_pnl  = True
+        self._show_titleA   = True
+        self._show_titleB   = True
       # self._init(**kwargs) # the function to call in child class
 
     def _get_param(self,k1,k2):
@@ -107,13 +110,19 @@ class JuMEG_wxMainPanelBase(wx.Panel):
     def isInit(self): return self.__isInit
 
     @property
+    def MainPanel(self):    return self._pnl_main
+
+    @property
+    def LoggerPanel(self):  return self._pnl_logger
+  
+    @property
+    def TopPanel(self):  return self._pnl_top
+  
+    @property
+    def CmdButtonPanel(self):  return self._pnl_cmd_buttons
+
+    @property
     def WindowSplitter(self): return self._splitter
-
-    @property
-    def LoggerPanel(self):return self._pnl_logger
-
-    @property
-    def MainPanel(self):  return self._pnl_main
 
     @property
     def ShowLogger(self)  : return self._show_logger
@@ -129,6 +138,20 @@ class JuMEG_wxMainPanelBase(wx.Panel):
     def ShowCmdButtons(self)  : return self._show_cmd_bts
     @ShowCmdButtons.setter
     def ShowCmdButtons(self,v): self._show_cmd_bts = v
+
+    @property
+    def ShowTopPanel(self)  : return self._show_top_pnl
+    @ShowTopPanel.setter
+    def ShowTopPanel(self,v): self._show_top_pnl = v
+
+    @property
+    def ShowTitleA(self): return self._show_titleA
+    @ShowTitleA.setter
+    def ShowTitleA(self,v): self._show_titleA = v
+    @property
+    def ShowTitleB(self): return self._show_titleB
+    @ShowTitleB.setter
+    def ShowTitleB(self,v): self._show_titleB = v
 
     def SetVerbose(self,value=False):
         self.verbose=value
@@ -154,8 +177,10 @@ class JuMEG_wxMainPanelBase(wx.Panel):
         self._show_cmd_bts = kwargs.get("ShowCmdButtons",self._show_cmd_bts)
         self.verbose       = kwargs.get("verbose", False)
         self.debug         = kwargs.get("debug", False)
+        self.SashPosition  = kwargs.get("SashPosition",-50)
         self.SetBackgroundColour(kwargs.get("bg", "grey88"))
-
+        
+        
     def FitBoxSizer(self,pnl,pos=wx.HORIZONTAL):
         """ fits a BoxSizer to a panel + AutoLayout
         pnl: wx:panel
@@ -172,6 +197,9 @@ class JuMEG_wxMainPanelBase(wx.Panel):
         self._splitter   = None
         self._pnl_logger = None
         self._pnl_main   = None
+        self._pnl_top    = None
+        self._pnl_cmd_buttons = None
+        
         # --- command logger
         if self.ShowLogger:
            self._splitter = JuMEG_wxSplitterWindow(self, label="Logger", name=self.GetName() + ".LOGGER",
@@ -229,7 +257,11 @@ class JuMEG_wxMainPanelBase(wx.Panel):
       #---
         self.__isInit=True
         self._ApplyLayout()
-
+        self.update_on_display()
+    
+    def update_on_display(self):
+        pass
+    
     def _ApplyLayout(self):
         """ default Layout Framework """
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
@@ -242,7 +274,7 @@ class JuMEG_wxMainPanelBase(wx.Panel):
            self._splitter.SplitHorizontally(self.MainPanel,self.LoggerPanel)
            self._splitter.SetMinimumPaneSize(50)
            self._splitter.SetSashGravity(1.0)
-           self._splitter.SetSashPosition(-50,redraw=True)
+           self._splitter.SetSashPosition(self.SashPosition,redraw=True)
            self.Sizer.Add(self._splitter, 1, wx.ALIGN_CENTER | wx.EXPAND | wx.ALL, 5)
         else:
            self.Sizer.Add(self.MainPanel, 1, wx.ALIGN_CENTER | wx.EXPAND | wx.ALL, 5)
@@ -295,26 +327,27 @@ class JuMEG_wxMainPanel(JuMEG_wxMainPanelBase):
                Button Panel
     """
     def __init__(self,*kargs,name="MAIN_PANEL",**kwargs):
-        super(JuMEG_wxMainPanel,self).__init__(*kargs,name=name)
+        super(JuMEG_wxMainPanel,self).__init__(*kargs,name=name,**kwargs)
         #self._init(**kwargs)
 
     def wx_init(self, **kwargs):
         """ init WX controls """
         self.update_from_kwargs(**kwargs)
        #---
-        self.TopPanel = wx.Panel(self.MainPanel)
-        self.FitBoxSizer(self.TopPanel)
+        if self.ShowTopPanel:
+           self._pnl_top = wx.Panel(self.MainPanel)
+           self.FitBoxSizer(self.TopPanel)
        #---
         self.SplitterAB = JuMEG_wxSplitterWindow(self.MainPanel,listener=self.GetName()+"_B")
         self.SplitterAB.SetSashGravity(1.0)
        #---
-        self.PanelA     = JuMEG_wxPanelAB(self.SplitterAB,name=self.GetName()+"_A",bg=self.bgA,label=self.labelA)
-        self.PanelB     = JuMEG_wxPanelAB(self.SplitterAB,name=self.GetName()+"_B",bg=self.bgB,label=self.labelB,ShowMinMaxBt=self.ShowMinMaxBt)
+        self.PanelA     = JuMEG_wxPanelAB(self.SplitterAB,name=self.GetName()+"_A",bg=self.bgA,label=self.labelA,ShowTitle=self.ShowTitleA)
+        self.PanelB     = JuMEG_wxPanelAB(self.SplitterAB,name=self.GetName()+"_B",bg=self.bgB,label=self.labelB,ShowMinMaxBt=self.ShowMinMaxBt,ShowTitle=self.ShowTitleB)
         self.SplitterAB.SplitVertically(self.PanelA, self.PanelB)
        #---
         if self.ShowCmdButtons:
-           self.CmdButtons = JuMEG_wxCMDButtons(self.MainPanel,prefix=self.GetName(),
-                                                ShowClose=True,ShowCancel=True,ShowApply=True)
+           self._pnl_cmd_buttons = JuMEG_wxCMDButtons(self.MainPanel,prefix=self.GetName(),
+                                                      ShowClose=True,ShowCancel=True,ShowApply=True)
 
        #--- make a BoxSizer to pack later CTRLs
         self.FitBoxSizer(self.PanelA.Panel)
@@ -323,10 +356,16 @@ class JuMEG_wxMainPanel(JuMEG_wxMainPanelBase):
     def ApplyLayout(self):
         """ your layout stuff """
         vbox = wx.BoxSizer(wx.VERTICAL)
-        vbox.Add(self.TopPanel, 0, wx.ALIGN_LEFT| wx.EXPAND | wx.ALL, 1)
+        
+        if self.TopPanel:
+          # if self.TopPanel.GetChildren():
+           vbox.Add(self.TopPanel, 0, wx.ALIGN_LEFT| wx.EXPAND | wx.ALL, 1)
+           #else: self.TopPanel.Destroy()
+              
         vbox.Add(self.SplitterAB, 1, wx.ALIGN_LEFT | wx.EXPAND | wx.ALL, 1)
+        
         if self.ShowCmdButtons:
-           vbox.Add(self.CmdButtons,0,wx.ALIGN_BOTTOM|wx.EXPAND|wx.ALL,1 )
+           vbox.Add(self.CmdButtonPanel,0,wx.ALIGN_BOTTOM|wx.EXPAND|wx.ALL,1 )
 
         self.MainPanel.SetSizer(vbox)
 
@@ -408,7 +447,8 @@ class JuMEG_wxPanelAB(wx.Panel):
      bg    : wx.Colour()
      title : text for title-panel
      ShowMinMaxBt: will show MinMAx button <False>
-
+     showTitle: <True>
+     
      Example:
      --------
       PanelA = JuMEG_wxPanelAB(SplitterAB,name="MAIN_PANEL_A",bg=wx.Colour(132, 126, 238),label="PDFs")
@@ -432,15 +472,18 @@ class JuMEG_wxPanelAB(wx.Panel):
         """  """
         self.SetName(kwargs.get("name","PANEL_AB"))
         self.SetBackgroundColour(kwargs.get("bg",wx.Colour(132, 126, 238)))
-
+        self._show_title = kwargs.get("ShowTitle",True)
+        
     def wx_init(self, **kwargs):
         """ init WX controls """
-        self.PanelHead = JuMEG_wxTitlePanel(self,**kwargs) # label="PDFs",ShowMinMaxBt=False
-        self.Panel     = wx.Panel(self)
+        if self._show_title:
+           self.PanelHead = JuMEG_wxTitlePanel(self,**kwargs) # label="PDFs",ShowMinMaxBt=False
+        self.Panel = wx.Panel(self)
 
     def ApplyLayout(self):
         self.Sizer  = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self.PanelHead,0, wx.ALIGN_LEFT | wx.EXPAND | wx.ALL, 1)
+        if self._show_title:
+           self.Sizer.Add(self.PanelHead,0, wx.ALIGN_LEFT | wx.EXPAND | wx.ALL, 1)
         self.Sizer.Add(self.Panel,1, wx.ALIGN_LEFT | wx.EXPAND | wx.ALL, 1)
         self.SetSizer(self.Sizer)
         self.Fit()
