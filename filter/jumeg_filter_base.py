@@ -7,6 +7,9 @@
  update: 16.12.2014
  update: 21.12.2016
   --> add function calc_lowpass_value
+ update: 17.12.2018
+  --> filter_name_postfix use print() with format(),
+      print fcut as float 0.001-200.0Hz
 
  version    : 0.031415
 ---------------------------------------------------------------------- 
@@ -285,9 +288,11 @@ class JuMEG_Filter_Base(JuMEG_Base_Basic):
         
         self.__filter_name_extention  = "fi" + self.filter_type 
         if self.filter_type == 'bp' :
-           self.__filter_name_extention += "%d-%d" % ( int(self.fcut1), int(self.fcut2) )
+           self.__filter_name_extention +=  "{}".format(self.fcut1).rstrip("0").rstrip(".")
+           self.__filter_name_extention += "-{}".format(self.fcut2).rstrip("0").rstrip(".")
+           
         elif self.filter_type != 'notch' :
-           self.__filter_name_extention += "%d" % (int(self.fcut1) )
+           self.__filter_name_extention += "{}".format(self.fcut1).rstrip("0").rstrip(".")
            
         if self.filter_notch.size :
            self.__filter_name_extention += "n%d"%(self.filter_notch.size)
@@ -301,9 +306,9 @@ class JuMEG_Filter_Base(JuMEG_Base_Basic):
         self.__filter_info_string = self.filter_method +" ---> "+ self.filter_type
 
         if self.filter_type == 'bp' :
-           self.__filter_info_string += "%0.3f-%0.1f Hz" % (self.fcut1,self.fcut2)
+           self.__filter_info_string += "{}-{} Hz".format(self.fcut1,self.fcut2)
         elif self.filter_type != "notch":
-           self.__filter_info_string += "%0.3f Hz" % (self.fcut1)
+           self.__filter_info_string += "{} Hz".format(self.fcut1)
        
         if self.filter_notch.size :
            self.__filter_info_string += ",apply notch"

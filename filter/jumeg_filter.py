@@ -8,7 +8,7 @@ from jumeg.jumeg_base  import jumeg_base as jb
 from jumeg.filter.jumeg_filter_bw  import JuMEG_Filter_Bw
 from jumeg.filter.jumeg_filter_mne import JuMEG_Filter_MNE
 
-__version__= '2018.08.24.001'
+__version__= '2018.12.17.001'
 
 
 '''
@@ -40,6 +40,7 @@ excluded:
  How to use the jumeg filter
 ---------------------------------------------------------------------- 
 
+import numpy as np
 from jumeg.filter import jumeg_filter
 
 #===> set some global values
@@ -148,6 +149,11 @@ def apply_filter(opt):
     raw  = None
     fout = None
     jb.verbose = opt.verbose
+  
+   #--- check if fullfile exists
+    fin = jb.isfile(opt.fif_filename,path=opt.fif_stage,head="apply_suggest_bads: FIF File Check",exit_on_error=False)
+    if not fin: return
+    
    #--- generate filter obj reset no defaults
     filter_obj = jumeg_filter(filter_method=opt.method,filter_type=opt.type,fcut1=None,fcut2=None,
                               remove_dcoffset=False,notch=np.array([]),notch_width=1.0,order=4)
@@ -174,31 +180,23 @@ def apply_filter(opt):
       if jb.isNotEmpty(opt.mne_length)        : filter_obj.mne_filter_length = float(opt.mne_length)
       if jb.isNotEmpty(opt.mne_trans_bandwith): filter_obj.trans_bandwith    = float(opt.mne_trans_bandwith)
 
-   #--- load fif and generate obj 
-   #--- input file fullpath
-    fin  = ""
-    if (opt.fif_stage).strip(): fin = opt.fif_stage +"/"
-    fin += opt.fif_filename
-  #--- check if fin file exist  
-    if not jb.isFile(fin,head="<jumeg_filter>"): return
-   
-    print(" --> jumeg filter load MEG data: " + fin)
+#--- load fif
+    jb.Log.info(" --> jumeg filter load MEG data: " + fin)
     raw, _  = jb.get_raw_obj(fin,raw=raw) 
    #--- get MEG & Ref picks
     picks = jb.picks.exclude_trigger(raw)
     filter_obj.sampling_frequency = raw.info['sfreq']
     
    #--- apply filter
-    print(" --> jumeg filter apply filter")
-    filter_obj.apply_filter(raw._data, picks=picks)   
-    print(" --> jumeg filter info: " + filter_obj.filter_info)
+    jb.Log.info(" --> jumeg filter apply filter")
+    filter_obj.apply_filter(raw._data, picks=picks)
+    jb.Log.info(" --> jumeg filter info: " + filter_obj.filter_info)
     
     filter_obj.update_info_filter_settings(raw) # raw.info lowpass and highpass
   
    #--- make output filename
     name_raw = fin.split('-')[0]
     fout = name_raw + "," + filter_obj.filter_name_postfix + opt.file_extention
-    raw.info['filename'] = fout
     
     if opt.save:
        fout = jb.apply_save_mne_data(raw,fname=fout)
@@ -218,7 +216,9 @@ def get_args(self):
         info_global = """
                       JuMEG Filter
                       filter meg data
-                      """  
+                      used python version:
+                       {}
+                      """.format( sys.version.replace("\n"," "))
                       
         info_fif_stage="""
                        fif stage: start path for fif files from list
@@ -241,7 +241,7 @@ def get_args(self):
         parser = argparse.ArgumentParser(info_global)
  
        #--- meg input files
-        parser.add_argument("-fin",     "--fif_filename",      help="fif file + relative path to stage",                    metavar="FIF_FILENAME")
+        parser.add_argument("-fin",     "--fif_filename",      help="fif file + relative path to stage",metavar="FIF_FILENAME",default="101716/MEG94T/121219_1310/1/101716_MEG94T_121219_1310_1_c,rfDC,fibp11-15-raw.fif")
         parser.add_argument("-fif_ext", "--fif_file_extention",help="fif file extention", default="FIF files (*.fif)|*.fif",metavar="FIF_FILEEXTENTION")
         parser.add_argument("-sfif",    "--fif_stage",         help=info_fif_stage,       default="/home/fboers/MEGBoers/data/exp/MEG94T/mne/",metavar="FIF_STAGE")  #os.getcwd()
         
@@ -250,10 +250,10 @@ def get_args(self):
         parser.add_argument("-t",    "--type",  choices=["bp","lp","hp","notch"],help="type of filter: for lp,hp use <fcut1> only; for bp use <fcut1> and <fcut2>",default="bp")
         parser.add_argument("-w",    "--window",choices=["blackmann","hamming"], help="filter window function",default='blackmann')
        
-        parser.add_argument("-fc1",  "--fcut1",         help="fcut1 [Hz]",default=None)
-        parser.add_argument("-fc2",  "--fcut2",         help="fcut2 [Hz]",default=None)
-        parser.add_argument("-n",    "--notch",         help='notch single number or list "50,100" [Hz]') 
-        parser.add_argument("-nmax", "--notch_max",     help= help_notch)
+        parser.add_argument("-fc1",  "--fcut1",         help="fcut1 [Hz]",default=1.0)
+        parser.add_argument("-fc2",  "--fcut2",         help="fcut2 [Hz]",default=45.0)
+        parser.add_argument("-n",    "--notch",         help='notch single number or list "50,100" [Hz]',default=50)
+        parser.add_argument("-nmax", "--notch_max",     help= help_notch,default=400)
         parser.add_argument("-nw",   "--notch_width",   help='notch width [Hz]', default=1.0) 
         parser.add_argument("-or",   "--order",         help='order', default=4) 
         parser.add_argument("-ext",  "--file_extention",help="output file extention",default="-raw.fif")
@@ -263,15 +263,13 @@ def get_args(self):
         parser.add_argument("-mne_tb","--mne_trans_bandwith",help='mne trans bandwith',default='0.5') 
         
        # ---flags:
-        parser.add_argument("-dc","--remove_dcoffset",action="store_true", help="remove dcoffset") 
-        parser.add_argument("-v", "--verbose",        action="store_true", help="verbose") 
+        parser.add_argument("-dc","--remove_dcoffset",action="store_true", help="remove dcoffset")
+        parser.add_argument("-v", "--verbose",        action="store_true", help="verbose")
         parser.add_argument("-r", "--run",            action="store_true", help="!!! EXECUTE & RUN this program !!!")
         parser.add_argument("-s", "--save", action="store_true", help="save output fif file")
 
-        parser.add_argument("-tt", "--test", action="store_true", help="save output fif file")
-
-        parser.set_defaults(save=True)
-       
+        parser.set_defaults(save=True,run=True)
+      
         return parser.parse_args(), parser
 
 #=========================================================================================
@@ -284,39 +282,15 @@ def main(argv):
        parser.print_help()
        sys.exit(-1)
 
-    if opt.verbose :
-       jb.line()
-       print("---> jumeg filter version: {}".format(__version__))
-       print("---> python sys version  : {}".format(sys.version_info))
-       jb.line
-       print("\n---> file input parameter:")
-       print(" --> fin        : " + str(opt.fif_filename))
-       print(" --> fext       : " + str(opt.fif_file_extention))
-       print(" --> stage      : " + str(opt.fif_stage))
-       print(" --> output file extention : " + str(opt.file_extention))
-       jb.line()
-       print("\n---> filter parameter:")
-       print(" --> method     : " + str(opt.method))
-       print(" --> type       : " + str(opt.type))
-       print(" --> window     : " + str(opt.window))
-       print(" --> fcut1      : " + str(opt.fcut1))
-       print(" --> fcut2      : " + str(opt.fcut2))
-       print(" --> notch      : " + str(opt.notch)) 
-       print(" --> notch max  : " + str(opt.notch_max)) 
-       print(" --> notch width: " + str(opt.notch_width)) 
-       print(" --> order      : " + str(opt.order)) 
-       jb.line()
-       print("\n---> MNE filter method (only):")
-       print(" --> MNE method : " + str(opt.mne_method))
-       print(" --> MNE length : " + str(opt.mne_length))
-       print(" --> MNE tansition bandwith: " + str(opt.mne_trans_bandwith))
-       jb.line()    
-       print(" --> verbose     : " + str(opt.verbose))
-       print(" --> run         : " + str(opt.run))
-       jb.line()
-       print("\n\n")  
+    if opt.verbose:
+       msg=["---> jumeg filter version: {}".format(__version__),
+            "---> python sys version  : {}".format(sys.version_info),
+            "-"*50," --> ARGV parameter:"]
+       for k,v in sorted(vars(opt).items()):
+           msg.append(" --> {0:24}: {1}".format(k,v))
+       jb.Log.info(msg)
        
-    if opt.run: apply_filter(opt)    
+    if opt.run: apply_filter(opt)
 
 if __name__ == "__main__":
     main(sys.argv)
