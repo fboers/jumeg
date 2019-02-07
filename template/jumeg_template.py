@@ -33,10 +33,11 @@ from jumeg.template.jumeg_template import JuMEG_Template_Experiments
 #--------------------------------------------
 
 import glob, os, re, sys
-import json
+import json,time
+# from jsonschema import validate
 from jumeg.jumeg_base import JuMEG_Base_Basic
 
-__version__='2018-11-21.001'
+__version__='2018-12-13.001'
 
 class dict2obj(dict):
     def __init__(self, dict_):
@@ -109,7 +110,7 @@ def _decode_dict(data):
 
 class JuMEG_Template(JuMEG_Base_Basic):
     def __init__ (self,template_name='DEFAULT'):
-        super().__init__()
+        super(JuMEG_Template,self).__init__()
 
         self._template_path     = "123"#None  # os.getenv('JUMEG_PATH_TEMPLATE',self.__JUMEG_PATH_TEMPLATE)
         self._template_name     = template_name
@@ -167,7 +168,9 @@ class JuMEG_Template(JuMEG_Base_Basic):
    #--- template_full_filename
     @property
     def template_full_filename(self): return self.template_path + '/' + self.template_filename
-
+   #---
+    @property
+    def template_extention(self): return self.template_postfix + self.template_suffix
     #---
     def template_get_name_from_list(*args):
         if type( args[1] ) == int :
@@ -182,31 +185,44 @@ class JuMEG_Template(JuMEG_Base_Basic):
           template_name_list
          """
          self.template_name_list = []
-
-         flist = glob.glob( self.template_path + '/*' + self.template_postfix + self.template_suffix)
-         pat   = re.compile( (self.template_path + '|/|'+ '_' + self.template_postfix + self.template_suffix) )
-         self.template_name_list = pat.sub('', str.join(',',flist) ).split(',')
-        #---
          self.template_data = dict()
+        #---
+         flist = glob.glob( self.template_path + '/*' + self.template_postfix + self.template_suffix)
+         if flist:
+             pat   = re.compile( (self.template_path + '|/|'+ '_' + self.template_postfix + self.template_suffix) )
+             self.template_name_list = pat.sub('', str.join(',',flist) ).split(',')
+        #---
          return self.template_name_list
 
-    def template_update_file(self):
-          self._template_isUpdate = False
-
-          try:
-              with open(self.template_full_filename) as FH: # PY3
-                   self.template_data = json.load(FH) # close  anyway
-
+    def template_update_file(self,dict2obj=False,exit_on_error=True):
+        """
+        
+        :param dict2obj:  convert dict to obj <False>
+        :param exit_on_error: will exit on error e.g. error in loadibg template file <True>
+        :param clear will clear template data <True>
+        :return:
+        """
+        status = True
+        self._template_isUpdate = False
+        self.template_data.clear() # clear all copies
+        try:
+           with open(self.template_full_filename) as FH: # PY3
+                self.template_data = json.load(FH) # close  anyway
+           if dict2obj:
               self.template_data = dict2obj(self.template_data)
               self._template_isUpdate = True
-          except ValueError as e:
-              print("\n---> ERROR loading Template File: " + self.template_full_filename, file=sys.stderr)
-              print(' --> invalid json: %s' % e, file=sys.stderr)
-
-          assert self.template_data,"---> ERROR in template file format [json]\n"  
-          return 
+        except (ValueError,FileNotFoundError) as e:
+           self.Log.error(["\n---> ERROR loading Template File: " + self.template_full_filename," --> invalid json: %s\n" % e])
+           status=False
+        if exit_on_error:
+           assert self.template_data,"---> ERROR in template file format [json]: {}\n".format(self.template_full_filename)
+        return status
           
     def template_get_as_obj(self):
+        """
+         :return obj  convertet from dict
+         d["test1"]  -> d.test1
+        """
         return dict2obj( self.template_data )
     
     def template_update_and_merge_dict(self, d, u, depth=-1):
@@ -265,47 +281,43 @@ class JuMEG_Template(JuMEG_Base_Basic):
                 d = _decode_dict(d)
             except:
                 d = dict()
-                print("\n\n!!! ERROR NO JSON File Format:\n  ---> " + fjson,file=sys.stderr)
-                print("\n\n",file=sys.stderr)
+                self.Log.error("\n\n!!! ERROR NO JSON File Format:\n  ---> " + fjson +"\n\n")
             FID.close()
         return d
         
-    def template_write_json(self,fjson, d):
-        with open(fjson, 'wb') as FOUT:
-             json.dump(d,FOUT, sort_keys=True)   
-             FOUT.close()
-
-class JuMEG_Template_Experiments(JuMEG_Template):
-    """
-    class to work with <jumeg experiment templates>
-    overwrite _init(**kwargs) for you settings
-
-    Example
-    -------
-     from jumeg.template.jumeg_template import JuMEG_Template_Experiments
-
-     class JuMEG_ExpTemplate(JuMEG_Template_Experiments):
-        def __init__(self,**kwargs):
-            super().__init__()
-
-        def update_from_kwargs(self,**kwargs):
-           self.template_path = kwargs.get("template_path",self.template_path)
-
-        def _init(self,**kwargs):
-            self.update_from_kwargs(**kwargs)
-
-     TMP = JuMEG_ExpTemplate()
-     print(TMP.template_path)
-
-    """
-    def __init__ (self,**kwargs):
-        super().__init__()
-        self.template_path    = os.getenv('JUMEG_PATH_TEMPLATE_EXPERIMENTS',self.template_path_default + '/jumeg_experiments')
-        self.template_name    = 'default'
-        self.template_postfix = 'jumeg_experiment_template'
-        self._init(**kwargs)
-
-    def _init(self,**kwargs):
-        pass
-
-experiment = JuMEG_Template_Experiments()
+    def template_write_json(self,fjson, data):
+        """
+        
+        :param fjson: full filename
+        :param data: dict to save in json format
+        :return:
+        """
+        with open(fjson,"w") as f:
+            f.write(json.dumps(data,indent=4))
+        f.close()
+        
+    def update_template_info(self,version=None,gui_version=None):
+        """
+        generate info dict
+        :param : version <None>
+        
+        "info":{
+          "time":"2019-01-01  00:00:01",
+          "user": "donal the duck",
+          "version": "v2019-01-01-007"
+         },
+         
+         ??? update dict2obj
+        """
+        t = time.localtime()
+        if not version:
+           version = time.strftime("%G-%m-%d",t) + "-0.001"
+        self.template_data["info"]={
+            "time"    : time.strftime("%G-%m-%d %H:%M:%S",t),
+            "user"    : os.getenv("USER","nobody"),
+            "version" : version,
+            "jumeg_template_version":__version__
+            }
+        if gui_version:
+           self.template_data["info"]["jumeg_gui_version"] = gui_version
+        return self.template_data["info"]
