@@ -1,7 +1,7 @@
 {
     "info": {
         "time": "2019-01-17 08:44:21",
-        "user": "fboers",
+        "user": "test",
         "version": "2019-01-17-0.001",
         "jumeg_template_version": "2018-12-13.001",
         "jumeg_gui_version": "2019-01-04.001"
@@ -9,8 +9,7 @@
     "experiment": {
         "name": "FREEVIEWING",
         "stages": [
-            "${JUMEG_PATH_MOUNT_POINT}/meg_store1/exp",
-            "${JUMEG_PATH_MOUNT_POINT}/meg_store2/exp",
+            "${JUMEG_PATH_MNE_IMPORT}",
             "${JUMEG_PATH_LOCAL_DATA}/exp"
         ],
         "scans": [
@@ -41,10 +40,9 @@
     },
     "bti_export": {
         "bti_path": [
-            "~/MEGBoers/data/megdaw_data21",
-            "${JUMEG_PATH_BTI_EXPORT}",
-            "/data/MEG/meg_store2/megdaw_data21"
-        ],
+                     "${JUMEG_PATH_BTI_EXPORT}",
+                      "${JUMEG_PATH_LOCAL_DATA}/megdaw_data21"
+                    ],
         "pdf_name": "c,rfDC",
         "config_fname": "config",
         "head_shape_fname": "hs_file",
