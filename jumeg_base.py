@@ -45,7 +45,7 @@ License: BSD 3 clause
 
 '''
 
-import os,sys,six
+import os,sys,six,contextlib
 import numpy as np
 
 # py3 obj from pathlib import Path
@@ -88,25 +88,67 @@ class AccessorType(type):
 
 class JuMEG_Logger(object):
    """
-    logger
+    logger cls
+    :param: app_name => logger name <None>
+    :param: level    => logging level  <10>
+       level values:
+        CRITICAL 50
+        ERROR 	 40
+        WARNING  30
+        INFO 	 20
+        DEBUG 	 10
+        NOTSET 	 0
     https://docs.python.org/3/howto/logging-cookbook.html
     https://stackoverflow.com/questions/44522676/including-the-current-method-name-when-printing-in-python
+    
+    Example:
+    ---------
+    from jumeg.jumeg_base import JuMEG_Logger
+    myLog=JuMEG_Logger(app_name="MYLOG",level=logging.DEBUG)
+    myLog.info( "test logging info instead of using <print> ")
+    
+    from jumeg.jumeg_base import JuMEG_Base_Basic as JB
+    jb=JB()
+    jb.Log.info("test logging info instead of using <print>")
+    
    """
-   def __init__( self, app_name=None,**kwargs):
+   def __init__( self, app_name=None,level=10,**kwargs):
        super(JuMEG_Logger, self).__init__(**kwargs)
-       self.logger = logging.getLogger(app_name or __name__)
+       self.verbose = False
+       self.logger  = logging.getLogger(app_name or __name__)
        self.logger.setLevel(logging.DEBUG)
-       self.log_format = '[%(asctime)-15s] [%(levelname)08s] (%(funcName)s %(message)s'
-       logging.basicConfig(format=self.log_format)
+       self.fmt_info  = 'JuMEG LOG %(asctime)s %(message)s'
+       logging.basicConfig(format=self.fmt_info,datefmt='%Y/%m/%d %I:%M:%S')
+       
+       
+       #self.fmt_debug   = '%(asctime)-15s] %(levelname) %(funcName)s %(message)s'
+       #self.fmt_error   = '[%(asctime)-15s] [%(levelname)08s] (%(funcName)s %(message)s'
+       #formatter = logging.Formatter("%(asctime)s - %(name)s - %(message)s")
+       
 
+   def list2str(self,msg):
+       if isinstance(msg,(list)):
+          return "\n"+"\n".join(msg)
+       return msg
+   
    def info( self,msg ):
-       self.logger.info(msg)
+       #self.logger.setFormatter()
+       self.logger.info( self.list2str(msg) )
+       
    def warning( self,msg ):
-       self.logger.warning(msg)
-   def error( self,msg ):
-       self.logger.error(msg)
+       self.logger.warning(self.list2str(msg) )
+       
+   def error( self,msg):
+       if isinstance(msg,(list)):
+          self.logger.error("\nERROR:\n"+self.list2str(msg)+"\n",exc_info=True)
+       else:
+          self.logger.error("\nERROR: "+msg+"\n",exc_info=True,)
+       
+      # if self.verbose:
+      #    traceback.print_exc()
+      
    def debug( self, msg ):
-       self.logger.debug(msg)
+       self.logger.debug( self.list2str(msg),exc_info=True )
 
 '''
 class bcolors():
@@ -138,16 +180,22 @@ class JuMEG_Base_Basic(object):
         self._do_plot       = False
 
         self._pp = PrettyPrinter(indent=4)
-        self.Hlog = JuMEG_Logger()
-
+        self.Log = JuMEG_Logger()
+        
+        self.__MSG_CODE_PATH_NOT_EXIST = 1001
+        self.__MSG_CODE_FILE_NOT_EXIST = 1002
+        
     
     def get_function_name(self):
+        print(sys._getframe(2))
         return sys._getframe(2).f_code.co_name
+    def get_function_fullfilename(self):
+        return sys._getframe(2).f_code.co_filename
 
     @property
     def python_version(self):
         self.line()
-        self.Hlog.info("---> python sys version: " + sys.version_info)
+        self.Log.info("---> python sys version: " + sys.version_info)
         #try:
         #   print("---> wx version: " + wx.version)   
         #except:
@@ -203,7 +251,7 @@ class JuMEG_Base_Basic(object):
         m.append( msg )
         m.append(self.line(char="*"))
         #print(bcolors.ENDC)
-        self.Hlog.warning( "\n".join(m) )
+        self.Log.warning( "\n".join(m) )
 
     def print_error(self,msg,head=None,file=sys.stderr):
         """
@@ -221,7 +269,7 @@ class JuMEG_Base_Basic(object):
         #print( msg,file=file )
         #self.line(char=". ! ",n=10,file=file)
         #print(bcolors.ENDC,file=file)
-        self.Hlog.error(msg)
+        self.Log.error(msg)
 
     def line(self,n=40,char="-",file=None):
         """ line: prints a line for nice printing  and separate
@@ -360,46 +408,110 @@ class JuMEG_Base_Basic(object):
         
         # PY2 if isinstance(s, basestring): return bool(s.strip())
         return False
-    
-    def isFile(self,fin,head="ERROR JuMEG_Base_Basic:isFile"):
+
+    def isFile(self,fin,path=None,extention=None,head="ERROR JuMEG_Base_Basic:isFile",exit_on_error=False,logmsg=False):
         """
         check if file exist
 
         Parameters
         ----------
-        string: full filename to check
+        :param <string>     : full filename to check
+        :param extention    : file extention  <None>
+        :param head         : log msg/error title
+        :param logmsg       : log msg <False>
+        :param exit_on_error: will exit pgr if not file exist <False>
+
+        :return:
+        full filename / False or call <exit>
 
         Result
         ------
         abs full file name/False
         """
-        f = os.path.abspath( os.path.expandvars( os.path.expanduser(fin) ) )
-        if os.path.isfile( f ):
+        if not head: head = " --->"
+    
+        fck = ""
+        try:
+            if path.strip(): fck = path + "/"
+        except:
+            pass
+    
+        if fin:
+            fck += fin
+        if extention:
+            fck += extention
+        f = os.path.abspath(os.path.expandvars(fck))
+        # f = os.path.abspath(os.path.expandvars(os.path.expanduser(fin)))
+        if os.path.isfile(f):
+           if logmsg:
+              self.Log.info([head," --> file exist: {}",format(fck),"  -> abs file{:>18} {}".format(':',f)])
            return f
-        self.print_error("\n".join([" --> no such file or directory: " +fin,"  -> abs file{:>18} {}".format(':',f)]),
-                         head=head)
+        #--- error no such file
+        msg = [head," --> no such file or directory: {}".format(fck),"  -> abs file{:>18} {}".format(':',f)]
+        if exit_on_error:
+           self.Log.error(msg)
+           raise SystemError(self.__MSG_CODE_FILE_NOT_EXIST)
+        if logmsg: self.Log.info(msg)
+        
         return False
 
-    def isPath(self,pin,head="ERROR JuMEG_Base_Basic:isPath",print_error=True):
+    def isPath(self,pin,head="ERROR JuMEG_Base_Basic:isPath",exit_on_error=False,logmsg=False):
         """
         check if file exist
-        use os.path.isdir: very slow
 
         Parameters
         ----------
-         string: full filename to check
-         print_error : prints error MSG to sys.stderr [slow] <True>
+        :param <string>     : full path to check
+        :param head         : log msg/error title
+        :param logmsg       : log msg <False>
+        :param exit_on_error: will exit pgr if not file exist <False>
 
-        Result
-        ------
-        abs full path/False
+        :return:
+        full path / False or call <exit>
+
         """
-        p = os.path.abspath( os.path.expandvars( os.path.expanduser(pin) ) )
-        if os.path.isdir( p ):
+        if not head: head = " --->"
+    
+        p = os.path.abspath(os.path.expandvars(pin))
+        if os.path.isdir(p):
+           if logmsg:
+              self.Log.info([head," --> dir exist: {}",format(pin),"  -> abs dir{:>18} {}".format(':',p)])
            return p
-        if not print_error: return
-        self.print_error("\n".join([" --> no such path or directory: " +pin,"  -> abs path{:>18} {}".format(':',p)]),head=head)
+        #--- error no such file
+        msg =[head," --> no such directory: {}".format(pin),"  -> abs dir{:>18} {}".format(':',p)]
+        if exit_on_error:
+           self.Log.error(msg)
+           raise SystemError(self.__MSG_CODE_PATH_NOT_EXIST)
+        if logmsg: self.Log.info(msg)
         return False
+   
+    @contextlib.contextmanager
+    def working_directory(self,path):
+        """
+        copied from
+        https://stackoverflow.com/questions/39900734/how-to-change-directories-within-python
+        >>You simply specify the relative directory from the current directory,
+        >>and then run your code in the context of that directory.
+        
+        :param path:
+        :return:
+          
+        Example:
+        --------
+        with working_directory(<my path>):
+             names = {}
+             for fn in glob.glob('*.py'):
+                 print(f)
+                
+        """
+        prev_cwd = os.getcwd()
+        try:
+            os.chdir(path)
+        except Exception as e:
+               self.Log.error("Can`t change to directory: ".format(path))
+        yield
+       
+        os.chdir(prev_cwd)
 
 class JuMEG_Base_PickChannels(object):
     """ MNE Wrapper Class for mne.pick_types
@@ -1167,6 +1279,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         Results
         ----------
          raw obj
+         
          fname from raw obj 
         """
         if raw is None:
@@ -1326,7 +1439,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
 
           # channel_type = mne.io.pick.channel_type(raw.info, 75)
 
-    def apply_save_mne_data(self,raw,fname="test.fif",overwrite=True):
+    def apply_save_mne_data(self,raw,fname=None,overwrite=True):
         """saving mne raw obj to fif format
         
         Parameters
@@ -1340,16 +1453,19 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         filename
         """
         from distutils.dir_util import mkpath
-         
+        if not fname:
+           fname = raw.filenames[0]
+        
+        fname = os.path.expandvars(fname)  # expand envs
         if ( os.path.isfile(fname) and ( not overwrite) ) :
-           print(" --> File exist => skip saving data to : " + fname)
+           self.Log.info(" --> File exist => skip saving data to : " + fname)
         else:
-          print(">>>> writing filtered data to disk...")
-          print(' --> saving: '+ fname)
-          mkpath( os.path.dirname(fname) )
-          raw.save(fname,overwrite=True)
-          print(' --> Bads:' + str( raw.info['bads'] ))
-          print(" --> Done writing data to disk...")
+           self.Log.info(">>>> writing filtered data to disk...")
+           self.Log.info(' --> saving: '+ fname)
+           mkpath( os.path.dirname(fname) )
+           raw.save(fname,overwrite=True)
+           self.Log.info(' --> Bads:' + str( raw.info['bads'] ))
+           self.Log.info(" --> Done writing data to disk...")
         
         return fname
 
