@@ -12,7 +12,7 @@ Updates:
 """
 
 import wx,sys
-from wx.lib.pubsub import pub
+from pubsub import pub
 from jumeg.template.jumeg_template_experiments import JuMEG_ExpTemplate
 from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxControlGrid
 from jumeg.ioutils.jumeg_ioutils_functions import JuMEG_IOUtils

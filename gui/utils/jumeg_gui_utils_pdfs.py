@@ -342,7 +342,7 @@ class JuMEG_Utils_PDFsMNE(JuMEG_Utils_PDFsBase):
      --------
       from jumeg import jumeg_base as jb
       from jumeg.gui.utils.jumeg_gui_utils_pdfs import JuMEG_Utils_PDFsMNE
-      stage = "/data/meg_store1/exp"
+      stage = "/data/meg1/exp"
       PDFs  = JuMEG_Utils_PDFsMNE(stage=stage,experimnet="TEST",scan="TEST01",verbose=True,debug=True)
       
       PDFs.update()

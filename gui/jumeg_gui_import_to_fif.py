@@ -20,7 +20,7 @@ import os,sys
 import numpy as np
 
 import wx
-from   wx.lib.pubsub import pub
+from   pubsub import pub
 import wx.lib.scrolledpanel as scrolled
 
 #--- jumeg cls
@@ -150,7 +150,6 @@ class JuMEG_wxImport_BTiCtrlGrid(wx.Panel):
         self.SetAutoLayout(1)
         self.GetParent().Layout()
 
-
 class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
       """
       """
@@ -165,7 +164,7 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
           
           self._template_panel_name = "EXPERIMENT_TEMPLATE"
           
-          self.module_path      = os.getenv("JUMEG_PATH", os.getcwd()) + "/jumeg/pipeline"
+          self.module_path      = os.getenv("JUMEG_PATH", os.getcwd()) + "/jumeg/tools"
           self.module_name      = "jumeg_io_import_to_fif"
           self.module_extention = ".py"
           self.SubProcess       = JuMEG_IoUtils_SubProcess()
@@ -194,7 +193,7 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
           if self.BtiCtrl.UseStagePostfix:
              fif_stage_postfix = self.BtiCtrl.StagePostfix
           if not fif_stage.endswith(fif_stage_postfix):
-              fif_stage += "/"+fif_stage_postfix
+             fif_stage += "/"+fif_stage_postfix
           return(os.path.expandvars( os.path.expanduser(fif_stage)))
           
       def update(self,**kwargs):
@@ -281,12 +280,7 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
           self.AP.SetParameter(pdf_stage=self.BtiCtrl.BtiPath)
           self.PDFBox.update(stage=self.BtiCtrl.BtiPath,scan=scan,pdf_name=self.AP.GetParameter("pdf_fname"),
                              emptyroom=self.BtiCtrl.UseEmptyroom,verbose=self.verbose,debug=self.debug)
-           
-     #---
-      def Cancel(self):
-          wx.LogMessage("CLICK ON CANCEL")
-          wx.CallAfter(pub.sendMessage("SUBPROCESS.CANCEL",verbose=self.verbose))
-
+   
       def ClickOnApply(self):
           """
           apply to subprocess
@@ -294,7 +288,7 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
           self.PDFBox.verbose = self.verbose
           pdfs = self.PDFBox.GetSelectedPDFs()  # returns list of list [[pdf,extention] ..]
           if not pdfs :
-             wx.CallAfter( pub.sendMessage,"MAIN_FRAME.MSG.ERROR",data="\n MEEG Merger: Please select PDFs first")
+             wx.CallAfter( pub.sendMessage,"MAIN_FRAME.MSG.ERROR",data="\nPlease select PDFs first\n in: "+self.GetName())
              return
 
           cmd_command = self.AP.get_fullfile_command(ShowFileIO=False)
@@ -326,9 +320,10 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
              wx.CallAfter(self.SubProcess.run,jobs=joblist,host_parameter=self.HostCtrl.HOST.GetParameter(),verbose=self.verbose)
              
       def ClickOnCancel(self,evt):
-          wx.LogMessage( "<Cancel> button is no in use" )
-          wx.CallAfter(pub.sendMessage,"MAIN_FRAME.MSG.INFO",data="<Cancel> button is no in use")
-
+          wx.LogMessage( "Click <Cancel> button" )
+          #wx.CallAfter(pub.sendMessage,"MAIN_FRAME.MSG.INFO",data="<Cancel> button is no in use")
+          self.SubProcess.Cancel()
+          
       def ClickOnCtrls(self, evt):
           obj = evt.GetEventObject()
           #print("\n ---> ClickOnCTRL:".format( self.GetName() ))
@@ -340,7 +335,8 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
              self.ClickOnApply()
           elif obj.GetName() == self.GetName()+".BT.CLOSE":
              wx.CallAfter( pub.sendMessage,"MAIN_FRAME.CLICK_ON_CLOSE",evt=evt)
-             
+          elif obj.GetName() == self.GetName()+".BT.CANCEL":
+               self.ClickOnCancel(evt)
           elif obj.GetName() == self.BtiCtrl.EmptyroomCheckbox().GetName():
                self.PDFBox.UpdateEmptyroom(self.BtiCtrl.UseEmptyroom)
           else:

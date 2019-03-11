@@ -16,11 +16,10 @@
 #--------------------------------------------
 
 import wx
-from   wx.lib.pubsub import pub
 from   wx.lib.scrolledpanel import ScrolledPanel
-
 import wx.propgrid as wxpg
 from   wx.propgrid import PropertyGridManager as wxpgm
+from   pubsub      import pub
 
 __version__='2019-01-04-001'
 

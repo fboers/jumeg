@@ -20,7 +20,7 @@ import os,sys #path,fnmatch
 import numpy as np
 import json
 import wx
-from   wx.lib.pubsub import pub
+from   pubsub import pub
 from   wx.lib.scrolledpanel import ScrolledPanel
 
 import wx.propgrid as wxpg

@@ -7,7 +7,7 @@ Created on Tue Jun 27 22:35:34 2017
 """
 
 import wx
-from wx.lib.pubsub import pub
+from pubsub import pub
 
 #try:
 #    from agw import floatspin as FS
@@ -89,12 +89,12 @@ class JuMEG_wxMultiChoiceDialog(wx.Dialog):
         self.Sizer.Add(self._ctrlbox, 0, wx.ALL | wx.EXPAND, 5)
         self.Sizer.Add(self.btns, 0, wx.LEFT|wx.ALL | wx.EXPAND, 5 )
         self.SetSizer(self.Sizer)
-        
+       
 
 class JuMEG_wxSplitterWindow(wx.SplitterWindow):
     def __init__(self, parent,**kwargs):
         """
-        JuMEG wx.SplitterWindow with method to shrink and
+        JuMEG wx.SplitterWindow with method to flip and min/max position
 
         Parameters
         ----------
@@ -102,14 +102,8 @@ class JuMEG_wxSplitterWindow(wx.SplitterWindow):
          listener      : name of pubsub listener to subscribe <SPLITTER>
          flip_position : key word for pubsub listener to flip position <FLIP_POSITION>
          split_min_max : key word for pubsub listener to reise windows <SPLIT_MIN_MAX>
-        
-         pubsub calls:
-          <listener>.<flip_position> : change window position left7/right or up/down
-          <listener>.<split_min_max> : rezise shrink/enlarge one window
-
         """
-        super(JuMEG_wxSplitterWindow,self).__init__(parent=parent, id=wx.ID_ANY,style=wx.SP_3DSASH|wx.SP_3DBORDER|wx.SUNKEN_BORDER)
-        self._listener      = "SPLITTER"
+        super().__init__(parent=parent, id=wx.ID_ANY,style=wx.SP_3DSASH|wx.SP_3DBORDER|wx.SUNKEN_BORDER)
         self._flip_position = "FLIP_POSITION"
         self._split_min_max = "SPLIT_MIN_MAX"
         self.__split_factor_list  = [-1.0,0.5,1.0]
@@ -117,26 +111,15 @@ class JuMEG_wxSplitterWindow(wx.SplitterWindow):
         self.SetSashGravity(1.0) # expamd top/left
         self.SetMinimumPaneSize(100)
         self.update(**kwargs)
-
-    @property
-    def PubSubListener(self): return self._listener
-
-    @property
-    def PubSubListenerFlipPosition(self): return self.PubSubListener+"."+self._flip_position
-    @property
-    def PubSubListenerSplitMinMax(self):  return self.PubSubListener+"."+self._split_min_max
-
    #---
     def _update_from_kwargs(self,**kwargs):
-        self._listener     = kwargs.get("listener", self._listener).replace(" ", "_").upper()
+        self.SetName(kwargs.get("name","SPLITTER").replace(" ", "_").upper())
         self._flip_position= kwargs.get("flip_position", self._flip_position).replace(" ", "_").upper()
         self._split_min_max= kwargs.get("split_min_max", self._split_min_max).replace(" ", "_").upper()
    #---
     def _init_pubsub(self,**kwargs):
-        pub.subscribe(self.FlipPosition,self.PubSubListenerFlipPosition)
-        pub.subscribe(self.UpdateSplitPosition,self.PubSubListenerSplitMinMax) # "SPLITTER.SPLIT_MIN_MAX"
-        #print("SPLITTER MIN MAX: "+self.PubSubListenerSplitMinMax)
-
+        pass
+    
     def update(self,**kwargs):
         self._update_from_kwargs(**kwargs)
         self._init_pubsub(**kwargs)
@@ -188,7 +171,7 @@ class JuMEG_wxSplitterWindow(wx.SplitterWindow):
         #--- todo check  keep sahposition
         # wx.SplitterWindow.GetSplitMode
         #spos = self.GetSize()[-1] - self.GetSashPosition()
-
+        
         if not value: return
         w1 = self.GetWindow1()
         w2 = self.GetWindow2()
@@ -562,7 +545,7 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
            style= d[5]
         except:
             style=wx.BU_EXACTFIT
-        self._obj.append(wx.Button(self,wx.NewId(),label=d[2],style=style))
+        self._obj.append(wx.Button(self,wx.ID_ANY,label=d[2],style=style))
         self._gs_add_init_last_obj(d,evt=wx.EVT_BUTTON)
 
     def _gs_add_FlatButton(self,d):
@@ -572,42 +555,42 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
         except:
             style=wx.BU_EXACTFIT|wx.NO_BORDER
 
-        self._obj.append(wx.Button(self,wx.NewId(),label=d[2],style=style))
+        self._obj.append(wx.Button(self,wx.ID_ANY,label=d[2],style=style))
         self._gs_add_init_last_obj(d,evt=wx.EVT_BUTTON)
 
     def _gs_add_CheckBox(self,d):
         """ add wx.CheckBox"""
-        self._obj.append( wx.CheckBox(self,wx.NewId(),label=d[2] ) )  
+        self._obj.append( wx.CheckBox(self,wx.ID_ANY,label=d[2] ) )  
         self._obj[-1].SetValue(d[3])
         self._gs_add_init_last_obj(d,evt=wx.EVT_CHECKBOX)             
         
     def _gs_add_ComboBox(self,d):
         """ add wx.ComboBox """
-        self._obj.append(wx.ComboBox(self,wx.NewId(),choices=d[3],style=wx.CB_READONLY))
+        self._obj.append(wx.ComboBox(self,wx.ID_ANY,choices=d[3],style=wx.CB_READONLY))
         self._obj[-1].SetValue(d[2])
         self._gs_add_init_last_obj(d,evt=wx.EVT_COMBOBOX)
         
     def _gs_add_TextCtrl(self,d):
         """ add wx.TextCrtl """
-        self._obj.append( wx.TextCtrl(self,wx.NewId() ))   
+        self._obj.append( wx.TextCtrl(self,wx.ID_ANY ))   
         self._obj[-1].SetValue(d[2])
         self._gs_add_init_last_obj(d,evt=wx.EVT_TEXT)
             
     def _gs_add_StaticText(self,d):
         """ add wx.StaticText """
-        self._obj.append(wx.StaticText(self,wx.NewId(),style=wx.ALIGN_LEFT|wx.ST_ELLIPSIZE_MIDDLE))
+        self._obj.append(wx.StaticText(self,wx.ID_ANY,style=wx.ALIGN_LEFT|wx.ST_ELLIPSIZE_MIDDLE))
         self._obj[-1].SetLabel(d[2])
         self._gs_add_init_last_obj(d)
         
     def _gs_add_min_max_button(self,l,n):  
         """ add button MIN or MAX set to min or max in range of SpinCtrl"""
-        self._obj.append( wx.Button(self,wx.NewId(),label=l,style=wx.BU_EXACTFIT,name=n) )
+        self._obj.append( wx.Button(self,wx.ID_ANY,label=l,style=wx.BU_EXACTFIT,name=n) )
         self._obj[-1].Bind(wx.EVT_BUTTON,self.OnClickMinMax)
         self.GS.Add(self._obj[-1],0,wx.LEFT,self.gap_minmax)
             
     def _gs_add_SpinCtrl(self,d):
         """ add wx.SpinCtrl """
-        self._obj.append( wx.SpinCtrl(self,wx.NewId(),style=wx.SP_ARROW_KEYS|wx.SP_WRAP|wx.TE_PROCESS_ENTER|wx.ALIGN_RIGHT))
+        self._obj.append( wx.SpinCtrl(self,wx.ID_ANY,style=wx.SP_ARROW_KEYS|wx.SP_WRAP|wx.TE_PROCESS_ENTER|wx.ALIGN_RIGHT))
         self._obj[-1].SetLabel(d[1])
         self._obj[-1].SetName("SP"+self.separator+d[1].upper()) if self.set_ctrl_prefix else self._obj[-1].SetName(d[1].upper())
         self._obj[-1].SetToolTip("Min: " + str(d[2][0]) +"  Max: " + str(d[2][1]) )
@@ -620,7 +603,7 @@ class JuMEG_wxControlBase(wx.Panel,JuMEG_wxControlUtils):
 
     def _gs_add_FloatSpin(self,d):
         """ add wx.FloatSpin """
-        self._obj.append( FS.FloatSpin(self,wx.NewId(),min_val=d[2][0],max_val=d[2][1],increment=d[2][2],value=1.0,agwStyle=FS.FS_RIGHT) )   
+        self._obj.append( FS.FloatSpin(self,wx.ID_ANY,min_val=d[2][0],max_val=d[2][1],increment=d[2][2],value=1.0,agwStyle=FS.FS_RIGHT) )   
         self._obj[-1].SetLabel(d[1])
         self._obj[-1].SetName("FSP"+self.seperator+d[1].upper()) if self.set_ctrl_prefix else self._obj[-1].SetName(d[1].upper())
         self._obj[-1].SetFormat("%f")
@@ -917,7 +900,7 @@ class JuMEG_wxControlButtonPanel(JuMEG_wxControlBase):
     def _gs_add_Button(self,d):
         """ add Button"""
         if d[0]:
-           self._obj.append(wx.Button(self,wx.NewId(),label=d[0]))
+           self._obj.append(wx.Button(self,wx.ID_ANY,label=d[0]))
            self._gs_add_init_last_obj(d,evt=wx.EVT_BUTTON)
         else: # add separator
            self.GS.Add(0,0,d[2]|wx.ALL,self.gap)

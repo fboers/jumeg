@@ -27,7 +27,7 @@ This is a container widged for pre processing GUIs
 #--------------------------------------------
 
 import wx
-from   wx.lib.pubsub import pub
+from   pubsub import pub
 import wx.lib.scrolledpanel as scrolled
 
 #--- jumeg cls
@@ -83,9 +83,9 @@ class JuMEG_wxPreProcPanel(JuMEG_wxMainPanel):
            
         i=1
         self._proc_pnl=dict()
-        self._proc_pnl["Experiment Template"] = JuMEG_wxTemplatePanel(   self.NB,ShowLogger=False)
-        self._proc_pnl["Import To FIF"]       = JuMEG_wxImportToFIFPanel(self.NB,ShowLogger=False)
-        self._proc_pnl["MEEG Merger"]         = JuMEG_wxMEEGMergerPanel( self.NB,ShowLogger=False,ShowCmdButtons=True,ShowParameter=True)
+        self._proc_pnl["Experiment Template"] = JuMEG_wxTemplatePanel(self.NB,ShowLogger=True)
+        self._proc_pnl["Import To FIF"]       = JuMEG_wxImportToFIFPanel(self.NB,ShowLogger=True)
+        self._proc_pnl["MEEG Merger"]         = JuMEG_wxMEEGMergerPanel(self.NB,ShowLogger=True,ShowCmdButtons=True,ShowParameter=True)
 
         for p in self.process_list:
             self.NB.AddPage(self._proc_pnl[p],p)
@@ -150,5 +150,5 @@ class JuMEG_GUI_PreProcFrame(JuMEG_wxMainFrame):
 
 if __name__ == '__main__':
    app    = wx.App()
-   frame  = JuMEG_GUI_PreProcFrame(None,-1,'JUMEG_PREPROC_UTILITY',ShowLogger=True,ShowCmdButtons=False,debug=True,verbose=True)
+   frame  = JuMEG_GUI_PreProcFrame(None,-1,'JUMEG_PREPROC_UTILITY',ShowLogger=False,ShowCmdButtons=False,debug=True,verbose=True)
    app.MainLoop()

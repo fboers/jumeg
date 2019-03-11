@@ -8,7 +8,7 @@
 
 import os,json
 import wx
-from wx.lib.pubsub  import pub
+from pubsub  import pub
 from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxControls,JuMEG_wxControlGrid,JuMEG_wxControlButtonPanel
 
 __version__="2018-11-26-001"

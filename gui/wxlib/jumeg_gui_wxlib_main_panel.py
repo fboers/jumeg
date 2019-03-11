@@ -7,7 +7,7 @@
 #----------------------------------------
 
 import wx
-from wx.lib.pubsub import pub
+from pubsub import pub
 from jumeg.gui.wxlib.jumeg_gui_wxlib_logger               import JuMEG_wxLogger
 from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxSplitterWindow,JuMEG_wxCMDButtons
 
@@ -84,7 +84,7 @@ class JuMEG_wxMainPanelBase(wx.Panel):
 
     '''
     def __init__(self,parent,name="MAIN_PANEL_BASE",**kwargs):
-        super(JuMEG_wxMainPanelBase,self).__init__(parent,id=wx.ID_ANY,style=wx.SUNKEN_BORDER,name=name)
+        super().__init__(parent,id=wx.ID_ANY,style=wx.SUNKEN_BORDER,name=name)
         self._splitter  = None
         self.use_pubsub = True
         self.debug      = False
@@ -168,18 +168,17 @@ class JuMEG_wxMainPanelBase(wx.Panel):
         :param kwargs:
         :return:
         """
-        self.labelA        = kwargs.get("labelA","PANEL A")
-        self.labelB        = kwargs.get("labelB","PANEL B")
-        self.bgA           = kwargs.get("bgA",wx.Colour(132, 126, 238))
-        self.bgB           = kwargs.get("bgB",wx.Colour(140, 233, 238))
-        self._show_logger  = kwargs.get("ShowLogger",self._show_logger)
+        self.labelA         = kwargs.get("labelA","PANEL A")
+        self.labelB         = kwargs.get("labelB","PANEL B")
+        self.bgA            = kwargs.get("bgA",wx.Colour(132, 126, 238))
+        self.bgB            = kwargs.get("bgB",wx.Colour(140, 233, 238))
+        self._show_logger   = kwargs.get("ShowLogger",self._show_logger)
         self._show_minmax_bt= kwargs.get("ShowMinMaxBt",self._show_minmax_bt)
-        self._show_cmd_bts = kwargs.get("ShowCmdButtons",self._show_cmd_bts)
-        self.verbose       = kwargs.get("verbose", False)
-        self.debug         = kwargs.get("debug", False)
-        self.SashPosition  = kwargs.get("SashPosition",-50)
+        self._show_cmd_bts  = kwargs.get("ShowCmdButtons",self._show_cmd_bts)
+        self.verbose        = kwargs.get("verbose", False)
+        self.debug          = kwargs.get("debug", False)
+        self.SashPosition   = kwargs.get("SashPosition",-50)
         self.SetBackgroundColour(kwargs.get("bg", "grey88"))
-        
         
     def FitBoxSizer(self,pnl,pos=wx.HORIZONTAL):
         """ fits a BoxSizer to a panel + AutoLayout
@@ -202,11 +201,9 @@ class JuMEG_wxMainPanelBase(wx.Panel):
         
         # --- command logger
         if self.ShowLogger:
-           self._splitter = JuMEG_wxSplitterWindow(self, label="Logger", name=self.GetName() + ".LOGGER",
-                                                   listener=self.GetParent().GetName())
-
-           self._pnl_logger = JuMEG_wxLogger(self._splitter, listener=self.GetParent().GetName())
-           self._pnl_main = wx.Panel(self._splitter)
+           self._splitter   = JuMEG_wxSplitterWindow(self,label="Logger",name=self.GetName() + ".SPLITTER")
+           self._pnl_logger = JuMEG_wxLogger(self._splitter,name=self.GetName().upper()+".LOGGER") #listener=self.GetName())
+           self._pnl_main   = wx.Panel(self._splitter)
            self._pnl_main.SetBackgroundColour(wx.Colour(0, 0, 128))
         else:  # --- only you controls
            self._pnl_main = wx.Panel(self)

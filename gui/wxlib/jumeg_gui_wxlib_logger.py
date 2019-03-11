@@ -1,5 +1,5 @@
 import wx,sys,io
-from wx.lib.pubsub import pub
+from pubsub import pub
 from jumeg.jumeg_base  import jumeg_base as jb
 __version__= "2018-11-15-001"
 
@@ -56,6 +56,8 @@ class JuMEG_wxLog(wx.Log):
         """
         
         if self._txtctrl:
+           #if (msg.find("Gtk-CRITICAL")): return
+           #if (msg.find("Gtk-WARNINGS")): return
            self._txtctrl.SetDefaultStyle(wx.TextAttr(self.LogLevelColour(level)))
            self._txtctrl.AppendText(msg + '\n\n')
            self._txtctrl.SetDefaultStyle(wx.TextAttr(wx.NullColour))
@@ -85,7 +87,6 @@ class JuMEG_wxLogger(wx.Panel):
     def __init__(self, parent, name="LOGGER", **kwargs):
         super().__init__(parent, name=name)
         self._font        = wx.Font(10,wx.FONTFAMILY_TELETYPE,wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_NORMAL)
-        self._listener    = name
         self.__isInit     = False
         self.__isMinimize = False
         self._loglevel    = wx.LOG_Error
@@ -100,16 +101,18 @@ class JuMEG_wxLogger(wx.Panel):
            self.Logger.SetLogLevel(self._loglevel)
 
     @property
-    def PubSubListener(self):
-        return self._listener
-
-    @property
     def cmd_update_min_max(self):
-        return self.PubSubListener + ".SPLIT_MIN_MAX"
+        return self.GetName() + ".SPLIT_MIN_MAX"
 
     @property
     def cmd_set_status(self):
-        return self.PubSubListener + ".SET_STATUS"
+        return self.GetName() + ".SET_STATUS"
+    @property
+    def cmd_clear(self):
+        return self.GetName() + ".BT.CLEAR"
+    @property
+    def cmd_minimize(self):
+        return self.GetName() + ".BT.MINIMIZE"
 
     @property
     def font(self):
@@ -125,7 +128,6 @@ class JuMEG_wxLogger(wx.Panel):
   # ---
     def _update_from_kwargs(self, **kwargs):
         self._loglevel = kwargs.get("loglevel", wx.LOG_Message)
-        self._listener = kwargs.get("listener", self._listener).replace(" ", "_").upper()
         self._font     = kwargs.get("font", self._font)
 
   # ---
@@ -148,11 +150,11 @@ class JuMEG_wxLogger(wx.Panel):
         self._txt_head.SetBackgroundColour("grey70")
 
         stl = wx.BU_EXACTFIT | wx.BU_NOTEXT  # | wx.BORDER_NONE
-        self._BtClear = wx.Button(self._pnl, -1, name=self.PubSubListener + ".BT.CLEAR", style=stl)
+        self._BtClear = wx.Button(self._pnl, -1, name=self.cmd_clear,style=stl)
         self._BtClear.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_DELETE, wx.ART_MENU, (12, 12)))
         self.Bind(wx.EVT_BUTTON, self.ClickOnButton, self._BtClear)
 
-        self._BtMinimize = wx.Button(self._pnl, -1, name=self.PubSubListener + ".BT.MINIMIZE", style=stl)
+        self._BtMinimize = wx.Button(self._pnl, -1, name=self.cmd_minimize, style=stl)
         self._BtMinimize.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK, wx.ART_MENU, (12, 12)))
         self.Bind(wx.EVT_BUTTON, self.ToggleMinimize, self._BtMinimize)
 
@@ -180,29 +182,33 @@ class JuMEG_wxLogger(wx.Panel):
         send cmd to parent splitter window via pubsub
         """
         if self.__isMinimize:
-            self.__isMinimize = False
+           self.__isMinimize = False
         else:
-            self.__isMinimize = True
-        wx.CallAfter(pub.sendMessage , self.cmd_update_min_max, name=self.GetName(),
-                        size=self._BtMinimize.GetSize() * 2 ) # two buttons to show
+           self.__isMinimize = True
+        try:
+            self.GetParent().UpdateSplitPosition(name=self.GetName(),size=self._BtMinimize.GetSize() * 2 )
+            return
+        except:
+            pass
+        wx.CallAfter(pub.sendMessage,self.cmd_update_min_max,name=self.GetName(),
+                     size=self._BtMinimize.GetSize() * 2 ) # two buttons to show
 
     def ClickOnButton(self, evt):
         obj = evt.GetEventObject()
-        if obj.GetName().startswith(self.PubSubListener + ".BT.CLEAR"):
-            self._txtctrl.Clear()
-
+        if obj.GetName().startswith(self.cmd_clear):
+           self._txtctrl.Clear()
+       
     def _ApplyLayout(self):
-
         hbox = wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(self._txt_head, 1, wx.ALL | wx.EXPAND, 1)
-        hbox.Add(self._BtClear, 0, wx.ALL, 1)
-        hbox.Add(self._BtMinimize, 0, wx.ALL, 1)
+        hbox.Add(self._txt_head,  1,wx.ALL | wx.EXPAND, 1)
+        hbox.Add(self._BtClear,   0,wx.ALL, 1)
+        hbox.Add(self._BtMinimize,0,wx.ALL, 1)
         self._pnl.SetSizer(hbox)
         self._pnl.Fit()
 
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
-        self.Sizer.Add(self._pnl, 0, wx.ALL | wx.EXPAND, 1)
-        self.Sizer.Add(self._txtctrl, 1, wx.ALL | wx.EXPAND, 1)
+        self.Sizer.Add(self._pnl,    0,wx.ALL | wx.EXPAND, 1)
+        self.Sizer.Add(self._txtctrl,1,wx.ALL | wx.EXPAND, 1)
 
         self.SetSizer(self.Sizer)
         self.SetAutoLayout(1)

@@ -20,7 +20,7 @@ import os,sys
 import numpy as np
 
 import wx
-from   wx.lib.pubsub import pub
+from   pubsub import pub
 # import wx.lib.scrolledpanel as scrolled
 
 #--- jumeg cls
@@ -55,7 +55,7 @@ class JuMEG_wxMEEGMergerPanel(JuMEG_wxMainPanel):
           self.ShowTitleA       = True
           self.ShowTitleB       = True
           self.ShowMinMaxBt     = True
-          self.module_path      = os.getenv("JUMEG_PATH") + "/jumeg/pipeline/"
+          self.module_path      = os.getenv("JUMEG_PATH") + "/jumeg/tools/"
           self.module_name      = "jumeg_io_merge_meeg"
           self.module_extention = ".py"
           self.SubProcess       = JuMEG_IoUtils_SubProcess()
@@ -128,8 +128,8 @@ class JuMEG_wxMEEGMergerPanel(JuMEG_wxMainPanel):
          
           self.PDFBox.verbose = self.verbose
           pdfs = self.PDFBox.GetSelectedPDFs()
-          if not pdfs :
-             wx.CallAfter( pub.sendMessage,"MAIN_FRAME.MSG.ERROR",data="\n MEEG Merger: Please select PDFs first")
+          if not pdfs:
+             wx.CallAfter(pub.sendMessage,"MAIN_FRAME.MSG.ERROR",data="\nPlease select PDFs first\n in: " + self.GetName())
              return
      
           #cmd_parameter       = self.AP.GetParameter()

@@ -17,8 +17,9 @@ frame work
 
 
 #--- wx Phoenix Version 4.03.01
+import warnings
 import os,wx
-from wx.lib.pubsub        import pub
+from pubsub        import pub
 from wx.lib.scrolledpanel import ScrolledPanel
 
 try:
@@ -196,6 +197,7 @@ class JuMEG_wxMainFrame(wx.Frame):
         self._init_AboutBox()
         self.wxInitMainMenu()
         self.wxInitStatusBar()
+        self.UpdateDebugMode(self.debug)
         
         self.Sizer = wx.BoxSizer(wx.VERTICAL)
        #---
@@ -248,7 +250,14 @@ class JuMEG_wxMainFrame(wx.Frame):
     def UpdateAboutBox(self):
         pass
 
-   #---
+    def UpdateDebugMode(self,v):
+        """set debug flag and warning-mode True:default False:ignore"""
+        self.debug = v
+        if self.debug:
+           warnings.filterwarnings("ignore")
+        else:
+           warnings.filterwarnings("default")
+    #---
     def _update_menubar(self):
         for mdata in self.menu_data_list:
             mlabel = mdata[0]
@@ -405,8 +414,7 @@ class JuMEG_wxMainFrame(wx.Frame):
         elif label=="Verbose":
              self.verbose = v
         elif label=="Debug":
-             self.debug=False
-
+             self.UpdateDebugMode(v)
         if self.use_pubsub:  # verbose,debug status
            pub.sendMessage('MAIN_FRAME.' + label.upper(), value=v)
 
