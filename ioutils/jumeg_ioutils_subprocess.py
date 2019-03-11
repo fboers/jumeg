@@ -21,7 +21,7 @@ import threading
 from datetime         import datetime as dt
 import subprocess
 from subprocess       import Popen, PIPE,STDOUT
-from wx.lib.pubsub    import pub
+from pubsub    import pub
 from jumeg.jumeg_base import jumeg_base as jb
 from jumeg.gui.wxlib.jumeg_gui_wxlib_pbshost  import JuMEG_PBSHostsParameter
 
@@ -429,8 +429,9 @@ class JuMEG_IoUtils_SubProcess(object):
         #pub.subscribe(self.run_on_cluster,'SUBPROCESS.RUN.CLUSTER')
         pass
 
-    def stop(self,pid):
+    def stop(self,id):
         """
+        
         ToDo stop thrd
         find thrd via pid
         if local
@@ -438,10 +439,16 @@ class JuMEG_IoUtils_SubProcess(object):
             kill via sys signals
             wait till terminate
         kill via ssh
+        ToDo
+        check  delete trhd obj for memory?
         """
-        pass
+        if int(pid):
+           self._thrd_list[id].join()
         
     
+    def cancel(self,id=None):
+        self.stop(id)
+        
     def run(self,jobs=None,host_parameter=None,verbose=False):
         """
         https://wiki.wxpython.org/LongRunningTasks
@@ -470,7 +477,8 @@ class JuMEG_IoUtils_SubProcess(object):
         thrd.start()
 
         self.__isBusy=False
-
+        
+        return thrd.id
 
 
 class JuMEG_IoUtils_SubProcThread(JuMEG_IoUtils_SubProcThreadBase):
