@@ -71,8 +71,7 @@ import mne
 from jumeg.jumeg_base                import jumeg_base,JuMEG_Base_Basic,JuMEG_Base_PickChannels
 from jumeg.epocher.jumeg_epocher_hdf import JuMEG_Epocher_HDF
 
-__version__="2018.06.19.001"
-
+__version__="2019.02.11.001"
 
 class JuMEG_Epocher_Channel_Baseline(object):
     """ 
@@ -635,10 +634,10 @@ class JuMEG_Epocher_ResponseMatching(JuMEG_Epocher_Basic):
            tdmean,tdstd,tdmin,tdmax = 0,0,0,0
         
         
-        print" --> "+ text +" time difference [ms]"
-        print"  -> bad epochs count : {:d}".format(n_zeros)
-        print"  -> mean [ s ]: {:3.3f}  std: {:3.3f} max: {:3.3f} min: {:3.3f}".format(tdmean,tdstd,tdmin,tdmax)
-        print"  -> mean [tsl]: {:3.3f}  std: {:3.3f} max: {:3.3f} min: {:3.3f}".format(dmean,dstd,dmin,dmax)
+        print(" --> "+ text +" time difference [ms]")
+        print("  -> bad epochs count : {:d}".format(n_zeros))
+        print("  -> mean [ s ]: {:3.3f}  std: {:3.3f} max: {:3.3f} min: {:3.3f}".format(tdmean,tdstd,tdmin,tdmax))
+        print("  -> mean [tsl]: {:3.3f}  std: {:3.3f} max: {:3.3f} min: {:3.3f}".format(dmean,dstd,dmin,dmax))
         self.line()   
    
    #---   
@@ -806,7 +805,7 @@ class JuMEG_Epocher_ResponseMatching(JuMEG_Epocher_Basic):
            
        #--- ck RT window range
         if ( self.resp_param['window'][0] >= self.resp_param['window'][1] ):
-           print" --> ERROR in <apply_response_matching>"
+           print(" --> ERROR in <apply_response_matching>")
            print("ERROR in self.parameter response windows")
            return
         
@@ -1139,9 +1138,9 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
             iod_data_frame = None
             
             self.line()
-            print"===> Jumeg Epocher Events ====\n"
-            print" --> Start Events Store into HDF"      
-            print" --> condition: "+ condi
+            print("===> Jumeg Epocher Events ====\n")
+            print(" --> Start Events Store into HDF")
+            print(" --> condition: "+ condi)
             self.line()
             
             if not self.marker.channel_parameter: continue
@@ -1153,8 +1152,8 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
             response_info       = dict()
                        
             if self.verbose:
-               print' --> EPOCHER  Template: %s  Condition: %s' %(self.template_name,condi)
-               print'  -> find events and epochs,  generate epocher output HDF5'
+               print(' --> EPOCHER  Template: %s  Condition: %s' %(self.template_name,condi))
+               print('  -> find events and epochs,  generate epocher output HDF5')
                #self.pp(self.parameter,head="  -> parameter")               
             
            #--- iod matching ckek if true and if channe == stimulus channel
@@ -1173,7 +1172,7 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
                     
            #--- ck if not stimulus_data_frame        
             if marker_data_frame.empty : 
-               print"  -> MARKER CHANNEL -> find events => condition: "+ condi +" ---> marker channel: "+ self.marker.channel
+               print("  -> MARKER CHANNEL -> find events => condition: "+ condi +" ---> marker channel: "+ self.marker.channel)
                if self.verbose:
                   self.pp( self.marker.parameter,head="  -> Marker Channel parameter:")
                marker_data_frame,marker_info = self.events_find_events(self.raw,prefix=self.marker.prefix,**self.marker.channel_parameter)
@@ -1187,18 +1186,18 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
            # self.event_data_frames[self.marker.channel],self.event_data_info[self.marker.channel] = self.events_find_events(raw,prefix=self.marker.prefix,**self.event_data_parameter)
             
             if self.verbose:
-               print"  -> Marker Epocher Events Data Frame [marker channel]: "+ condi
-               print marker_data_frame
-               print"\n"
+               print("  -> Marker Epocher Events Data Frame [marker channel]: "+ condi)
+               print(marker_data_frame)
+               print("\n")
             
            #--- Marker Matching task
            #--- match between stimulus and response or vice versa
            #--- get all response events for condtion e.g. button press 4
         
             if self.response.matching :
-               print"  -> Marker Matching -> matching marker & response channel: " + condi
-               print"  -> marker   channel : " + self.marker.channel
-               print"  -> response channel : " + self.response.channel
+               print("  -> Marker Matching -> matching marker & response channel: " + condi)
+               print("  -> marker   channel : " + self.marker.channel)
+               print("  -> response channel : " + self.response.channel)
              #--- look for all responses => 'event_id' = None
                if response_data_frame.empty:
                   res_channel_param = self.response.channel_parameter.copy()
@@ -1209,11 +1208,11 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
               # self.event_data_info[self.response.channel]   = response_info 
                 
                if self.verbose:
-                  print"---> Response Epocher Events Data Frame [response channel] : " + self.response.channel
-                  print self.response.parameter
+                  print("---> Response Epocher Events Data Frame [response channel] : " + self.response.channel)
+                  print(self.response.parameter)
                      #print"---> Response Epocher Events Data Frame [respnse channel] : " + self.parameter['response_channel']
-                  print response_data_frame
-                  print"\n\n"
+                  print(response_data_frame)
+                  print("\n\n")
 
               #--- update stimulus epochs with response matching
                marker_data_frame = self.ResponseMatching.apply(raw=self.raw,verbose=self.verbose,
@@ -1236,8 +1235,8 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
                 
                 
                 
-            print "\n---> Marker DataFrame out:"
-            print marker_data_frame
+            print("\n---> Marker DataFrame out:")
+            print(marker_data_frame)
                 
             key = self.hdf_node_name_epocher +'/'+condi
             storer_attrs = {'epocher_parameter': self.parameter,'info_parameter':marker_info}
@@ -1245,8 +1244,8 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
          
         self.HDFobj.close()
 
-        print" ---> DONE save epocher data into HDF5 :"
-        print"  --> " + self.hdf_filename +"\n\n"
+        print(" ---> DONE save epocher data into HDF5 :")
+        print("  --> " + self.hdf_filename +"\n\n")
         return self.raw,fname
 
 #---
@@ -1281,7 +1280,7 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
                 (TSL => timeslices,samples)
         """
         if raw is None:
-           print "ERROR in  <get_event_structure: No raw obj \n"
+           print( "ERROR in  <get_event_structure: No raw obj \n")
            return 
         
        #---
@@ -1328,15 +1327,15 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
                    ev_onset = ev_onset[ ev_id_idx,:]
                    ev_offset= ev_offset[ev_id_idx,:]
               else:
-                  print'Warning => No such event code(s) found (ev_id_idx) -> event: ' + str( param['event_id'] )
+                  print('Warning => No such event code(s) found (ev_id_idx) -> event: ' + str( param['event_id'] ))
                   return 
            else:
-               print'Warning => No such event code(s) found (ev_id) -> event: ' + str(param['event_id'])
+               print('Warning => No such event code(s) found (ev_id) -> event: ' + str(param['event_id']))
                return 
 
        #---- use all event ids
         if ( ev_onset.size == 0 ):
-            print'Warning => No such event code(s) found -> event: ' + str(param['event_id'])
+            print('Warning => No such event code(s) found -> event: ' + str(param['event_id']))
             return 
        #--- apply system delay if is defined e.g. auditory take`s 20ms to subjects ears
         if param['system_delay_ms']:
