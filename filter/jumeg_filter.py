@@ -223,7 +223,7 @@ def get_args(self):
         info_fif_stage="""
                        fif stage: start path for fif files from list
                        -> start path to fif file directory structure
-                       e.g. /data/megstore1/exp/INTEXT/mne/
+                       e.g. /data/meg1/exp/M100/mne/
                        """
 
 
@@ -241,9 +241,9 @@ def get_args(self):
         parser = argparse.ArgumentParser(info_global)
  
        #--- meg input files
-        parser.add_argument("-fin",     "--fif_filename",      help="fif file + relative path to stage",metavar="FIF_FILENAME",default="101716/MEG94T/121219_1310/1/101716_MEG94T_121219_1310_1_c,rfDC,fibp11-15-raw.fif")
+        parser.add_argument("-fin",     "--fif_filename",      help="fif file + relative path to stage",metavar="FIF_FILENAME",default="test-raw.fif")
         parser.add_argument("-fif_ext", "--fif_file_extention",help="fif file extention", default="FIF files (*.fif)|*.fif",metavar="FIF_FILEEXTENTION")
-        parser.add_argument("-sfif",    "--fif_stage",         help=info_fif_stage,       default="/home/fboers/MEGBoers/data/exp/MEG94T/mne/",metavar="FIF_STAGE")  #os.getcwd()
+        parser.add_argument("-sfif",    "--fif_stage",         help=info_fif_stage,       default="{$JUMEG_PATH_MNE_IMPORT}/M100/mne/",metavar="FIF_STAGE")  #os.getcwd()
         
        #--- parameter
         parser.add_argument("-m",    "--method",choices=["bw","mne"],            help="method to filter => bw:<jumeg butter> or mne: <mne-FFT FIR>",default="bw")
@@ -266,12 +266,23 @@ def get_args(self):
         parser.add_argument("-dc","--remove_dcoffset",action="store_true", help="remove dcoffset")
         parser.add_argument("-v", "--verbose",        action="store_true", help="verbose")
         parser.add_argument("-r", "--run",            action="store_true", help="!!! EXECUTE & RUN this program !!!")
-        parser.add_argument("-s", "--save", action="store_true", help="save output fif file")
-
-        parser.set_defaults(save=True,run=True)
-      
-        return parser.parse_args(), parser
-
+        parser.add_argument("-s", "--save",           action="store_true", default=True, help="save output fif file")
+        
+       #---- ck if flag is set in argv as True
+        opt = parser.parse_args()
+        
+        for g in parser._action_groups:
+            for obj in g._group_actions:
+                if str( type(obj) ).endswith('_StoreTrueAction\'>'):
+                   if vars( opt ).get(obj.dest):
+                      opt.__dict__[obj.dest] = False
+                      for flg in argv:
+                          if flg.startswith("-"+obj.dest) or flg.startswith("--"+obj.dest):
+                             opt.__dict__[obj.dest] = True
+                             break
+  
+        return opt, parser
+  
 #=========================================================================================
 #==== MAIN
 #=========================================================================================
