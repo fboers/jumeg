@@ -16,7 +16,7 @@
 #--------------------------------------------
 
 import os,sys,copy
-from  wx.lib.pubsub                import pub
+from pubsub                        import pub
 from jumeg.template.jumeg_template import JuMEG_Template
 
 __version__="2019-02-05.001"
@@ -31,7 +31,7 @@ __DEFAULT_EXPERIMENT_TEMPLATE__={
               "name" : "default",
               #"ids"  : [], not used jet
               "scans": [],
-              "stages":["${JUMEG_PATH_MOUNT_POINT}/meg_store1/exp","${JUMEG_PATH_MOUNT_POINT}/meg_store2/exp","${JUMEG_PATH_LOCAL_DATA}/exp"],
+              "stages":["${JUMEG_PATH_MNE_IMPORT}/exp","${JUMEG_PATH_MNE_IMPORT2}/exp","${JUMEG_PATH_LOCAL_DATA}/exp"],
               "bads_list":["MEG 007","MEG 010","MEG 142","MEG 156","RFM 011"],
               "segmentation":{
                               "path":{
@@ -51,7 +51,7 @@ __DEFAULT_EXPERIMENT_TEMPLATE__={
  },
 
 "bti_export": {
-              "bti_path"          : ["${JUMEG_PATH_BTI_EXPORT}", "/data/MEG/meg_store2/megdaw_data21"],
+              "bti_path"          : ["${JUMEG_PATH_BTI_EXPORT}","${JUMEG_PATH_LOCAL_DATA}/megdaw_data21"],
               "pdf_name"          : "c,rfDC",
               "config_fname"      :"config",
               "head_shape_fname"  :"hs_file",
