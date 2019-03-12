@@ -932,7 +932,7 @@ def get_args(argv):
         parser.add_argument("-eegam","--eeg_and_mask",      help="eeg and mask",     type=int, default=None)
            
        # ---flags:
-        parser.add_argument("-fieeg", "--filter_eeg",action="store_true", help="filter eeg data") 
+        parser.add_argument("-fieeg", "--filter_eeg",action="store_true",default=True,help="filter eeg data")
         parser.add_argument("-fimeg", "--filter_meg",action="store_true", help="filter meg data") 
         
         parser.add_argument("-first_event","--first_event",action="store_true",default=True,help="if no startcode found match with first event code")
