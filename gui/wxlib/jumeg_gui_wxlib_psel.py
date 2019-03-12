@@ -23,10 +23,12 @@ class JuMEG_wxPDFMEEGTextEditor(JuMEG_wxRichTextFrame):
     Txt Editor to show vhdr,vmrk file from eeg recordings
     change <DataFile> and <MarkerFile> names for correct matching
     """
-    def __init__(self,name="JuMEG PDFs MEEG Editor"):
+    def __init__(self,name="JuMEG PDFs MEEG Editor",wildcard="HDR files (*.vhdr)|*.vhdr|marker files (*.vmrk)|*.vmrk|all files (*.*)|*.*",
+                 status_text="JuMEG Text Editor; select a text file",path="."):
         super().__init__(None,-1,name,size=(700,500),style=wx.DEFAULT_FRAME_STYLE | wx.STAY_ON_TOP,
-                         status_text="JuMEG Text Editor; select a text file",
-                         path=".",wildcard="HDR files (*.vhdr)|*.vhdr|marker files (*.vmrk)|*.vmrk|all files (*.*)|*.*"
+                         wildcard=wildcard,
+                         status_text=status_text,
+                         path=path
                          )
         
     '''
@@ -866,7 +868,7 @@ class JuMEG_wxPDFMEEG(JuMEG_wxPDFBase):
                 pdf_name = os.path.basename(fpdf)
                    
                # --- init  mne checkbox
-                ckb = wx.CheckBox(self._pnl_pdf, wx.NewId(), label=self._checkbox_label(pdf_name), name=subject_id + '_' + str(idx))
+                ckb = wx.CheckBox(self._pnl_pdf, wx.NewId(), label=self._checkbox_label(pdf_name), name="CK."+subject_id + '.' + str(idx))
                 ckb.SetValue(True)
                 ckb.SetForegroundColour(wx.BLACK)
                 ckb.SetFont(self._font)
@@ -881,7 +883,7 @@ class JuMEG_wxPDFMEEG(JuMEG_wxPDFBase):
                    
                 cbb.SetItems(  [ x["pdf"] for x in pdfs['eeg'][subject_id] ] )  # will clear cbb first
                 
-                cbb.SetName(subject_id + '_' + str(idx))
+                cbb.SetName("CB."+subject_id + '.' + str(idx))
                # --- if eeg vhdr exist
                 if pdfs["eeg_index"][subject_id][idx] > -1:
                    eeg_idx = pdfs["eeg_index"][subject_id][idx]
@@ -915,6 +917,22 @@ class JuMEG_wxPDFMEEG(JuMEG_wxPDFBase):
           
             self._ApplyPDFLayout(fgs1)
     
+    def _set_cbox_tooltip(self,subject_id,idx):
+        i=int(idx)
+        self._cbbox[subject_id][i].SetToolTip( self.GetStage() +"/"+self._cbbox[str(subject_id)][i].GetValue())
+        print("set TP: {}  {}".format(subject_id,i))
+        print(self.GetStage() )
+        print(self._get_tooltip( self._cbbox[subject_id][i] ) )
+   
+    def _get_cbox_tooltip(self,subject_id,idx):
+        i=int(idx)
+        if not self._cbbox[subject_id][i].GetToolTip(): return
+        return self._cbbox[subject_id][i].GetToolTip().GetTip()
+   
+    def _get_tooltip(self,obj):
+        if not obj.GetToolTip(): return
+        return obj.GetToolTip().GetTip()
+       
     def _ShowTextEditor(self,f,vmrk=False):
         #---ToDo in new CLS
         #--- highlight
@@ -923,15 +941,18 @@ class JuMEG_wxPDFMEEG(JuMEG_wxPDFBase):
         #--- do correction asfile from combo
         # ck-button correct data file name as
         # ck-button correct mrk file name as
+        
+        print("TXT EDITOR TEST: "+f)
+        print(vmrk)
         if vmrk:
            if self.TxtEditvmrk:
               return
-           self.TxtEditvmrk = JuMEG_wxPDFMEEGTextEditor(name="JuMEG MEEG Editor <vmrk>")
+           self.TxtEditvmrk = JuMEG_wxPDFMEEGTextEditor(name="JuMEG MEEG Editor <vmrk>",wildcard="Marker files (*.vmrk)|*.vmrk|all files (*.*)|*.*")
            self.TxtEditvmrk.LoadFile(f.replace(".vhdr",".vmrk"))
            return
         elif self.TxtEditvhdr:
              return
-        self.TxtEditvhdr = JuMEG_wxPDFMEEGTextEditor(name="JuMEG MEEG Editor <vhdr>")
+        self.TxtEditvhdr = JuMEG_wxPDFMEEGTextEditor(name="JuMEG MEEG Editor <vhdr>",wildcard="HDR files (*.vhdr)|*.vhdr|all files (*.*)|*.*")
         self.TxtEditvhdr.LoadFile(f)
 
     #--- highlight
@@ -940,20 +961,30 @@ class JuMEG_wxPDFMEEG(JuMEG_wxPDFBase):
         #--- do correction asfile from combo
         # ck-button correct data file name as
         # ck-button correct mrk file name as
-      
-        
         
     def _ClickOnButton(self,evt):
-        obj  = evt.GetEventObject()
+        obj = evt.GetEventObject()
+        vmrk=False
+        fhdr=None
         if obj.GetName().startswith("FILE_VHDR_BT"):
-           s,subject_id,idx = obj.GetName().split(".")
-           fvhdr = self._cbbox[subject_id][int(idx)].GetToolTip().GetTip()
-           self._ShowTextEditor(fvhdr,vmrk=False)
-        if obj.GetName().startswith("FILE_VMRK_BT"):
-           s,subject_id,idx = obj.GetName().split(".")
-           fvhdr = self._cbbox[subject_id][int(idx)].GetToolTip().GetTip()
-           self._ShowTextEditor(fvhdr,vmrk=True)
-           
+           vmrk=False
+        elif obj.GetName().startswith("FILE_VMRK_BT"):
+           vmrk=True
+        else: return
+        
+        s,subject_id,idx = obj.GetName().split(".")
+        try:
+            fhdr = self._get_cbox_tooltip(subject_id,idx)
+        except:
+            if vmrk:
+               msg= "select <vmrk> file first !!!\n subject id: {}".format(subject_id)
+            else:
+               msg = "select <vhdr> file first !!!\n subject id: {}".format(subject_id)
+            pub.sendMessage('MAIN_FRAME.MSG.ERROR',data=msg)
+            return
+        if fhdr:
+           self._ShowTextEditor(fhdr,vmrk=vmrk)
+    
     
     def _ClickOnCombo(self, evt):
         """
@@ -964,6 +995,11 @@ class JuMEG_wxPDFMEEG(JuMEG_wxPDFBase):
         """
         obj  = evt.GetEventObject()
         n    = obj.GetName()
+
+       #--- update cb subject_id and idx
+        s,subject_id,idx = obj.GetName().split(".")
+        self._set_cbox_tooltip(subject_id,idx)
+
         ckbt = self._find_obj_by_name(self._ckbox, n)
         if ckbt:
             if obj.GetValue():
@@ -974,7 +1010,6 @@ class JuMEG_wxPDFMEEG(JuMEG_wxPDFBase):
 
             # --- ck for if eeg file is multi selected
             # --- https://stackoverflow.com/questions/11528078/determining-duplicate-values-in-an-array
-            subject_id = n.split('_')[0]
             a = []
             # --- fill array with selected index
             for cb in self._cbbox[subject_id]:

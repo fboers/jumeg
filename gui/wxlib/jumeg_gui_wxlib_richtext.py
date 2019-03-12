@@ -33,7 +33,7 @@ class JuMEG_wxRichTextFrame(wx.Frame):
 
         self.SetStatusText("JuMEG Text Editor; select a text file")
         self.FDlgPath = "."
-        self.FDlgWildcard = "text files (*.txt)|*.txt; all files (*.*)|*.*"
+        self.FDlgWildcard = "text files (*.txt)|*.txt|all files (*.*)|*.*"
         self._wx_init(**kwargs)
     
     @property
@@ -136,7 +136,7 @@ class JuMEG_wxRichTextFrame(wx.Frame):
         if dlg.ShowModal() == wx.ID_OK:
             path = dlg.GetPath()
             if path:
-               fileType = types[dlg.GetFilterIndex()]
+               fileType = wx.richtext.RICHTEXT_TYPE_TEXT #types[dlg.GetFilterIndex()]
                self.rtc.LoadFile(path,fileType)
                self.FDlgPath = path
         dlg.Destroy()
@@ -146,26 +146,27 @@ class JuMEG_wxRichTextFrame(wx.Frame):
         if not self.rtc.GetFilename():
             self.OnFileSaveAs(evt)
             return
-        self.rtc.SaveFile()
+        self.rtc.SaveFile(self.rtc.GetFilename(),wx.richtext.RICHTEXT_TYPE_TEXT)
 
 
     def OnFileSaveAs(self, evt):
+        """
+        save in plaintext format
+        :param evt:
+        :return:
+        """
+        # wildcard,types = rt.RichTextBuffer.GetExtWildcard(save=True)
+        
         dlg = wx.FileDialog(self, "Choose a filename",
                             wildcard=self.FDlgWildcard,defaultDir=self.FDlgPath,
-                            style=wx.FD_SAVE)
+                            style=wx.FD_SAVE|wx.FD_OVERWRITE_PROMPT)
         dlg.SetFilename( os.path.basename( self.rtc.GetFilename()))
         if dlg.ShowModal() == wx.ID_OK:
-            path = dlg.GetPath()
-            if path:
-                fileType = types[dlg.GetFilterIndex()]
-                ext = rt.RichTextBuffer.FindHandlerByType(fileType).GetExtension()
-                if not path.endswith(ext):
-                   path += '.' + ext
-                self.rtc.SaveFile(path, fileType)
-                self.FDlgPath = path
+           path = dlg.GetPath()
+           if path:
+              self.rtc.SaveFile(path,wx.richtext.RICHTEXT_TYPE_TEXT)
+              self.FDlgPath = os.path.dirname(path)
         dlg.Destroy()
-
-  
 
     def OnFileExit(self, evt):
         self.Close(True)
@@ -311,6 +312,11 @@ if __name__ == '__main__':
    app = wx.App()
    win = JuMEG_wxRichTextFrame(None, -1, "JuMEG Text Editor",
                                 size=(700, 500),style = wx.DEFAULT_FRAME_STYLE)
+   
+   f="208548_INTEXT01_002.vhdr"
+   win.FDlgWildcard='HDR files (*.vhdr)|*.vhdr|all files (*.*)|*.*)'
+   win.LoadFile(f)
+   
    win.Show(True)
    app.MainLoop()
 
