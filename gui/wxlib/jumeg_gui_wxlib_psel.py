@@ -910,7 +910,9 @@ class JuMEG_wxPDFMEEG(JuMEG_wxPDFBase):
            #---
             fgs1.Add(wx.StaticLine(self._pnl_pdf), 0, wx.LEFT | wx.EXPAND | wx.ALL)
             fgs1.Add(wx.StaticLine(self._pnl_pdf), 0, wx.LEFT | wx.EXPAND | wx.ALL)
-            
+            fgs1.Add(wx.StaticLine(self._pnl_pdf), 0, wx.LEFT | wx.EXPAND | wx.ALL)
+            fgs1.Add(wx.StaticLine(self._pnl_pdf), 0, wx.LEFT | wx.EXPAND | wx.ALL)
+          
             self._ApplyPDFLayout(fgs1)
     
     def _ShowTextEditor(self,f,vmrk=False):
