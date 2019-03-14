@@ -29,7 +29,7 @@ from jumeg.template.jumeg_template import JuMEG_Template_Experiments
 # License: BSD (3-clause)
 #--------------------------------------------
 # Updates
-# 21.11.18
+# 13.03.19 PY3
 #--------------------------------------------
 
 import glob, os, re, sys
@@ -37,7 +37,7 @@ import json,time
 # from jsonschema import validate
 from jumeg.jumeg_base import JuMEG_Base_Basic
 
-__version__='2018-12-13.001'
+__version__='2019-03-13.001'
 
 class dict2obj(dict):
     def __init__(self, dict_):
@@ -94,7 +94,7 @@ def _decode_list(data):
 """
 def _decode_dict(data):
     rv = {}
-    for key, value in data.items():  # Py3   Py2: iteritems():
+    for key, value in data.items():  # Py3   Py2: items():
         if isinstance(key, unicode):
            key = key.encode('utf-8')
         if isinstance(value, unicode):
@@ -249,7 +249,7 @@ class JuMEG_Template(JuMEG_Base_Basic):
         return dict
         """
         import collections
-        for k, v in u.iteritems():
+        for k, v in u.items():
             if isinstance(v, collections.Mapping) and not depth == 0:
                r = self.template_update_and_merge_dict(d.get(k, {}), v, depth=max(depth - 1, -1))
                d[k] = r
