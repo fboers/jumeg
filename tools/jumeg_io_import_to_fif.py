@@ -120,7 +120,7 @@ def apply_import_to_fif(opt):
        return raw
     
     
-def get_args(self):
+def get_args(argv):
     """
     get args using argparse.ArgumentParser ArgumentParser
     e.g: argparse  https://docs.python.org/3/library/argparse.html
