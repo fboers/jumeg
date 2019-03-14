@@ -169,7 +169,8 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         dict of info  parameter from HDF
         """
         
-      #--- read hdf get dataframe  
+      #--- read hdf get dataframe
+        print(condi)
         df,ep_param,info_param = self._epochs_read_hdf_data(condi) 
             
       #--- check in case of changing epoch time 
@@ -341,7 +342,7 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
        # if self.response.matching:
         mkr_type = self.rt_type_as_index( self.marker.type_result )
        
-         #--- find  all xyz_type => img_type iod_type sac_type 
+       #--- find  all xyz_type => img_type iod_type sac_type
         idx       = np.where( df.filter(regex='_type$') == mkr_type    )[0]
         event_idx = np.where( df['bads'][ np.unique(idx) ] != self.idx_bad )[0]
         #else:
@@ -624,7 +625,7 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         import numpy as np
      
         artifact_events = dict()
-        for kbad,time_window in kwargs.iteritems():
+        for kbad,time_window in kwargs.items():
             node_name = self.hdf_node_name_artifact + '/' + kbad
           #--- ck if node exist 
             try:             
@@ -683,7 +684,12 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
        #--- update and load raw     obj
         self.raw,self.fname = jumeg_base.get_raw_obj(self.fname,raw=self.raw)
        
-       #--- get epochs no bc correction 
+       #--- get epochs no bc correction
+        print("events")
+        print(evt['events'])
+        print(evt['event_id'])
+        print(evt)
+        
         ep = mne.Epochs(self.raw,evt['events'],event_id=evt['event_id'],tmin=self.marker.time_pre,tmax=self.marker.time_post,
                         baseline=None,picks=picks,reject=self.reject,proj=self.proj,preload=True,verbose=False) 
         ep.drop_bad() #- exclude bad epochs e.g: to short  
@@ -1022,7 +1028,7 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
     def _epochs_update_kwargs(self,**kwargs):
         """ internal use only use update() to update obj parameter"""
         if not kwargs: return
-        for k,v in kwargs.iteritems():
+        for k,v in kwargs.items():
             if k == 'template_name':
                  self.template_name = v  
             elif k=='fname':
