@@ -45,7 +45,7 @@ License: BSD 3 clause
 
 '''
 
-import os,sys,six,contextlib
+import os,sys,six,contextlib,re,numbers
 import numpy as np
 
 # py3 obj from pathlib import Path
@@ -110,6 +110,13 @@ class JuMEG_Logger(object):
     from jumeg.jumeg_base import JuMEG_Base_Basic as JB
     jb=JB()
     jb.Log.info("test logging info instead of using <print>")
+    
+    https://stackoverflow.com/questions/10973362/python-logging-function-name-file-name-line-number-using-a-single-file
+    import logging
+    logger = logging.getLogger('root')
+    FORMAT = "[%(filename)s:%(lineno)s - %(funcName)20s() ] %(message)s"
+    logging.basicConfig(format=FORMAT)
+    logger.setLevel(logging.DEBUG)
     
    """
    def __init__( self, app_name=None,level=10,**kwargs):
@@ -360,7 +367,8 @@ class JuMEG_Base_Basic(object):
         """ 
         check if input is a number:  isinstance of int or float
          no check for numpy ndarray
-        
+         https://stackoverflow.com/questions/40429917/in-python-how-would-you-check-if-a-number-is-one-of-the-integer-types
+         
         Parameters:
         ------------            
         n: value to check
@@ -376,8 +384,10 @@ class JuMEG_Base_Basic(object):
         jb.is_number(123)
          True
         """
-        return isinstance(n,(int, float) )
- 
+        #print("is_number: {} type:{}".format(n, type(n)))
+        return isinstance(n,numbers.Integral)
+        # return hasattr(val,"denominator") & & val.denominator == 1
+    
     def isNumber(self,n):
         """
          wrapper fct. call <is_number>
@@ -572,7 +582,7 @@ class JuMEG_Base_PickChannels(object):
         -------
          return label list
         """
-        if isinstance(picks,(int)):
+        if isinstance(picks,(int,np.int64)):
            return raw.ch_names[picks] 
         return ([raw.ch_names[i] for i in picks]) 
        
@@ -770,10 +780,23 @@ class JuMEG_Base_StringHelper(JuMEG_Base_Basic):
         "1-5"           => [1,2,3,4,5]
         "1,2,3-6,8,111" => [1,2,3,4,5,6,8,111]
         """
-        xranges = [(lambda l: xrange(l[0], l[-1]+1))(map(int, r.split('-'))) for r in seq_str.split(',')]
-         # flatten list of xranges
-        return [y for x in xranges for y in x]
-      
+        #xranges = [(lambda l: range(l[0], l[-1]+1))(map(int, r.split('-'))) for r in seq_str.split(',')]
+        #--- py3 range instead of xrange
+        
+        xrange=[]
+        for r in seq_str.split(','):
+            l=r.split('-')
+            if len(l)>1:
+               xrange+= list(range(int(l[0]),int(l[-1]) + 1))
+            else:
+               xrange.append( int(l[0]) )
+       #--- mk unique & list & sort
+        xrange = list(set(xrange))
+        xrange.sort()
+        # flatten list of xranges
+        #return [y for x in xranges for y in x]
+        return xrange
+    
     def str_range_to_numpy(self, seq_str,exclude_zero=False,unique=False): 
         """converts integer string to numpy array 
         Parameters
@@ -811,7 +834,8 @@ class JuMEG_Base_StringHelper(JuMEG_Base_Basic):
         if seq_str is None:
            return np.unique( np.asarray( [ ] ) )
         if self.isString(seq_str):
-           anr = np.asarray (self.str_range_to_list( seq_str ) )
+           s = re.sub(r",+",",",seq_str.replace(" ",",") )
+           anr = np.asarray (self.str_range_to_list( s ) )
         else:
            anr = np.asarray( [seq_str] )
            
