@@ -659,10 +659,8 @@ class JuMEG_Epocher_ResponseMatching(JuMEG_Epocher_Basic):
         """
         for col in self.stim_df.columns:
             df[col][df_idx] = self.stim_df[col][stim_idx]
-        #print("TEST _set_stim_df_resp:{}".format(resp_idx))
         
         if self.is_number( resp_idx ):
-           #print("TEST _is number ok:{}".format(resp_idx))
            for col in self.resp_df.columns:
                df[col][df_idx] = self.resp_df[col][resp_idx]
            df[self.resp_prefix +'_index'][df_idx] = resp_idx
@@ -675,6 +673,7 @@ class JuMEG_Epocher_ResponseMatching(JuMEG_Epocher_Basic):
         df[self.resp_prefix + "_counts"][df_idx] = counts
         df[self.resp_prefix + "_div"][df_idx]    = df[ self.resp_type_input ][df_idx]- df[ self.stim_type_input ][df_idx]
       
+        print( df.loc[df_idx,:])
         return df
 
     def _set_hit(self,df,stim_idx=None,df_idx=None,resp_idx=None):
@@ -1255,13 +1254,13 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
             else: 
                mrk_type = self.marker.prefix +'_type'  
                if mrk_type not in marker_data_frame :
-                  marker_data_frame[ mrk_type ] = self.rt_type_as_index( self.marker.type_result ) 
-                
-                
-                
-            print("\n---> Marker DataFrame out:")
-            print(marker_data_frame)
-                
+                  marker_data_frame[ mrk_type ] = self.rt_type_as_index( self.marker.type_result )
+
+            if self.verbose:
+                print("  -> Marker Matching DataFrame : " + condi)
+                print(marker_data_frame)
+                print("\n")
+
             key = self.hdf_node_name_epocher +'/'+condi
             storer_attrs = {'epocher_parameter': self.parameter,'info_parameter':marker_info}
             self.hdf_obj_update_dataframe(marker_data_frame.astype(np.int32),key=key,**storer_attrs )

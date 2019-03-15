@@ -48,7 +48,7 @@ class JuMEG_Epocher_Marker(JuMEG_Epocher_Events_Channel):
     def type_result(self): return self.get_channel_parameter(key="type_result").upper()  
     @type_result.setter
     def type_result(self,v): self.set_channel_parameter(key="type_result",val=v)
-   
+ 
 
 class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
     """ CLS JuMEG_Epocher_Epochs
@@ -170,9 +170,14 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         """
         
       #--- read hdf get dataframe
-        print(condi)
+        #print(condi)
         df,ep_param,info_param = self._epochs_read_hdf_data(condi) 
-            
+        
+        #print("  --> EP param")
+        #print(ep_param)
+       
+        self.response = JuMEG_Epocher_Events_Channel(label="response",parameter=ep_param)
+        
       #--- check in case of changing epoch time 
         self._epochs_update_marker_time()
       #--- matching e.g. hits 
@@ -223,6 +228,11 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
           #---
             df,evt,ep_param,info_param = self._epochs_get_events(condi,ck_weights_skip_first=True,ck_weights_equalize=False)
        
+            #print("EP param")
+            #print(ep_param)
+            #print("TEST")
+            #print(self.param)
+            
           #---     
             if not evt['events'].size: continue
          
@@ -337,32 +347,46 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         dataframe,event indx array
         """
         event_idx = None
-        mkr_type  = None
-        
-       # if self.response.matching:
-        mkr_type = self.rt_type_as_index( self.marker.type_result )
+        mrk_value = self.rt_type_as_index( self.marker.type_result )
+        mrk_result= self.marker.type_result
        
-       #--- find  all xyz_type => img_type iod_type sac_type
-        idx       = np.where( df.filter(regex='_type$') == mkr_type    )[0]
-        event_idx = np.where( df['bads'][ np.unique(idx) ] != self.idx_bad )[0]
-        #else:
-        #   event_idx = np.where( df['bads'] != self.idx_bad )[0]
+        if self.response.matching:
+           mrk_type = self.response.prefix
+        else:
+           mrk_type = self.marker.prefix
         
-       #--- reset df selection 
+        if not mrk_type.endswith("_type"):
+           mrk_type += "_type"
+
+       #--- old: find all xyz_type => img_type iod_type sac_type
+        # idx= np.where( df.filter(regex='_type$') == mkr_type    )[0]
+        
+        mrk_idx = np.where( df[mrk_type] == mrk_value)[0]
+        idx =  np.where( df.loc[mrk_idx,'bads'] != self.idx_bad )[0]
+        event_idx = mrk_idx[idx].copy()
+   
+      #--- reset df selection
         df['selected']          = 0
         df['weighted_selected'] = 0
           
         if event_idx.size:
            df.loc[event_idx,'selected']          = 1
            df.loc[event_idx,'weighted_selected'] = 1
-           # data.loc[data['name'] == 'fred', 'A'] = 0
        
         if self.verbose:
+           print("\n  -> DataFrame input:\n")
+           print(df)
+           print("\n  -> Matching event index: ")
+           print(event_idx)
+           print("\n  -> DataFrame matched events:")
+           print(df.loc[event_idx])
+
            msg=["---> epocher_hdf_data_get_event_index",
-                "   -> marker type result: " + self.marker.type_result,
                 "   -> response matching : {}".format(self.response.matching),
-                "   -> marker type value : %d" %(mkr_type),
-                "   -> number of events  : " + str( event_idx.size ),
+                "   -> marker type       : {}".format(mrk_type),
+                "   -> marker type result: {}".format(self.marker.type_result),
+                "   -> marker type value : {}".format(mrk_value),
+                "   -> number of events  : {}".format(event_idx.size),
                 "-" * 40
                ]
            self.Log.info(msg)
@@ -685,10 +709,13 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         self.raw,self.fname = jumeg_base.get_raw_obj(self.fname,raw=self.raw)
        
        #--- get epochs no bc correction
-        print("events")
-        print(evt['events'])
-        print(evt['event_id'])
-        print(evt)
+       # print(" --> events _epochs_get_epochs_and_apply_baseline\n")
+       # print("  -> evt[events]: {}".format(evt['events'].shape))
+       # print(evt['events'])
+       # print("  -> evt[event_id]: {}".format(evt['event_id'].shape))
+       # print(evt['event_id'])
+       
+       # self.pp(evt)
         
         ep = mne.Epochs(self.raw,evt['events'],event_id=evt['event_id'],tmin=self.marker.time_pre,tmax=self.marker.time_post,
                         baseline=None,picks=picks,reject=self.reject,proj=self.proj,preload=True,verbose=False) 
