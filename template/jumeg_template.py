@@ -133,7 +133,6 @@ class JuMEG_Template(JuMEG_Base_Basic):
     def template_path(self,v): self._template_path = v
    #--- tmp path default
     @property
-    "${JUMEG_PATH}"
     def template_path_default(self): return os.path.abspath( os.path.dirname(__file__) ) + '/../examples/templates'
    #--- tmp name
     @property
