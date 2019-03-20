@@ -142,7 +142,7 @@ class JuMEG_Logger_Base(metaclass=_FunctionInfoLogger):
        """
        
        fn = experiment+"_"+module+"_"+os.getenv("USER","meg")+"_"+ time.strftime("%G-%m-%d %H:%M:%S",time.localtime())+"_"+postfix+ extention
-       fn = fn.replace(" ","_")
+       fn = fn.replace(" ","_").replace(":","-")
        print("log file: "+fn)
        return fn
    
