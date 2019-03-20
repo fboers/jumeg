@@ -98,9 +98,11 @@ class JuMEG_Logger(object):
         INFO 	 20
         DEBUG 	 10
         NOTSET 	 0
+   
+    https://realpython.com/python-logging/
     https://docs.python.org/3/howto/logging-cookbook.html
     https://stackoverflow.com/questions/44522676/including-the-current-method-name-when-printing-in-python
-    
+   
     Example:
     ---------
     from jumeg.jumeg_base import JuMEG_Logger
@@ -156,7 +158,10 @@ class JuMEG_Logger(object):
       
    def debug( self, msg ):
        self.logger.debug( self.list2str(msg),exc_info=True )
-
+   
+   def exception(self,msg,*args,**kwargs):
+       self.logger.exception( msg,*args,**kwargs )
+       
 '''
 class bcolors():
   """
@@ -419,6 +424,20 @@ class JuMEG_Base_Basic(object):
         # PY2 if isinstance(s, basestring): return bool(s.strip())
         return False
 
+    def expandvars(self,v):
+        """
+        expand env's from string works on list or string
+         => expandvars and expanduser
+        :param v: list of strings  or string
+        :return: input with expanded env's
+        """
+        if isinstance(v,(list)):
+            for i in range(len(v)):
+                v[i] = os.path.expandvars(os.path.expanduser( str(v[i]) ))
+            return v
+    
+        return os.path.expandvars(os.path.expanduser( str(v) ))
+
     def isFile(self,fin,path=None,extention=None,head="ERROR JuMEG_Base_Basic:isFile",exit_on_error=False,logmsg=False):
         """
         check if file exist
@@ -450,7 +469,7 @@ class JuMEG_Base_Basic(object):
             fck += fin
         if extention:
             fck += extention
-        f = os.path.abspath(os.path.expandvars(fck))
+        f = os.path.abspath(self.expandvars(fck))
         # f = os.path.abspath(os.path.expandvars(os.path.expanduser(fin)))
         if os.path.isfile(f):
            if logmsg:
@@ -464,7 +483,19 @@ class JuMEG_Base_Basic(object):
         if logmsg: self.Log.info(msg)
         
         return False
-
+       
+    def isDir(self,v):
+        """
+        expand env's e.g. expand user from string
+        check if is dir
+        
+        :param v: string
+        :return: input with expanded env's or None
+        """
+        v=self.expandvars(v)
+        if os.path.isdir(v): return v
+        return False
+   
     def isPath(self,pin,head="ERROR JuMEG_Base_Basic:isPath",exit_on_error=False,logmsg=False):
         """
         check if file exist
@@ -482,7 +513,7 @@ class JuMEG_Base_Basic(object):
         """
         if not head: head = " --->"
     
-        p = os.path.abspath(os.path.expandvars(pin))
+        p = os.path.abspath(self.expandvars(pin))
         if os.path.isdir(p):
            if logmsg:
               self.Log.info([head," --> dir exist: {}",format(pin),"  -> abs dir{:>18} {}".format(':',p)])
