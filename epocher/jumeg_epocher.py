@@ -25,7 +25,7 @@ Example:
 from jumeg.epocher.jumeg_epocher import jumeg_epocher
 
 template_name = 'M100'
-template_path = "/data/templates/epocher/"
+template_path = "${JUMEG_PATH_TEMPLATE_EPOCHER}"
 evt_param = { "condition_list":condition_list,
               "template_path": template_path, 
               "template_name": template_name,
