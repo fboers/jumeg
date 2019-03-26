@@ -114,12 +114,14 @@ class JuMEG_wxSplitterWindow(wx.SplitterWindow):
    #---
     def _update_from_kwargs(self,**kwargs):
         self.SetName(kwargs.get("name","SPLITTER").replace(" ", "_").upper())
+        self.listener      = kwargs.get("listener",self.GetParent().GetName())
         self._flip_position= kwargs.get("flip_position", self._flip_position).replace(" ", "_").upper()
         self._split_min_max= kwargs.get("split_min_max", self._split_min_max).replace(" ", "_").upper()
    #---
     def _init_pubsub(self,**kwargs):
-        pass
-    
+        #print("init pubsub " + self.GetName().upper()+"."+self._split_min_max)
+        pub.subscribe(self.UpdateSplitPosition,self.listener+"."+self._split_min_max)
+        
     def update(self,**kwargs):
         self._update_from_kwargs(**kwargs)
         self._init_pubsub(**kwargs)

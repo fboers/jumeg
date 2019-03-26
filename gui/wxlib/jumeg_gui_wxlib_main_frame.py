@@ -149,15 +149,7 @@ class JuMEG_wxMainFrame(wx.Frame):
            msgtxt= "\n".join(data)
         wx.MessageBox("Info: "+data,caption="Info  " +self.Name,style=wx.ICON_INFORMATION|wx.OK)
    #---
-    def log_info(self,data):
-        for msg in data:
-            if isinstance(msg,(list,dict)):
-               for l in msg:
-                   wx.LogMessage("TEST") # str(l) )
-            else:
-                wx.LogMessage( str(msg) )
-
-
+  
     def init_toolbar(self,**kwargs):
         """
         overwrite  e.g.
@@ -173,10 +165,6 @@ class JuMEG_wxMainFrame(wx.Frame):
         pub.subscribe(self.msg_error,  "MAIN_FRAME.MSG.ERROR")
         pub.subscribe(self.msg_warning,"MAIN_FRAME.MSG.WARNING")
         pub.subscribe(self.msg_info,   "MAIN_FRAME.MSG.INFO")
-       #---
-        pub.subscribe(self.log_info,    "MAIN_FRAME.LOG.INFO")
-        #pub.subscribe(self.log_error,   "MAIN_FRAME.LOG.ERROR")
-        #pub.subscribe(self.log_warnings,"MAIN_FRAME.LOG.WARNINGS")
        #---
         pub.subscribe(self.SetStatusBarMSG, "MAIN_FRAME.STB.MSG")
         pub.subscribe(self.ClickOnClose, "MAIN_FRAME.CLICK_ON_CLOSE")
@@ -331,7 +319,6 @@ class JuMEG_wxMainFrame(wx.Frame):
         if not self.use_pubsub: return
         menu     = evt.GetEventObject()
         menuItem = menu.FindItemById( evt.GetId() )
-
         if menuItem.GetItemLabelText() == "Log Output":
            pub.sendMessage(label.upper()+".SET_STATUS",   value= menuItem.IsChecked())
         elif menuItem.GetItemLabelText() == "Horizontal":

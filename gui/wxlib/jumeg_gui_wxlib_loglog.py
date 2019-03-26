@@ -1,7 +1,264 @@
 import wx,sys,io
 from pubsub import pub
 from jumeg.jumeg_base  import jumeg_base as jb
+from jumeg.jumeg_logger import JuMEG_Logger, JuMEG_LoggerFormatter
 __version__= "2018-11-15-001"
+
+class wxLogerTxtCtrl(wx.TextCtrl):
+    """
+    
+    """
+    def __init__(self,parent,**kwargs):
+        super().__init__(parent,wx.ID_ANY,kwargs.get("name","Logger"),style=wx.TE_MULTILINE | wx.TE_READONLY)
+        self._colour = kwargs.get("colour",wx.BLACK)
+        self.__isBusy = False
+
+    @property
+    def colour(self):   return self._colour
+    @colour.setter
+    def colour(self,v): self._colour=v
+
+    @property
+    def isBusy(self): return self.__isBusy
+
+    def _write(self,msg):
+        self.__isBusy = True
+        self.SetDefaultStyle(wx.TextAttr(self.colour))
+        self.AppendText(msg)
+        self.SetDefaultStyle(wx.TextAttr(wx.NullColour))
+        self.ShowPosition(self.GetLastPosition())  # scroll to end
+       #self._txtctrl.SetScrollPos(wx.VERTICAL,-1)
+        #self._txtctrl.SetInsertionPoint(-1)
+        self.Refresh()
+        self.__isBusy = False
+
+    def write(self,msg):
+        wx.CallAfter(self._write,msg)
+
+    def flush(self):
+        pass
+
+
+class wxTxtCtrlHandler(logging.StreamHandler):
+    """"""
+ 
+    #----------------------------------------------------------------------
+    def __init__(self, textctrl):
+        """"""
+        logging.StreamHandler.__init__(self)
+        self.textctrl = textctrl
+ 
+ 
+    #----------------------------------------------------------------------
+    def emit(self, record):
+        """Constructor"""
+        msg = self.format(record)
+       # self.textctrl.WriteText(msg + "\n")
+        self.textctrl.Write(msg + "\n")
+        self.flush()
+        
+        
+        
+class JuMEG_wxLogLog(JuMEG_Logger):
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+
+    def init_logger(self,**kwargs):
+       """
+       add you Handlers
+       :return:
+       """
+       self._txctrl= kwargs.get("textctrl")
+       self.logger.setLevel(self._level)
+       if self._txctrl:
+          self._wxLogHandler = wxTxtCtrlHandler(self._txtctrl)
+          self.logger.addHandler(self._wxLogHandler)
+       else:
+          self.logger.addHandler(self._init_console_handler(name="ch_info",fmt=self._LogFMT.info,level=self._level))
+          self.logger.addHandler(self._init_console_handler(name="ch_error",fmt=self._LogFMT.error,level=40))
+       
+       #self.logger.addHandler(self._init_file_handler(name="fh_info",fmt=self._LogFMT.info))
+       # with this pattern, it's rarely necessary to propagate the error up to parent
+       # self.logger.propagate = False
+       return self.logger
+  
+
+
+
+
+class JuMEG_wxLoggerPanel(wx.Panel):
+    """
+     panel with wx.textCtrl and a wx.Log obj
+     with different colors for
+
+     Parameter:
+     ----------
+      parent obj
+      name   : string       <"Logger">
+     logLevel: wx.LOG LEVEL <wx.LOG_Error>
+     listener: string       <same as name>
+    """
+
+    def __init__(self, parent, name="LOGGER", **kwargs):
+        super().__init__(parent, name=name)
+        self._font        = wx.Font(10,wx.FONTFAMILY_TELETYPE,wx.FONTSTYLE_NORMAL,wx.FONTWEIGHT_NORMAL)
+        self.__isInit     = False
+        self.__isMinimize = False
+        self._loglevel    = wx.LOG_Error
+        self.update(**kwargs)
+
+    @property
+    def cmd_min_max(self):
+        return self.GetName() + ".SPLIT_MIN_MAX"
+    @property
+    def cmd_set_status(self):
+        return self.GetName() + ".SET_STATUS"
+    @property
+    def cmd_clear(self):
+        return self.GetName() + ".BT.CLEAR"
+    #@property
+    #def cmd_minimize(self):
+    #    return self.GetName() + ".BT.MINIMIZE"
+
+    @property
+    def cmd_flip_vertical(self): return self.GetName()+".BT.FLIP_VERTICAL"
+
+    @property
+    def cmd_flip_horizontal(self): return self.GetName() + ".BT.FLIP_HORIZONTAL"
+
+    @property
+    def font(self):
+        return self._font
+
+    @font.setter
+    def font(self, v):
+        self._font = v
+
+    @property
+    def isInit(self):
+        return self.__isInit
+  # ---
+    def _update_from_kwargs(self, **kwargs):
+        self._loglevel = kwargs.get("loglevel", wx.LOG_Message)
+        self._font     = kwargs.get("font", self._font)
+
+  # ---
+    def _init_pubsub(self, **kwargs):
+        pass
+
+    def update(self, **kwargs):
+        self._update_from_kwargs(**kwargs)
+        self._wx_init()
+        self._init_logger()
+        self._init_pubsub(**kwargs)
+        self._ApplyLayout()
+        
+    def _wx_init(self):
+        self.SetBackgroundColour(wx.LIGHT_GREY)
+
+        self._pnl = wx.Panel(self, -1)
+        self._txt_head = wx.StaticText(self._pnl, wx.ID_ANY, "Logger", style=wx.ALIGN_CENTRE_HORIZONTAL)
+        self._txt_head.SetBackgroundColour("grey70")
+
+        stl = wx.BU_EXACTFIT | wx.BU_NOTEXT  # | wx.BORDER_NONE
+        self._BtClear = wx.Button(self._pnl, -1, name=self.cmd_clear,style=stl)
+        self._BtClear.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_DELETE, wx.ART_MENU, (12, 12)))
+        
+        self._BtMinimize = wx.Button(self._pnl, -1, name=self.cmd_min_max, style=stl)
+        self._BtMinimize.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK, wx.ART_MENU, (12, 12)))
+        
+        self._BtFlipHorizontal = wx.Button(self._pnl, -1,name=self.cmd_flip_horizontal,style=stl)
+        self._BtFlipHorizontal.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_GO_UP, wx.ART_MENU, (12, 12)))
+
+        self._BtFlipVertical = wx.Button(self._pnl,-1,name=self.cmd_flip_vertical,style=stl)
+        self._BtFlipVertical.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_GO_FORWARD,wx.ART_MENU,(12,12)))
+
+        self.Bind(wx.EVT_BUTTON,self.ClickOnButton)
+        
+        style = wx.TE_MULTILINE | wx.TE_READONLY  # |wx.HSCROLL
+        self._txtctrl = wxLogerTxtCtrl(self, wx.ID_ANY, style=style)  #wx.TextCtrl(self, wx.ID_ANY, style=style)
+        self._txtctrl.SetFont(self.font)
+        #self.Logger = JuMEG_wxLog(self._txtctrl)
+
+    def _init_logger(self):
+        """ """
+        self.__isInit = False
+        self.logger   = JuMEG_wxLogLog( name="TESTLOG",level=10,txtctrl=self._txtctrl)
+        
+        #formatter=wx.LogFormatter("%(asctime)s - %(name)s - %(message)s")
+        #wx.Log.SetActiveTarget(self.Logger)
+        #formatter=JuMEG_LogFormatter()
+        #wx.Log.SetFormatter(JuMEG_LogFormatter)
+        #wx.Log.SetTimestamp('%Y-%m-%d %H:%M:%S')
+        #wx.Log.SetLogLevel(self.LogLevel)
+        #self.fmt_info  = 'JuMEG LOG %(asctime)s %(message)s'
+        #logging.basicConfig(format=self.fmt_info,datefmt='%Y/%m/%d %I:%M:%S')
+        self.__isInit = True
+    
+    def ToggleMinMax(self, evt):
+        """
+        toggle min/max size of logger window
+        send cmd to parent splitter window via pubsub
+        """
+        if self.__isMinimize:
+           self.__isMinimize = False
+        else:
+           self.__isMinimize = True
+        try:
+           self.GetParent().UpdateSplitPosition(name=self.GetName(),size=self._BtMinimize.GetSize() * 5 )
+        except:
+            wx.LogError("Error in calling UpdateSplitPosition in parent", exc_info=True)
+        else:
+            wx.CallAfter(pub.sendMessage,self.cmd_update_min_max,name=self.GetName(),
+                     size=self._BtMinimize.GetSize() * 2 ) # two buttons to show
+
+    def FlipPosition(self,pos):
+        """
+        flip Logger window left/right horizontal/vertical
+        send cmd to parent splitter window via pubsub
+        FlipPosition(self,value=wx.SPLIT_VERTICAL):
+        """
+        try:
+            self.GetParent().FlipPosition(value=pos)
+        except Exception:
+            wx.LogError("Error in calling FlipPosition in parent", exc_info=True)
+       
+    def ClickOnButton(self, evt):
+        obj = evt.GetEventObject()
+        if obj.GetName().startswith(self.cmd_clear):
+            self._txtctrl.Clear()
+        if obj.GetName().startswith(self.cmd_min_max):
+            self.ToggleMinMax(evt)
+        if obj.GetName().startswith(self.cmd_flip_horizontal):
+            self.FlipPosition(wx.SPLIT_HORIZONTAL)
+        if obj.GetName().startswith(self.cmd_flip_vertical):
+            self.FlipPosition(wx.SPLIT_VERTICAL)
+
+    def _ApplyLayout(self):
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(self._txt_head,  1,wx.ALL | wx.EXPAND, 1)
+        hbox.Add(self._BtClear,   0,wx.ALL, 1)
+        hbox.Add(self._BtMinimize,0,wx.ALL, 1)
+        hbox.Add((0,0),0,wx.ALL,1)
+        hbox.Add(self._BtFlipHorizontal,0,wx.ALL, 1)
+        hbox.Add(self._BtFlipVertical,0,wx.ALL,1)
+        self._pnl.SetSizer(hbox)
+        self._pnl.Fit()
+
+        self.Sizer = wx.BoxSizer(wx.VERTICAL)
+        self.Sizer.Add(self._pnl,    0,wx.ALL | wx.EXPAND, 1)
+        self.Sizer.Add(self._txtctrl,1,wx.ALL | wx.EXPAND, 1)
+
+        self.SetSizer(self.Sizer)
+        self.SetAutoLayout(1)
+        self.Fit()
+        self.GetParent().Layout()
+
+
+
+
+
+
 
 
 # change formatter
@@ -138,6 +395,7 @@ class JuMEG_wxLogger(wx.Panel):
   # ---
     def _init_pubsub(self, **kwargs):
        # pub.subscribe(self.SetStatus, self.cmd_set_status)
+       # pub.subscribe(self.SetStatus, self.cmd_set_status)
         pass
 
     def update(self, **kwargs):
@@ -201,9 +459,9 @@ class JuMEG_wxLogger(wx.Panel):
            self.GetParent().UpdateSplitPosition(name=self.GetName(),size=self._BtMinimize.GetSize() * 5 )
         except:
             wx.LogError("Error in calling UpdateSplitPosition in parent", exc_info=True)
-        #else:
-        #    wx.CallAfter(pub.sendMessage,self.cmd_update_min_max,name=self.GetName(),
-        #             size=self._BtMinimize.GetSize() * 2 ) # two buttons to show
+        else:
+            wx.CallAfter(pub.sendMessage,self.cmd_update_min_max,name=self.GetName(),
+                     size=self._BtMinimize.GetSize() * 2 ) # two buttons to show
 
     def FlipPosition(self,pos):
         """

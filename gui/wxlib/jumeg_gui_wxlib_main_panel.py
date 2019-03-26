@@ -9,6 +9,7 @@
 import wx
 from pubsub import pub
 from jumeg.gui.wxlib.jumeg_gui_wxlib_logger               import JuMEG_wxLogger
+#from jumeg.gui.wxlib.jumeg_gui_wxlib_loglog               import JuMEG_wxLogger
 from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxSplitterWindow,JuMEG_wxCMDButtons
 
 version="2019.02.07.001"
@@ -159,7 +160,7 @@ class JuMEG_wxMainPanelBase(wx.Panel):
     def ShowHelp(self):
         """ show help __doc__string"""
         wx.MessageBox(self,self.__doc__ )
-
+    
 #--- default methods
     def _update_from_kwargs_default(self,**kwargs):
         """
@@ -212,7 +213,7 @@ class JuMEG_wxMainPanelBase(wx.Panel):
     def _init_pubsub_default(self):
         pub.subscribe(self.SetVerbose,'MAIN_FRAME.VERBOSE')
         pub.subscribe(self.ShowHelp, self.GetName()+".SHOW_HELP")
-
+        
 #--- overwrite methods
     def update_from_kwargs(self,**kwargs):
         """ pass """
@@ -452,7 +453,7 @@ class JuMEG_wxPanelAB(wx.Panel):
       PanelB = JuMEG_wxPanelAB(SplitterAB,name="MAIN_PANEL_B",bg=wx.Colour(140, 233, 238),label="Parameter",ShowMinMaxBt=True)
     """
     def __init__(self,parent,*kargs,**kwargs):
-        super(JuMEG_wxPanelAB,self).__init__(parent,*kargs,id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
+        super().__init__(parent,*kargs,id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
         self.update_from_kwargs(**kwargs)
         self.wx_init(**kwargs)
         self.ApplyLayout()

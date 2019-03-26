@@ -164,7 +164,7 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
           
           self._template_panel_name = "EXPERIMENT_TEMPLATE"
           
-          self.module_path      = os.getenv("JUMEG_PATH", os.getcwd()) + "/jumeg/tools"
+          self.module_path      = os.getenv("JUMEG_PATH_JUMEG", os.getcwd()) + "/tools"
           self.module_name      = "jumeg_io_import_to_fif"
           self.module_extention = ".py"
           self.SubProcess       = JuMEG_IoUtils_SubProcess()
@@ -235,7 +235,7 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
           self.Bind(wx.EVT_COMBOBOX,self.ClickOnCtrls)
           self.Bind(wx.EVT_CHECKBOX, self.ClickOnCtrls)
           self.update_parameter()
-
+          
       def update_on_display(self):
           self.SplitterAB.SetSashPosition(self.GetSize()[0] / 2.0,redraw=True)
 
@@ -256,9 +256,8 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
           
       def init_pubsub(self,**kwargs):
           """ init pubsub call overwrite """
-          #pub.subscribe(self.ClickOnExperimentTemplateSelectExperiment,self.ExpTemplate.GetMessage("SELECT_EXPERIMENT"))
           pub.subscribe(self.ClickOnExperimentTemplateUpdate,self.ExpTemplate.GetMessage("UPDATE"))
-          
+         
       def ClickOnExperimentTemplateSelectExperiment(self,stage=None,scan=None,data_type=None):
           """
           

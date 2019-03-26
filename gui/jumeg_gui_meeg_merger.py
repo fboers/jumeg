@@ -66,7 +66,7 @@ class JuMEG_wxMEEGMergerPanel(JuMEG_wxMainPanel):
       def fullfile(self): return self.module_path+"/"+self.module_name+ self.module_extention
 
       def update(self,**kwargs):
-          self.stage  = kwargs.get("stage", os.getenv("JUMEG_PATH", os.getcwd()) + "/jumeg/preproc" )
+          self.stage  = kwargs.get("stage", os.getenv("JUMEG_PATH_JUMEG", os.getcwd()) + "/preproc" )
         #-- update wx CTRLs
           self.PanelA.SetTitle(v="PDF`s")
         #---
