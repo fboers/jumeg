@@ -50,8 +50,11 @@ event_ids = jumeg_epocher.apply_epochs(fname=fname,raw=raw,**ep_param)
 '''
 
 # import os,sys,argparse
+import logging
 import numpy as np
 import pandas as pd
+
+logger = logging.getLogger(__name__)
 
 #from jumeg.jumeg_base import jumeg_base
 from jumeg.epocher.jumeg_epocher_epochs import JuMEG_Epocher_Epochs
@@ -120,7 +123,7 @@ class JuMEG_Epocher(JuMEG_Epocher_Epochs):
 
         raw,fname = self.apply_hdf_to_epochs(fname=fname,raw=raw,**kwargs)
 
-        self.Log.info("===> DONE apply epocher: " + self.hdf_filename +"\n")
+        logger.info("===> DONE apply epocher: " + self.hdf_filename +"\n")
         self.line()
         return (raw,fname)
      
