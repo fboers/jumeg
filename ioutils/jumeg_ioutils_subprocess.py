@@ -117,9 +117,9 @@ class JuMEG_IoUtils_SubProc_LogMsg(object):
        else:
           wx.LogMessage(self.msg_prefix +" "+head +"\n"+msg)
   
-   def msg_job_pid(self,jobnr,pid):
-       wx.LogMessage("{} RUN SubProc Nr.: {}  PID: {}\n".format(self.msg_prefix,jobnr,pid))
-       self.post_event(self.pubsub_listener_stb,data=["RUN", "", "PID", str(pid)])
+   def msg_job_pid(self,jobinfo,pid):
+       wx.LogMessage("{} RUN SubProc Nr.: {}  PID: {}\n".format(self.msg_prefix,jobinfo,pid))
+       self.post_event(self.pubsub_listener_stb,data=["RUN", "Job: " +str(jobinfo), "PID", str(pid)])
  
    def msg_done(self,jobnr=None,pid=None):
        wx.LogMessage("{} DONE  Job Nr: {} PID: {}\n".format(self.msg_prefix,jobnr,pid))
@@ -344,7 +344,7 @@ class JuMEG_IoUtils_SubProcThreadLocal(JuMEG_IoUtils_SubProcThreadBase):
            self.__proc = Popen(cmd,stdout=PIPE,stderr=STDOUT,shell=self.use_shell,universal_newlines=True)
            self._pidlist.append(self.__proc.pid)
            self._job_number+=1
-           self.Log.msg_job_pid(self._job_number,self.__proc.pid)
+           self.Log.msg_job_pid( str(self._job_number)+"/"+str(len(self.joblist)),self.__proc.pid)
         
            (msg_stdout,_) = self.__proc.communicate()  # BUG ??? returns only one output mixed with stdout and stderr
 
