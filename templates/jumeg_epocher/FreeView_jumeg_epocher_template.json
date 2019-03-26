@@ -61,10 +61,8 @@
                                   "consecutive"    : true,
                                   "min_duration"   : 0.0005,
                                   "shortest_event" : 1,
-                                  "initial_event"  : true,
                                   "mask"           : null,
                                   "initial_event"  : true
-
                                  },
                         
                         "window"               : [0.0,0.2],
@@ -105,6 +103,48 @@
          "StimImageOnset" : {"event_id":96},
          "KEYS" : {"event_id":"110, 111"}
          },
+
+"KeyLStimBc":{
+         "postfix"   :"keyLStim",
+         "info"      :"left key onset, with baseline correction",
+
+         "marker"   :{"channel":"KEYS","type_input":"key_onset","type_output":"key_onset","prefix":"key","type_result":"hit"},
+         "response" :{"matching":false,"channel":"KEYS","type_input":"key_onset","type_offset":"key_offset","prefix":"key"},
+         "iod":null,
+         "KEYS" : {"event_id":"20, 21, 120, 121"},
+         "time_pre"         : -0.4,
+         "time_post"        :  0.2,
+         "baseline" :{"method":"mean","type_input":"key_onset","baseline": [null,-0.2]}
+         },
+
+"KeyRStimBc":{
+         "postfix"   :"keyRStim",
+         "info"      :"right key onset, with baseline correction",
+
+         "marker"   :{"channel":"KEYS","type_input":"key_onset","type_output":"key_onset","prefix":"key","type_result":"hit"},
+         "response" :{"matching":false,"channel":"KEYS","type_input":"key_onset","type_offset":"key_offset","prefix":"key"},
+         "iod":null,
+         "KEYS" : {"event_id":"10, 11, 110, 111"},
+         "time_pre"         : -0.4,
+         "time_post"        :  0.2,
+         "baseline" :{"method":"mean","type_input":"key_onset","baseline": [null,-0.2]}
+         },
+
+"KeyRStimStimBc":{
+         "postfix"   :"keyRStim",
+         "info"      :"right key onset, with baseline correction",
+
+         "marker"   :{"channel":"StimImageOnset","type_input":"iod_onset","type_output":"key_onset","prefix":"iod","type_result":"hit"},
+         "response" :{"matching":true,"channel":"KEYS","type_input":"key_onset","type_offset":"key_offset","prefix":"key"},
+
+         "StimImageOnset" : {"event_id":"84, 96"},
+         "KEYS" : {"event_id":"10, 11, 110, 111"},
+
+          "time_pre"         : -0.4,
+          "time_post"        :  0.2,
+          "baseline" :{"method":"mean","type_input":"ḱey_onset","baseline": [null,-0.2]}
+         },
+
 
 "KeyRBc":{
          "postfix"   :"keyR",
