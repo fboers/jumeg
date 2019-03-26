@@ -32,12 +32,14 @@ from jumeg.template.jumeg_template import JuMEG_Template_Experiments
 # 13.03.19 PY3
 #--------------------------------------------
 
+import logging
 import glob, os, re, sys
 import json,time
-# from jsonschema import validate
+
 from jumeg.jumeg_base import JuMEG_Base_Basic
 
 __version__='2019-03-13.001'
+logger = logging.getLogger(__name__)
 
 class dict2obj(dict):
     def __init__(self, dict_):
@@ -57,8 +59,6 @@ class dict2obj(dict):
             return self[key]
         else:
             return None
-
-
 
 class Struct(dict):
   def __init__(self,data):
@@ -107,7 +107,6 @@ def _decode_dict(data):
     return rv
 
 
-
 class JuMEG_Template(JuMEG_Base_Basic):
     def __init__ (self,template_name='DEFAULT'):
         super(JuMEG_Template,self).__init__()
@@ -128,7 +127,7 @@ class JuMEG_Template(JuMEG_Base_Basic):
         
    #--- temp path
     @property
-    def template_path(self):   return self._template_path
+    def template_path(self):   return  self.expandvars(self._template_path)
     @template_path.setter
     def template_path(self,v): self._template_path = v
    #--- tmp path default
@@ -193,7 +192,23 @@ class JuMEG_Template(JuMEG_Base_Basic):
              self.template_name_list = pat.sub('', str.join(',',flist) ).split(',')
         #---
          return self.template_name_list
-
+    
+    '''
+    def template_read_json(self,fjson):
+        d = dict()
+        if (os.path.isfile(fjson)):
+           try:
+               FID = open(fjson)
+               d = json.load(FID)
+               d = _decode_dict(d)
+           except FileNotFoundError as e:
+           except ValueError as e:
+           except:
+                 d = dict()
+                 logger.exception("\n\n!!! ERROR NO JSON File Format:\n  ---> " + fjson + "\n\n")
+                 FID.close()
+        return d
+    '''
     def template_update_file(self,dict2obj=False,exit_on_error=True):
         """
         
@@ -205,18 +220,28 @@ class JuMEG_Template(JuMEG_Base_Basic):
         status = True
         self._template_isUpdate = False
         self.template_data.clear() # clear all copies
+        
         try:
            with open(self.template_full_filename) as FH: # PY3
                 self.template_data = json.load(FH) # close  anyway
            if dict2obj:
               self.template_data = dict2obj(self.template_data)
               self._template_isUpdate = True
-        except (ValueError,FileNotFoundError) as e:
-           self.Log.error(["\n---> ERROR loading Template File: " + self.template_full_filename," --> invalid json: %s\n" % e])
-           status=False
+        except json.decoder.JSONDecodeError as e:
+               logger.exception("---> Error in json template file format: " + self.template_full_filename)
+               status=False
+        except ValueError as e:
+               logger.exception("---> Value Error in json template file: " + self.template_full_filename)
+        except FileNotFoundError as e:
+            logger.exception("---> Error open template file: " + self.template_full_filename)
+            status = False
+
+        if status:
+           return status
+        
         if exit_on_error:
-           assert self.template_data,"---> ERROR in template file format [json]: {}\n".format(self.template_full_filename)
-        return status
+           assert self.template_data,"-\n--> ERROR in template file format [json]: {}\n".format(self.template_full_filename)
+           return status
           
     def template_get_as_obj(self):
         """
@@ -272,19 +297,7 @@ class JuMEG_Template(JuMEG_Base_Basic):
         """
         return dict2obj(self._dict_update_and_merge(d, u, depth=depth) )
 
-    def template_read_json(self,fjson):
-        d = dict()
-        if ( os.path.isfile( fjson ) ):
-            FID = open( fjson )
-            try:
-                d = json.load(FID)
-                d = _decode_dict(d)
-            except:
-                d = dict()
-                self.Log.error("\n\n!!! ERROR NO JSON File Format:\n  ---> " + fjson +"\n\n")
-            FID.close()
-        return d
-        
+       
     def template_write_json(self,fjson, data):
         """
         
