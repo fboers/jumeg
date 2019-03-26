@@ -143,7 +143,7 @@ class JuMEG_Logger_Base(metaclass=_FunctionInfoLogger):
        
        fn = experiment+"_"+module+"_"+os.getenv("USER","meg")+"_"+ time.strftime("%G-%m-%d %H:%M:%S",time.localtime())+"_"+postfix+ extention
        fn = fn.replace(" ","_").replace(":","-")
-       print("log file: "+fn)
+       #print("log file: "+fn)
        return fn
    
    def _init_console_handler(self,name="console",fmt=None,level=None):
@@ -175,7 +175,7 @@ class JuMEG_Logger_Base(metaclass=_FunctionInfoLogger):
        FH.set_name(name)
        return FH
    
-   def init_logger(self):
+   def init_logger(self,**kwargs):
        """
        overwrite
        :param kwarg:

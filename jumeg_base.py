@@ -390,8 +390,11 @@ class JuMEG_Base_Basic(object):
          True
         """
         #print("is_number: {} type:{}".format(n, type(n)))
-        return isinstance(n,numbers.Integral)
-        # return hasattr(val,"denominator") & & val.denominator == 1
+        if n:
+           if  isinstance(n,(numbers.Number)):
+               return True
+         #  return hasattr(n,"denominator") & n.denominator == 1
+        return False
     
     def isNumber(self,n):
         """
