@@ -35,6 +35,7 @@ def get_args(argv,parser=None,defaults=None,version=None):
 
     :param argv:   the arguments, parameter e.g.: sys.argv
     :param parser: argparser obj, the base/default obj like --verbose. --debug
+    :param version: adds version to description
     :return:
     
     Results:

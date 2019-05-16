@@ -1,6 +1,0 @@
-<templateSet group="Python">
-  <template name="props" value="@property&#10;def $NAME$(self): return $END$&#10;@$NAME$.setter&#10;def $NAME$(self, value):  pass" description="Property getter/setter" toReformat="false" toShortenFQNames="true">
-    <variable name="NAME" expression="" defaultValue="" alwaysStopAt="true" />
-    <context />
-  </template>
-</templateSet>
