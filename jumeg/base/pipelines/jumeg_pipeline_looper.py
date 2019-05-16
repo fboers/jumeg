@@ -588,7 +588,15 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
              self._config_data = yaml.load(f)
         if self.debug:
             logger.info("  -> DONE loading config file")
-            
+
+    def _update_config_stages(self):
+        """
+        overwriting congfig stage
+        :return:
+        """
+        for k in self.config.keys():
+            self.config[k]["stage"] = self.stage
+        
     def init(self,options=None,defaults=None):
         """
          init global parameter
@@ -661,6 +669,8 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
         self._PDFList.list_file_name = get_value("list_name",[opt,defaults,cfg_global])
         self._PDFFile.path           = get_value("fpath",    [opt,defaults,cfg_global])
         self._PDFFile.name           = get_value("fname",    [opt,defaults,cfg_global])
+        
+        self._update_config_stages()
         
     def init_logfile(self,fname=None,mode="a"):
         if self.logoverwrite:

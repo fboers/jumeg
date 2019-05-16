@@ -22,14 +22,16 @@ preproc functions:
 
 """
 import sys,os,logging,yaml,argparse,glob
-#from contextlib import redirect_stdout
 
 import mne
 
-from jumeg.base.jumeg_base         import jumeg_base as jb
-from jumeg.base                    import jumeg_logger  #     import STDStreamLogger # capture stout,stderr
-from jumeg.plot.jumeg_plot_preproc import JuMEG_PLOT_PSD
+from jumeg.base                                      import jumeg_logger
+from jumeg.base.jumeg_base                           import jumeg_base as jb
+from jumeg.base.jumeg_badchannel_table               import update_bads_in_hdf
 from jumeg.base.pipelines.jumeg_pipelines_utils_base import get_args
+
+from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD
+
 #--- preproc
 from jumeg.jumeg_noise_reducer     import noise_reducer
 from jumeg.jumeg_suggest_bads      import suggest_bads
@@ -37,7 +39,7 @@ from jumeg.jumeg_interpolate_bads  import interpolate_bads as jumeg_interpolate_
 
 logger = logging.getLogger("jumeg")
 
-__version__= "2019.05.10.001"
+__version__= "2019.05.16.001"
 
 #---------------------------------------------------
 #--- apply_noise_reducer
@@ -192,7 +194,11 @@ def apply_suggest_bads(raw_fname,raw=None,**cfg):
     if raw:
        with jumeg_logger.StreamLoggerSTD(label="suggest_bads"):
             marked,raw = suggest_bads(raw) #,**cfg["parameter"]) #show_raw=cfg.get("show_raw") )
-
+   
+   #--- set bads in global HDF
+    fhdf = os.path.join( cfg.get("stage"),cfg.get("hdfname","badchannels.hdf5"))
+    update_bads_in_hdf(fhdf=fhdf,bads=marked,fname=raw_fname,verbose=cfg.get("verbose"))
+    
     fname_out,raw = jb.update_and_save_raw(raw,fin=raw_fname,fout=None,save=cfg.get("save"),update_raw_filenname=True,
                                            postfix=cfg.get("postfix","bcc"),overwrite=cfg.get("overwrite",True))
  

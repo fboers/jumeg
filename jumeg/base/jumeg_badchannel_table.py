@@ -23,7 +23,7 @@ from jumeg.base.jumeg_base import jumeg_base
 from jumeg.base import jumeg_logger
 logger = logging.getLogger('jumeg')
 
-__version__="2019.05.15.001"
+__version__="2019.05.16.001"
 
 
 class JuMEG_BadChannelTable(object):
@@ -32,6 +32,29 @@ class JuMEG_BadChannelTable(object):
     HDF5format
 
     id,scan,filename,file path, bads
+    
+    Example:
+    --------
+     from jumeg.base.jumeg_badchannel_table import JuMEG_BadChannelTable
+     BCT = JuMEG_BadChannelTable(verbose=True)
+     BCT.open(path=path,fname=fname,overwrite=False)
+    
+     id    = "123456"
+     scan  = "FREEVIEW01"
+     fname = "$JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1/211747_FREEVIEW01_180109_0955_1_c,rfDC,meeg-raw.fif"
+     bads  = "MEG 007,MEG 142,MEG 156,RFM 011"
+     BCT.set_bads(id=id,scan=scan,fname=fname,bads=bads)
+     BCT.show()
+    
+     fname = "$JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1/211747_FREEVIEW01_180109_0955_2_c,rfDC,meeg-raw.fif"
+     bads  = "MEG 107,MEG 242,MEG 256,RFM 012"
+     BCT.set_bads(id=id,scan=scan,fname=fname,bads=bads)
+     BCT.show()
+    
+     BCT.set_bads(id=id,scan=scan,fname=fname,bads="NIX")
+     BCT.show()
+    
+     print("bads: {}".format( BCT.get_badslist(fname=fname) ))
 
     """
     
@@ -58,8 +81,17 @@ class JuMEG_BadChannelTable(object):
     @property
     def HDF(self):
         return self._HDF
-   
-   #--- HDFobj filename
+    
+    @property
+    def is_open(self):
+        try:
+            if self.HDF.is_open:
+               return True
+        except:
+            logger.error(" HDFobj is not open !!!\n")
+        return False
+
+    #--- HDFobj filename
     @property
     def filename(self):
         return self._fname
@@ -158,7 +190,7 @@ class JuMEG_BadChannelTable(object):
         return self.init(fhdf=fhdf,path=path,fname=fname,overwrite=overwrite)
     
     def close(self):
-        if self.is_open():
+        if self.is_open:
            if self.verbose:
               logging.debug("  -> HDF closing: {}".format(self.HDF.filename))
            self._HDF.close()
@@ -168,15 +200,7 @@ class JuMEG_BadChannelTable(object):
         if kf in self.HDF.keys():
            self.HDF.remove(k)
         return k
-    
-    def is_open(self):
-        try:
-            if self.HDF.is_open:
-               return True
-        except:
-            logger.error(" HDFobj is not open !!!\n")
-        return False
-    
+      
     def list_keys_from_node(self,node):
         """ get key list from HDF node
 
@@ -263,7 +287,7 @@ class JuMEG_BadChannelTable(object):
                                  "Attr: {}\n".format(attr))
                 return
         
-        elif self.is_open():
+        elif self.is_open:
             return self.HDF.get_storer(key).attrs[attr]
     
        
@@ -281,7 +305,7 @@ class JuMEG_BadChannelTable(object):
         """
         #-- avoid error in python3 pandas HDF  e.g: STI 13 => STI-13
         
-        if not self.is_open():
+        if not self.is_open:
            return None
         
         #--- fist clean HDF df & parameter
@@ -292,14 +316,82 @@ class JuMEG_BadChannelTable(object):
         
         #--- update attributes e.g. save dicts like parameter,info ...
        # return self.store_attributes(key=key,**storer_attrs)
-    
-    def set_bads(self,id=None,scan=None,fname=None,bads=None):
+
+    def bads2list(self,bads,sep=","):
+        """
+        
+        :param bads:
+        :param sep:
+        :return:
+        """
+        if not bads:
+           return []
+        elif isinstance(bads,str):
+             return bads.split(sep)
+        return bads
+
+    def get_key(self,id=None,scan=None,fname=None):
         """
         
         :param id:
         :param scan:
         :param fname:
-        :param bads:
+        :return:
+         key  e.g:  id + "/" + scan + "/" + run_name
+        
+        Example:
+        --------
+         input : fname = 123456_FREEVIEW01_200108_0955_1_c,rfDC,meeg-raw.fif
+         output: 123456/FREEVIEW01/123456_FREEVIEW01_200108_0955_1
+        """
+        pdf_name = "_".join(os.path.basename(fname).split("_")[0:-1])
+        id       = id if id else pdf_name.split("_")[0]
+        scan     = scan if scan else pdf_name.split("_")[1]
+        
+        return id + "/" + scan + "/" + pdf_name
+
+    def get_bads(self,id=None,scan=None,fname=None,key=None):
+        """
+        
+        :param id:
+        :param scan:
+        :param fname:
+        :return:
+        """
+        if not self.is_open: return
+        if not key:
+           if not fname: return
+           key = self.get_key(id=id,scan=scan,fname=fname)
+        
+        try:
+           return self.HDF[key]
+        except:
+           logger.exception("\n".join(["---> ERROR can not get bads from HDF:"
+                                       "  -> filename: {}".format(fname),
+                                       "  -> bads    : {}".format(bads),
+                                       "  -> HDF key : {}".format(key),
+                                       "  -> HDf file: {}".format(self.HDF.filename)]))
+     
+    def get_badslist(self,**kwargs):
+        """
+        
+        :param id:
+        :param scan:
+        :param fname:
+        :return:
+        """
+        s = self.get_bads(**kwargs)
+        if isinstance(s,pd.Series):
+          return s.tolist()
+        
+    def set_bads(self,id=None,scan=None,fname=None,bads=None):
+        """
+        set list of bads in HDF as pd.Series
+        build HDF key : id + "/" + scan + "/" + pdf_name
+        :param id:
+        :param scan:
+        :param fname: (full)filename
+        :param bads: string or list of strings
         :return:
         
         Example:
@@ -307,92 +399,81 @@ class JuMEG_BadChannelTable(object):
         
         id    = "123456"
         scan  = "FREEVIEW01"
-        fname = "$JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1/211747_FREEVIEW01_180109_0955_1_c,rfDC,meeg-raw.fif
+        fname = "$JUMEG_TEST_DATA/mne/123456/FREEVIEW01/180109_0955/1/123456_FREEVIEW01_180109_0955_1_c,rfDC,meeg-raw.fif
         bads  = "MEG 007,MEG 142,MEG 156,RFM 011"
         
+        BCT.set_bads(fname=fname,bads=bads)
         BCT.set_bads(id=id,scan=scan,fname=fname,bads=bads)
         
         """
-        if not fname: return
-        run_name = os.path.basename(fname).split(",")[0]
-        id       = id   if id   else run_name.split("_")[0]
-        scan     = scan if scan else zun_name.split("_")[1]
-        key      = id + "/" + scan
+        if not self.is_open: return
+        if not fname       : return
+        key = self.get_key(id=id,scan=scan,fname=fname)
         
-        if not self.is_open():  return
-        
-        df1 = pd.DataFrame({ 'PDF':[run_name],'bads':[bads] })
-        #df1 = pd.DataFrame( [run_name,bads],columns=["PDF","bads"] )
-       
         try:
-            df = self.HDF.get(key)
-            
-            if isinstance(df,pd.DataFrame):
-              idx = df[(df["PDF"] == run_name)].index
-              if not idx.empty:
-                 df["bads"][idx] = bads
-              else:
-                 self.HDF[key] = df.append(df1,sort=True) # slow implementation
-            else:
-               self.HDF[key] = df1
+           self.HDF[key] = pd.Series( self.bads2list(bads) )  # ["MEG 007","MEG 142","MEG 156","RFM 011"]
         except:
-            self.HDF[key] = df1
-      
+           logger.exception("\n".join(["---> ERROR can not set bads in HDF:"
+                                       "  -> filename: {}".format(fname),
+                                       "  -> bads    : {}".format(bads),
+                                       "  -> HDF key : {}".format(key),
+                                       "  -> HDf file: {}".format(self.HDF.filename)]))
         self.HDF.flush()
-      
         
     def show(self):
-        if self.is_open():
-           
+        if self.is_open:
+           msg=[]
            for key in self.HDF.keys():
-               msg = "HDF key: {}\n".format(key)
-               msg+= self.HDF[key].__str__()
-               logger.info(msg)
-               
-        
-         
+               msg.append("  -> {} : {}".format(key,self.get_badslist(key=key)))
+           logger.info( "\n".join(msg))
+
+
+
+def update_bads_in_hdf(fhdf=None,bads=None,path=None,fname=None,overwrite=False,verbose=False):
+    """
+    :param fhdf
+    :param path:
+    :param fname:
+    :param overwrite:
+    :param verbose:
+    :return:
+    """
+    BCT = JuMEG_BadChannelTable(verbose=True)
+    BCT.open(fhdf=fhdf,path=path,fname=fname,overwrite=overwrite)
+    BCT.set_bads(fname=fname,bads=bads)
+    BCT.close()
+    
+    
+#--- test
+def _test():
+    path  = "$JUMEG_TEST_DATA/mne"
+    fname = "FREEVIEW01"
+    
+    BCT = JuMEG_BadChannelTable(verbose=True)
+    
+    BCT.open(path=path,fname=fname,overwrite=True)
+    
+    id    = "123456"
+    scan = "FREEVIEW01"
+    fname = "$JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1/211747_FREEVIEW01_180109_0955_1_c,rfDC,meeg-raw.fif"
+    bads = "MEG 007,MEG 142,MEG 156,RFM 011"
+    BCT.set_bads(id=id,scan=scan,fname=fname,bads=bads)
+    
+    BCT.show()
+    
+    fname = "$JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1/211747_FREEVIEW01_180109_0955_2_c,rfDC,meeg-raw.fif"
+    BCT.set_bads(id=id,scan=scan,fname=fname,bads=bads)
+    BCT.show()
+    
+    BCT.set_bads(id=id,scan=scan,fname=fname,bads="NIX")
+    BCT.show()
+    print("bads: {}".format( BCT.get_badslist(fname=fname) ))
+    
+    BCT.close()
+
+
 if __name__ == "__main__":
   #--- init/update logger
    logger=jumeg_logger.setup_script_logging(logger=logger,level=logging.DEBUG)
+   _test()
    
-   path="$JUMEG_TEST_DATA/mne"
-   fname="FREEVIEW01"
-  
-   BCT = JuMEG_BadChannelTable(verbose =True)
-   
-   BCT.open(path=path,fname=fname,overwrite=True)
-
-   id    = "123456"
-   scan  = "FREEVIEW01"
-   fname = "$JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1/211747_FREEVIEW01_180109_0955_1_c,rfDC,meeg-raw.fif"
-   bads  = "MEG 007,MEG 142,MEG 156,RFM 011"
-   BCT.set_bads(id=id,scan=scan,fname=fname,bads=bads)
-
-   BCT.show()
-  
-   fname = "$JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1/211747_FREEVIEW01_180109_0955_2_c,rfDC,meeg-raw.fif"
-   BCT.set_bads(id=id,scan=scan,fname=fname,bads=bads)
-   BCT.show()
-   
-   BCT.set_bads(id=id,scan=scan,fname=fname,bads="NIX")
-   BCT.show()
-  
-   '''
-   key= "/123456/FREEVIEW01"
-   r  = "211747_FREEVIEW01_180109_0955_1_c"
-   
-   print("TEST")
-   df = BCT.HDF[key]
-   print(df)
-   
-   idx = df[ ( df["PDF"] == r ) ].index
-   print(idx)
-   df["bads"][idx]="test"
-   
-   print(df)
-   
-   key="/123456/FREEVIEW01"
-   '''
-   
-   BCT.close()
-  
