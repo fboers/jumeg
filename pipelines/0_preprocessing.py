@@ -36,7 +36,7 @@ call script with parameter or -h for help
 0_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747 -c config0.yaml -log -v -d -r -rec --logoverwrite
 
 #--- run for ids, recursive looking into subdirs, overwrite logfile
-0_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747,211890 config0.yaml -log -v -d -r -rec --logoverwrite
+0_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747,211890 -c config0.yaml -log -v -d -r -rec --logoverwrite
 
 #--- run for files in list, overwrite logfile
 0_preprocessing.py -s $JUMEG_TEST_DATA/mne -lname=list_test.txt -lpath=$JUMEG_TEST_DATA/mne -c config0.yaml -log -v -d -r --logoverwrite
@@ -108,7 +108,7 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
     jpl = JuMEG_PipelineLooper(options=opt,defaults=defaults)
     jpl.ExitOnError=True
     
-    for raw_fname,subject_id,dir in jpl.file_list():
+    for raw_fname,subject_id,raw_dir in jpl.file_list():
       
        #--- call noise reduction
         raw_fname,raw = utils.apply_noise_reducer(raw_fname,raw=raw,**jpl.config.get("noise_reducer"))
