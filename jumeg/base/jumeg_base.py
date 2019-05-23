@@ -1465,7 +1465,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
                      e.g.:
          separator : split to generate output filename with postfix  <"-">
          save      : save raw to disk
-         overwrite : <True>
+         overwrite : if overwrite  save <raw obj> to existing <raw file>  <True>
          update_raw_filenname: <False>
 
         Returns
@@ -1483,7 +1483,10 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
             if postfix:
                fpre,fext = fname.rsplit(separator)
                fname = fpre + "," + postfix + separator + fext
-    
+      
+        if not raw:
+           return fname,raw
+        
         if save:
             try:
                 if (os.path.isfile(fname) and (not overwrite)):
