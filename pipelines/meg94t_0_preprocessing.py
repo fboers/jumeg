@@ -46,6 +46,11 @@ call script with parameter or -h for help
 
 #--- run for MEG94T
 0_preprocessing.py -s $JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne -lpath $JUMEG_LOCAL_DATA/exp/MEG94T/mne -fname test01.txt -log -v -d -r --logoverwrite
+
+#--- run for list of files, overwrite logfile
+meg94t_0_preprocessing.py -s $JUMEG_TEST_DATA/mne -lpath $JUMEG_TEST_DATA/mne -lname meg94t_list.txt -c meg94t_config0.yaml -log -v -d -r --logoverwrite
+
+
 """
 
 import os,sys,logging
@@ -57,28 +62,29 @@ import jumeg.base.pipelines.jumeg_pipelines_utils0 as utils
 
 logger = logging.getLogger("jumeg")
 
-__version__= "2019.05.13.001"
+__version__= "2019.05.17.001"
 
 #--- parameter / argparser defaults
 defaults={
-          # "stage"          : ".",
-          #"file_extention" : ["meeg-raw.fif","rfDC-empty.fif"],
-          "config"         : "config_file.yaml",
+          #"stage"         :"$JUMEG_PATH_MNE_IMPORT2/MEG94T/mne",
+          "file_extention":["meeg-raw.fif","c,rfDC-raw.fif","rfDC-empty.fif"],
+          "config"        :"meg94t_config0.yaml",
     
-          #"subjects"       : None,
-          #"list_path"      : None,
-          #"list_file"      : None,
-          #"fpath"          : None,
-          #"fname"          : None,
-          
-          #"recursive"      : True,
+          #"subjects"      :None,
+    
+          #"list_path"     :"$JUMEG_PATH_MNE_IMPORT2/MEG94T/source/jumeg/pipelines",
+          "list_name"     :"meg94t_list.txt",
+    
+          #"fpath"         : None,
+          #"fname"         : None,
+          "recursive"     : True,
+    
+          "log2file"      : True,
+          "logprefix"     : "preproc0",
+          "logoverwrite"  : True,
       
-          #"log2file"       : True,
-          #"logprefix"      : "preproc0",
-          #"logoverwrite"   : False,
-      
-          #"verbose"        : False,
-          #"debug"          : False
+          "verbose"       : False,
+          "debug"         : False
          }
 
 #-----------------------------------------------------------
@@ -106,24 +112,25 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
     jpl = JuMEG_PipelineLooper(options=opt,defaults=defaults)
     jpl.ExitOnError=True
     
-    for raw_fname,subject_id,raw_dir in jpl.file_list():
-      
+    for fname,subject_id,raw_dir in jpl.file_list():
        #--- call noise reduction
-        raw_fname,raw = utils.apply_noise_reducer(raw_fname,raw=raw,**jpl.config.get("noise_reducer"))
+        raw_fname,raw = utils.apply_noise_reducer(raw_fname=fname,raw=raw,config=jpl.config.get("noise_reducer"))
 
        #--- call suggest_bads
-        raw_fname,raw = utils.apply_suggest_bads(raw_fname,raw=raw,**jpl.config.get("suggest_bads"))
+        raw_fname,raw = utils.apply_suggest_bads(raw_fname=raw_fname,raw=raw,config=jpl.config.get("suggest_bads"))
        
        #--- call interploate_bads
-        raw_fname,raw = utils.apply_interpolate_bads(raw_fname,raw=raw,**jpl.config.get("interpolate_bads") )
+        raw_fname,raw = utils.apply_interpolate_bads(raw_fname=raw_fname,raw=raw,config=jpl.config.get("interpolate_bads") )
         
        #--- call filter
-       # raw_fname,raw = utils.apply_filter(raw_fname,raw=raw,**jpl.config.get("filtering") )
+       # raw_fname,raw = utils.apply_filter(raw_fname,raw=raw,config=jpl.config.get("filtering") )
 
        #--- call resample
-       # raw_fname,raw = utils.apply_resample(raw_fname,raw=raw,**jpl.config.get("resampling"))
+       # raw_fname,raw = utils.apply_resample(raw_fname,raw=raw,config=jpl.config.get("resampling"))
 
-        logger.info(" --> DONE raw file output: {}\n".format(raw_fname))
+        logger.info(" --> DONE preproc subject id: {}\n".format(subject_id)+
+                    "  -> input  file: {}\n".format(fname)+
+                    "  -> output file: {}\n".format(raw_fname))
         
 #=========================================================================================
 #==== MAIN

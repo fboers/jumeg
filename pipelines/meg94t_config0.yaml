@@ -8,10 +8,10 @@ info:
 
 #--- global settings
 global:
-    experiment: "M100"
-    subjects: ['211747']
-    stage:  "$JUMEG_TEST_DATA/mne"
-    file_extention: ["meeg-raw.fif","rfDC-empty.fif"]
+    experiment: "MEG94T"
+    subjects: None
+    stage:  "$JUMEG_PATH_MNE_IMPORT2/MEG94T/mne"
+    file_extention: ["c,rfDC-raw.fif","meeg-raw.fif","rfDC-empty.fif"]
     recursive: True
 
 ###############################################################################
@@ -29,16 +29,17 @@ noise_reducer:
     noiseref_hp: ['RFG ...']
     # frequencies for notch filter (for power line noise, projector, etc.)
     refnotch: [50., 100., 150., 200., 250., 300., 350., 400.,
-               60., 120., 180., 240., 360.]
+               60., 120., 180.]
    #--- file postfix
     postfix: "nr"
     plot: True
     plot_dir: 'plots'
     plot_show : False
-    save: True
-    run:  False
-    overwrite: True
-    file_extention: ["meeg-raw.fif","rfDC-empty.fif"]
+    save: False
+    run:  True
+    fmax: 300
+    overwrite: False
+    file_extention: ["c,rfDC-raw.fif","meeg-raw.fif","rfDC-empty.fif"]
 
 #--- suggest bads
 suggest_bads:
@@ -46,8 +47,8 @@ suggest_bads:
     save: True
     run:  True
     plot_show : False
-    overwrite: True
-    file_extention: ["meeg,nr-raw.fif","rfDC,nr-empty.fif"]
+    overwrite: False
+    file_extention: [",nr-raw.fif","rfDC,nr-empty.fif"]
     hdfname: "badchannel_info.hdf"
 
    #--- suggest bads special parameter
@@ -64,9 +65,9 @@ suggest_bads:
 interpolate_bads:
     postfix: "int"
     save: True
-    run:  True
+    run:  False
     overwrite: True
-    file_extention: ["meeg,nr,bcc-raw.fif","rfDC,nr,bcc-empty.fif"]
+    file_extention: [",nr,bcc-raw.fif","rfDC,nr,bcc-empty.fif"]
 
     plot_block: False
 
@@ -78,9 +79,9 @@ interpolate_bads:
 filtering:
     postfix: "fi"
     save: True
-    run:  True
+    run:  False
     overwrite: True
-    file_extention: ["meeg,nr,bcc,int-raw.fif","rfDC,nr,bcc,int-empty.fif"]
+    file_extention: [",nr,bcc,int-raw.fif","rfDC,nr,bcc,int-empty.fif"]
 
     l_freq: 1.0
     h_freq: 45.
@@ -97,7 +98,7 @@ resampling:
     save: True
     run:  False
     overwrite: True
-    file_extention: ["meeg,nr,bcc,int,fi-raw.fif","rfDC,nr,bcc,int,fi-empty.fif"]
+    file_extention: [",nr,bcc,int,fi-raw.fif","rfDC,nr,bcc,int,fi-empty.fif"]
 
     rsfreq: 250
 
