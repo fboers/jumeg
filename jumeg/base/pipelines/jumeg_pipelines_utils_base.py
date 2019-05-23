@@ -238,9 +238,9 @@ class JuMEG_PipelineFrame(object):
          raw_fname=None,raw=None,config=None,function_name=None,verbose=False,debug=False
          :return:
         """
-        self._raw_fname = kwargs.get("raw_fname",self.raw_fname)
-        self._raw       = kwargs.get("raw",self.raw)
-        self._cfg       = kwargs.get("config",self._cfg)
+        self._raw_fname = kwargs.get("raw_fname")  # reset
+        self._raw       = kwargs.get("raw")
+        self._cfg       = kwargs.get("config")
         self.verbose    = kwargs.get("verbose",self._verbose)
         self._debug     = kwargs.get("debug",self._debug)
         
