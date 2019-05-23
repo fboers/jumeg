@@ -65,8 +65,8 @@ suggest_bads:
 interpolate_bads:
     postfix: "int"
     save: True
-    run:  False
-    overwrite: True
+    run:  True
+    overwrite: False
     file_extention: [",nr,bcc-raw.fif","rfDC,nr,bcc-empty.fif"]
 
     plot_block: False

@@ -113,8 +113,9 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
     jpl.ExitOnError=True
     
     for fname,subject_id,raw_dir in jpl.file_list():
+        raw = None
        #--- call noise reduction
-        raw_fname,raw = utils.apply_noise_reducer(raw_fname=fname,raw=raw,config=jpl.config.get("noise_reducer"))
+        raw_fname,raw = utils.apply_noise_reducer(raw_fname=fname,raw=None,config=jpl.config.get("noise_reducer"))
 
        #--- call suggest_bads
         raw_fname,raw = utils.apply_suggest_bads(raw_fname=raw_fname,raw=raw,config=jpl.config.get("suggest_bads"))
