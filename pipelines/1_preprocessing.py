@@ -1,152 +1,150 @@
-import os
-import os.path as op
-import mne
+#!/usr/bin/env python3
+# -+-coding: utf-8 -+-
 
-from utils import noise_reduction
-from utils import interpolate_bads_batch
-from utils import save_state_space_file
+"""
+"""
 
-import yaml
+#--------------------------------------------
+# Authors: Frank Boers <f.boers@fz-juelich.de> 
+#
+#-------------------------------------------- 
+# Date: 18.04.19
+#-------------------------------------------- 
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+#--------------------------------------------
+"""
+JuMEG preprcessing script frame work
 
-with open('config_file.yaml', 'r') as f:
-    config = yaml.load(f)
+- setup defaults
 
-###############################################################################
-# Get settings from config
-###############################################################################
+- apply; do your stuff
 
-# directories
-basedir = config['basedir']
-recordings_dir = op.join(basedir, config['recordings_dir'])
+Main
+  get args, set up parameter, call apply
+-------------
 
-# subject list
-subjects = config['subjects']
+Examples:
+----------
+call script with parameter or -h for help
 
-# noise reducer
-nr_cfg = config['noise_reducer']
+#--- run for id(s)
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747 -c config0.yaml -log -v -d -r
 
-# filtering
-fi_cfg = config['filtering']
+#--- run for id, recursive looking into subdirs, overwrite logfile
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747 -c config0.yaml -log -v -d -r -rec --logoverwrite
 
-flow = fi_cfg['l_freq']
-fhigh = fi_cfg['h_freq']
-fi_method = fi_cfg['method']
-fir_design = fi_cfg['fir_design']
-phase = fi_cfg['phase']
+#--- run for ids, recursive looking into subdirs, overwrite logfile
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747,211890 -c config0.yaml -log -v -d -r -rec --logoverwrite
 
-# resampling
-rs_cfg = config['resampling']
-rsfreq = rs_cfg['rsfreq']
-npad = rs_cfg['npad']
-unfiltered = rs_cfg['unfiltered']
+#--- run for files in list, overwrite logfile
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -lname=list_test.txt -lpath=$JUMEG_TEST_DATA/mne -c config0.yaml -log -v -d -r --logoverwrite
 
-# TODO WIP: the state space file saves the parameters for the creation of each file
-state_space_fname = '_state_space_dict.pkl'
+#--- run for one file, overwrite logfile
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -fpath $JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1 -fname 211747_FREEVIEW01_180109_0955_1_c,rfDC,meeg-raw.fif -c config0.yaml -log -v -d -r --logoverwrite
 
-###############################################################################
-# Noise reduction
-###############################################################################
+#--- run for MEG94T
+1_preprocessing.py -s $JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne -lpath $JUMEG_LOCAL_DATA/exp/MEG94T/mne -fname test01.txt -log -v -d -r --logoverwrite
 
-for subj in subjects:
-    print("Noise reduction for subject %s" % subj)
-    dirname = op.join(recordings_dir, subj)
-    sub_file_list = os.listdir(dirname)
+#--- run for list of files, overwrite logfile
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -lpath $JUMEG_TEST_DATA/mne -lname meg94t_list.txt -c meg94t_config0.yaml -log -v -d -r --logoverwrite
 
-    for raw_fname in sub_file_list:
 
-        if raw_fname.endswith('meeg-raw.fif') or raw_fname.endswith('rfDC-empty.fif'):
+"""
 
-            if raw_fname.endswith('-raw.fif'):
-                denoised_fname = raw_fname.rsplit('-raw.fif')[0] + ',nr-raw.fif'
-            else:
-                denoised_fname = raw_fname.rsplit('-empty.fif')[0] + ',nr-empty.fif'
+import os,sys,logging
 
-            if not op.isfile(op.join(dirname, denoised_fname)):
-                noise_reduction(dirname, raw_fname, denoised_fname, nr_cfg,
-                                state_space_fname)
+from jumeg.base import jumeg_logger
+from jumeg.base.pipelines.jumeg_pipeline_looper import JuMEG_PipelineLooper
 
-###############################################################################
-# Identify bad channels
-###############################################################################
+import jumeg.base.pipelines.jumeg_pipelines_utils1 as utils
 
-interpolate_bads_batch(subjects, recordings_dir, state_space_fname)
+logger = logging.getLogger("jumeg")
 
-###############################################################################
-# Filter
-###############################################################################
+__version__= "2019.05.17.001"
 
-for subj in subjects:
-    print("Filtering for subject %s" % subj)
+#--- parameter / argparser defaults
+defaults={
+          #"stage"         :"$JUMEG_PATH_MNE_IMPORT2/MEG94T/mne",
+          "file_extention":["meeg-raw.fif","c,rfDC-raw.fif","rfDC-empty.fif"],
+          "config"        :"meg94t_config0.yaml",
+    
+          #"subjects"      :None,
+    
+          #"list_path"     :"$JUMEG_PATH_MNE_IMPORT2/MEG94T/source/jumeg/pipelines",
+          "list_name"     :"meg94t_list.txt",
+    
+          #"fpath"         : None,
+          #"fname"         : None,
+          "recursive"     : True,
+    
+          "log2file"      : True,
+          "logprefix"     : "preproc0",
+          "logoverwrite"  : True,
+      
+          "verbose"       : False,
+          "debug"         : False
+         }
 
-    dirname = op.join(recordings_dir, subj)
-    sub_file_list = os.listdir(dirname)
+#-----------------------------------------------------------
+#--- apply
+#-----------------------------------------------------------
+def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
+    """
+     jumeg preprocessing step 1
+      noise reducer
+      interpolate bads (bad channels & suggested_bads)
+      filter
+      resample
+     
+    :param opt: arparser option obj
+    :param defaults: default dict
+    :param logprefix: prefix for logfile e.g. name of script
+    :return:
+    """
+   #---
+    raw = None
+    
+   #--- init/update logger
+    jumeg_logger.setup_script_logging(name=name,opt=opt,logger=logger)
+ 
+    jpl = JuMEG_PipelineLooper(options=opt,defaults=defaults)
+    jpl.ExitOnError=True
+    
+    for fname,subject_id,raw_dir in jpl.file_list():
+        raw = None # !!! important  !!!
+       #--- call noise reduction
+        raw_fname,raw = utils.apply_noise_reducer(raw_fname=fname,raw=None,config=jpl.config.get("noise_reducer"))
 
-    ss_dict_fname = op.join(dirname, subj + state_space_fname)
+       #--- call suggest_bads
+        raw_fname,raw = utils.apply_suggest_bads(raw_fname=raw_fname,raw=raw,config=jpl.config.get("suggest_bads"))
+       
+       #--- call interploate_bads
+        raw_fname,raw = utils.apply_interpolate_bads(raw_fname=raw_fname,raw=raw,config=jpl.config.get("interpolate_bads") )
+        
+       #--- call filter
+       # raw_fname,raw = utils.apply_filter(raw_fname,raw=raw,config=jpl.config.get("filtering") )
 
-    for raw_fname in sub_file_list:
+       #--- call resample
+       # raw_fname,raw = utils.apply_resample(raw_fname,raw=raw,config=jpl.config.get("resampling"))
 
-        if raw_fname.endswith('bcc-raw.fif') or raw_fname.endswith('bcc-empty.fif'):
+        logger.info(" --> DONE preproc subject id: {}\n".format(subject_id)+
+                    "  -> input  file: {}\n".format(fname)+
+                    "  -> output file: {}\n".format(raw_fname))
+        
+#=========================================================================================
+#==== MAIN
+#=========================================================================================
+def main(argv):
+   
+    opt, parser = utils.get_args(argv,defaults=defaults,version=__version__)
+    if len(argv) < 2:
+       parser.print_help()
+       sys.exit(-1)
+       
+    if opt.run: apply(name=argv[0],opt=opt,defaults=defaults)
+    
+if __name__ == "__main__":
+   main(sys.argv)
 
-            raw = mne.io.Raw(op.join(dirname, raw_fname), preload=True)
-
-            raw_filt = raw.filter(flow, fhigh, method=fi_method, n_jobs=1,
-                                  fir_design=fir_design, phase=phase)
-
-            if raw_fname.endswith('-raw.fif'):
-                raw_filt_fname = raw_fname.rsplit('-raw.fif')[0] + ',fibp-raw.fif'
-            else:
-                raw_filt_fname = raw_fname.rsplit('-empty.fif')[0] + ',fibp-empty.fif'
-
-            fi_dict = fi_cfg.copy()
-            fi_dict['input_file'] = op.join(dirname, raw_fname)
-            fi_dict['process'] = 'filtering'
-            fi_dict['output_file'] = op.join(dirname, raw_filt_fname)
-
-            save_state_space_file(ss_dict_fname, process_config_dict=fi_dict)
-
-            raw_filt.save(op.join(dirname, raw_filt_fname))
-
-            raw_filt.close()
-
-###############################################################################
-# Resampling
-###############################################################################
-
-for subj in subjects:
-    print("Filtering for subject %s" % subj)
-
-    dirname = op.join(recordings_dir, subj)
-    sub_file_list = os.listdir(dirname)
-
-    ss_dict_fname = op.join(dirname, subj + state_space_fname)
-
-    for raw_fname in sub_file_list:
-
-        valid_file = raw_fname.endswith('fibp-raw.fif') or raw_fname.endswith('fibp-empty.fif')
-
-        # perform resampling on unfiltered data
-        if unfiltered:
-            valid_file = valid_file or raw_fname.endswith('bcc-raw.fif') or raw_fname.endswith('bcc-empty.fif')
-
-        # resample valid data
-        if valid_file:
-
-            raw = mne.io.Raw(op.join(dirname, raw_fname), preload=True)
-
-            raw_rs = raw.resample(rsfreq, npad=npad)
-
-            if raw_fname.endswith('-raw.fif'):
-                raw_rs_fname = raw_fname.rsplit('-raw.fif')[0] + ',rs-raw.fif'
-            else:
-                raw_rs_fname = raw_fname.rsplit('-empty.fif')[0] + ',rs-empty.fif'
-
-            rs_dict = rs_cfg.copy()
-            rs_dict['input_file'] = op.join(dirname, raw_fname)
-            rs_dict['process'] = 'resampling'
-            rs_dict['output_file'] = op.join(dirname, raw_rs_fname)
-
-            save_state_space_file(ss_dict_fname, process_config_dict=rs_dict)
-
-            raw_rs.save(op.join(dirname, raw_rs_fname))
-
-            raw_rs.close()
