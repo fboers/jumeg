@@ -571,6 +571,7 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
                self.pdf.pdfs.extend(self._PDFList.pdfs)
             if self._PDFFile.pdf:
                self.pdf.pdfs.append(self._PDFFile.pdf)
+            self.pdf.pdfs.sort()
         except:
             raise Exception("\n" + "\n ---> error in update  PDFs list")
             return False
