@@ -1,4 +1,4 @@
-#!/usr/bin/env python2
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 Created on Tue Mar 27 15:28:58 2018
@@ -67,7 +67,7 @@ class JuMEG_wxPDFMEEGTextEditor(JuMEG_wxRichTextFrame):
         # change DataFile in vhdr
         # change dataFile  in vmrk
         # and save
-    '''
+'''
 
 class JuMEG_wxIdSelectionBoxBase(wx.Panel):
     """
