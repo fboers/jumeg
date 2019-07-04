@@ -209,24 +209,24 @@ class JuMEG_PDF_IDS(JuMEG_PDF_BASE):
       for subj in self.subjects:
           try:
          #--- check if its a dir
-             recordings_dir = os.path.join(self.stage,subj)
-             if not os.path.isdir( recordings_dir ):
+             start_dir = os.path.join(self.stage,subj)
+             if not os.path.isdir( start_dir ):
                 continue
-             
-             with jb.working_directory(recordings_dir):
+             # def find_files(start_dir=None,pattern=None,file_extention=None,debug=False)
+             with jb.working_directory(start_dir):
                   for fext in self.file_extention:
                       if self.debug:
-                         logging.debug( "  -> recordings dir: {}\n".format(recordings_dir)+
+                         logging.debug( "  -> start dir     : {}\n".format(start_dir)+
                                         "  -> extention     : {}\n".format(fext)+
                                         "  -> glob recursive: {}\n".format(self.recursive) +
                                         "  -> glob pattern  : {}".format(fpatt)
                                        )
                            
                       for f in glob.glob(fpatt + fext,recursive=self.recursive):
-                          self._pdfs.append( os.path.abspath( os.path.join(recordings_dir,f) ) )
+                          self._pdfs.append( os.path.abspath( os.path.join(start_dir,f) ) )
           except:
               logger.exception("---> error subject : {}\n".format(subj) +
-                               "  -> recordings dir: {}\n".format(recordings_dir) )
+                               "  -> start dir     : {}\n".format(start_dir) )
       self._pdfs.sort()
       
       if self.debug:
