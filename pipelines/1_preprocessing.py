@@ -45,7 +45,7 @@ call script with parameter or -h for help
 1_preprocessing.py -s $JUMEG_TEST_DATA/mne -fpath $JUMEG_TEST_DATA/mne/211747/FREEVIEW01/180109_0955/1 -fname 211747_FREEVIEW01_180109_0955_1_c,rfDC,meeg-raw.fif -c config0.yaml -log -v -d -r --logoverwrite
 
 #--- run for MEG94T
-1_preprocessing.py -s $JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne -lpath $JUMEG_LOCAL_DATA/exp/MEG94T/mne -fname test01.txt -log -v -d -r --logoverwrite
+1_preprocessing.py -s 1_preprocessing.py -s $JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne -lpath $JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne -lname test01.txt -log -v -d -r --logoverwrite
 
 #--- run for list of files, overwrite logfile
 1_preprocessing.py -s $JUMEG_TEST_DATA/mne -lpath $JUMEG_TEST_DATA/mne -lname meg94t_list.txt -c meg94t_config0.yaml -log -v -d -r --logoverwrite
@@ -68,7 +68,7 @@ __version__= "2019.05.17.001"
 defaults={
           #"stage"         :"$JUMEG_PATH_MNE_IMPORT2/MEG94T/mne",
           "file_extention":["meeg-raw.fif","c,rfDC-raw.fif","rfDC-empty.fif"],
-          "config"        :"meg94t_config0.yaml",
+          "config"        :"meg94t_config01.yaml",
     
           #"subjects"      :None,
     

@@ -10,7 +10,8 @@ info:
 global:
     experiment: "MEG94T"
     subjects: None
-    stage:  "$JUMEG_PATH_MNE_IMPORT2/MEG94T/mne"
+    #stage:  "$JUMEG_PATH_MNE_IMPORT2/MEG94T/mne"
+    stage:  "$JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne"
     file_extention: ["c,rfDC-raw.fif","meeg-raw.fif","rfDC-empty.fif"]
     recursive: True
 
