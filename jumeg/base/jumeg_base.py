@@ -1445,7 +1445,9 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
                raise FileNotFoundError("ERROR no file found: {}".format(fn))
             
             if ( fn.endswith(self.brainvision_extention) ):
-               raw = mne.io.read_raw_brainvision(fn,response_trig_shift=self.brainvision_response_shift,preload=preload)
+               # --- changed in mne version 019.dev
+               # raw = mne.io.read_raw_brainvision(fn,response_trig_shift=self.brainvision_response_shift,preload=preload)
+               raw = mne.io.read_raw_brainvision(fn,preload=preload)
                #raw.info['bads'] = []
           #--- ToDo may decide for eeg-name .eeg or.vhdr
             else:

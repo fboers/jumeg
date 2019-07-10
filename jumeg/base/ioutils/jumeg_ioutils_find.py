@@ -126,7 +126,26 @@ class JuMEG_IoUtils_FileIO(object):
         if exit_on_error:
             raise SystemError(self.__MSG_CODE_PATH_NOT_EXIST)
         return False
+    
+    
+    def remove_file(self,f):
+        """
         
+        :param f:
+        :return:
+        """
+        f = self.expandvars(f)
+        
+        try:
+            if os.path.isfile(f):
+               os.remove(f)
+               logger.debug("  -> removing file: {}".format(f))
+               return True
+        except OSError as e:  ## if failed, report it back to the user ##
+            logger.exception("Error: no such file: %s \n  %s." % (e.filename, e.strerror))
+            return False
+    
+    
     @contextlib.contextmanager
     def working_directory(self,path):
         """
@@ -207,7 +226,7 @@ class JuMEG_IoUtils_FileIO(object):
         
         with self.working_directory(start_dir):
             for fext in file_extention:
-                for f in glob.glob(pattern + fext,recursive=recursive):
+                for f in glob.glob(pattern + fext,recursive=recursive): # ToDo  fext re /\.vhdr|vmrk|eeg$/
                     if abspath:
                         yield os.path.abspath(os.path.join(start_dir,f))
                     else:
@@ -252,15 +271,15 @@ class JuMEG_IoUtils_FileIO(object):
             file_extention.append(s)
         
         if debug or self.debug:
-            logging.debug("  -> start dir      : {}\n".format(start_dir) +
+           logger.debug("  -> start dir      : {}\n".format(start_dir) +
                           "  -> glob pattern   : {}\n".format(pattern) +
                           "  -> file extention : {}\n".format(file_extention) +
                           "  -> glob recursive : {}\n".format(recursive) +
                           "  -> adding abs path: {}\n".format(abspath)
-                          )
+                        )
         files_found = []
         with self.working_directory(start_dir):
-            for fext in file_extention:
+            for fext in file_extention: # ToDo  fext re /\.vhdr|vmrk|eeg$/
                 for f in glob.iglob(pattern + fext,recursive=recursive):
                     if abspath:
                         files_found.append(os.path.abspath(os.path.join(start_dir,f)))
@@ -353,6 +372,13 @@ class JuMEG_IOutils_FindIds(JuMEG_IoUtils_FileIO):
             self._stage = self.expandvars(v)
     
     def find(self,**kwargs):
+        """
+        :param stage  : stage, start path
+        :param pattern: search pattern
+       
+        :return:
+        list of ids
+        """
         self._update_from_kwargs(**kwargs)
         self._ids = []
         
@@ -389,7 +415,7 @@ class JuMEG_IOutils_FindPDFs(JuMEG_IoUtils_FileIO):
     def _update_from_kwargs(self,**kwargs):
         self.stage   = kwargs.get("stage",self.stage)
         self.ids     = kwargs.get("ids",  self.ids)
-        #self.pattern = kwargs.get("pattern")  # !!! reset pattern
+        self.pattern = kwargs.get("pattern")  # !!! reset pattern
     
     @property
     def pdfs(self): return self._pdfs
@@ -425,7 +451,7 @@ class JuMEG_IOutils_FindPDFs(JuMEG_IoUtils_FileIO):
     @stage.setter
     def stage(self,v):
         if v:
-            self._stage = expandvars(v)
+            self._stage = jb.expandvars(v)
     
     def find(self,**kwargs):
         self._update_from_kwargs(**kwargs)
@@ -435,7 +461,7 @@ class JuMEG_IOutils_FindPDFs(JuMEG_IoUtils_FileIO):
         if self.pattern:
            pat = re.compile(self.pattern)
         
-        with working_directory(self.stage):
+        with self.working_directory(self.stage):
             
             for id in self.ids:
                 self._pdfs[id] = find_files(start_dir=self._stage,pattern="*",file_extention="*.fif",recursive=True,
