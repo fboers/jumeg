@@ -24,7 +24,7 @@ jb = JuMEG_Base_Basic()
 
 logger = logging.getLogger('jumeg')
 
-__version__="2019.07.02.001"
+__version__="2019.07.12.001"
 
 class JuMEG_IoUtils_FileIO(object):
     def __init__ (self):
@@ -387,14 +387,23 @@ class JuMEG_IOutils_FindIds(JuMEG_IoUtils_FileIO):
             pat = re.compile(self.pattern)
         
         with self.working_directory(self.stage):
-             with os.scandir(path=".") as dirs:
-                for id in dirs:
-                    if not id.is_dir(): continue  #os.path.isdir(id): continue
-                    if pat:
-                        if pat.search(id.name):
-                            self._ids.append(id.name)
-                    else:
-                        self._ids.append(id.name)
+           #--- works in py 3.6
+           #  with os.scandir(path=".") as dirs:
+           #     for id in dirs:
+           #         if not id.is_dir(): continue  #os.path.isdir(id): continue
+           #         if pat:
+           #             if pat.search(id.name):
+           #                 self._ids.append(id.name)
+           #         else:
+  
+           #             self._ids.append(id.name)
+             for id in  os.listdir(path="."):
+                 if not os.path.isdir(id): continue
+                 if pat:
+                    if pat.search(id):
+                       self._ids.append(id)
+                 else:
+                    self._ids.append(id)
         
         self._ids.sort()
         
@@ -464,7 +473,7 @@ class JuMEG_IOutils_FindPDFs(JuMEG_IoUtils_FileIO):
         with self.working_directory(self.stage):
             
             for id in self.ids:
-                self._pdfs[id] = find_files(start_dir=self._stage,pattern="*",file_extention="*.fif",recursive=True,
+                self._pdfs[id] = self.find_files(start_dir=self._stage,pattern="*",file_extention="*.fif",recursive=True,
                                             debug=False,abspath=False,ignore_case=False)
         
         return self._pdfs
