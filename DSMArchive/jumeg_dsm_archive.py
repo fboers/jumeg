@@ -209,9 +209,9 @@ class JuMEG_DSMConfig(object):
             password       : "xyz"
             id             : "xyz"
          """
-        return ["-se="+ os.getenv(self.Global.get("server"),default=self.Global.get("server")),
-                "-virtualnodename="+os.getenv(self.Global.get("virtualnodename"),default=self.Global.get("virtualnodename")),
-                "-password="+os.getenv(self.Global.get("password"),default=self.Global.get("password")) ]
+        return ["-se="             + os.path.expandvars(self.Global.get("server")),
+                "-virtualnodename="+ os.path.expandvars(self.Global.get("virtualnodename")),
+                "-password="       + os.path.expandvars(self.Global.get("password")) ]
 
 class JuMEG_DSMArchive(object):
     """
