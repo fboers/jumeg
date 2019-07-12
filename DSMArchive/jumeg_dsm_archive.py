@@ -172,14 +172,13 @@ class JuMEG_DSMConfig(object):
            self.filename = config
         if self.debug:
            logger.info("  -> loading config file: {} ...".format(self.filename) )
+     
        #--- ck cfg file or use default
         if not os.path.isfile(self.filename):
-          
-          fname = os.path.join(os.path.dirname(__file__,self.filename) )
-          
-          if os.path.isfile(fname):
-             logger.warning("---> Config file not found: {} using default config file {}".format(self.filename,fname) )
-             self.filename = fname
+           fname = os.path.join( os.path.dirname(__file__) , os.path.basename(self.filename))
+           if os.path.isfile(fname):
+              logger.warning("---> Config file not found: {} using default config file {}".format(self.filename,fname) )
+              self.filename = fname
              
         with open(self.filename,'r') as f:
              self._data = yaml.load(f)
