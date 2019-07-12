@@ -13,22 +13,22 @@
 #--------------------------------------------
 # License: BSD (3-clause)
 #--------------------------------------------
-# Updates  10.07.2019
+# Updates  12.07.2019
 #--------------------------------------------
 """
 Example
 ----------
+# get help
+jumeg_dsm_archive.py -h
 
-jumeg_dsm_archive.py -h for HELP
-
-jumeg_dsm_archive.py -r -v -d -meg -eeg --ids=212772,212779 --scans=INTEXT01,MEG94T
+jumeg_dsm_archive.py --ids=123456,234561 --scans=M100,V1 --experiments=Audio,VIS -meg -eeg -r -v -d -arc
 
 Configfile
 ------------
-with DSM options  e.g.: <jumeg_dsm_archive.yaml>
+store DSM options in yaml format e.g.: <jumeg_dsm_archive.yaml>
 
 info:
-    description: "JuMEG DSM archive conig file"
+    description: "JuMEG DSM archive config file"
 
     time: "2019-07-04 00:00:00"
 
@@ -76,10 +76,18 @@ from jumeg.base.pipelines.jumeg_pipelines_utils_base import parser_update_flags
 
 logger = logging.getLogger("jumeg")
 
-__version__= "2019.07.04.001"
+__version__= "2019.07.12.002"
 
 
 class JuMEG_DSMConfig(object):
+    """
+    CLS for DSM config file obj
+    
+    Example:
+    --------
+    self.CFG = JuMEG_DSMConfig(**kwargs)
+    self.CFG.update(**kwargs)
+   """
     __slots__ =["verbose","debug","data_type","_filename","_data"]
     
     def __init__(self,**kwargs):
@@ -193,12 +201,25 @@ class JuMEG_DSMConfig(object):
             password       : "xyz"
             id             : "xyz"
          """
-        
-        return ["-se="+self.Global.get("server"),"-virtualnodename="+self.Global.get("virtualnodename"),"-password="+self.Global.get("password")]
+        return ["-se="+ os.getenv(self.Global.get("server"),default=self.Global.get("server")),
+                "-virtualnodename="+os.getenv(self.Global.get("virtualnodename"),default=self.Global.get("virtualnodename")),
+                "-password="+os.getenv(self.Global.get("password"),default=self.Global.get("password")) ]
 
 class JuMEG_DSMArchive(object):
+    """
+    CLS to archive MEG data in 4D/BTi format
+    
+    Example:
+    --------
+     jumeg_logger.setup_script_logging(name=name,opt=opt,logger=logger,level=level)
+
+    if opt.meg:
+       JDS_MEG = JuMEG_DSMArchive(config=opt.config,verbose=opt.verbose,debug=opt.debug,archive=opt.archive,
+                                   overwrite=opt.overwrite)
+       JDS_MEG.archive(ids=opt.ids,scans=opt.scans,data_type="MEG")
+    """
     __slots__ =["run","verbose","debug","data_type","_pdfs","_id_list","_path_od","_FIDs","_FPDFs","_CFG","_ids","_scans",
-                "do_archive","do_overwrite","_ext","_remove_tmpfile"]
+                "do_archive","do_overwrite","_ext","_remove_tmpfile","_arc_info"]
    
     def __init__(self,**kwargs):
         
@@ -223,10 +244,6 @@ class JuMEG_DSMArchive(object):
  
     @property
     def Config(self):  return self._CFG
-
-    @property
-    def Config(self):
-        return self._CFG
 
     @property # IDS from argparser
     def IDs(self): return  self._ids
@@ -419,7 +436,7 @@ class JuMEG_DSMArchive(object):
            self._FPDFs.remove_file(fname)
         
         return result.replace('\n\n', '\n') # without empty lines
-   
+       
     def GetPDFsToArchive(self,stage,id):
         """
         :param stage: startpath to data structure on filesystem
@@ -468,16 +485,21 @@ class JuMEG_DSMArchive(object):
             for idx in range(lidx, len( lines) ):
               # logger.dbug("  ---> search pdf: {} -> {} -> {}".format(idx,lines[idx],pdf ))
                 if lines[idx].find(pdf)> 0:
-                   if len( lines[idx].strip().split(" ") ) <12: # not archived
+                   if len( lines[idx].strip().split(" ") ) < 12: # not archived
                       pdfs_to_arc.append(pdf)
                     # logger.debug("  ---> match: {} -> {} -> {} ".format(idx,lines[idx], pdf))
                    lidx = idx
                    break
             lidx += 1
-            
-        logger.info( "  -> Files to archive: {} from PDFs: {} stage: {}  id: {}".format( len(pdfs_to_arc),len(self._pdfs),stage,id))
-        logger.debug("  -> {}".format("\n  -> ".join(pdfs_to_arc) ))
         
+        if self.verbose:
+           logger.info( "  -> Files to archive: {} from PDFs: {} stage: {}  id: {}".format( len(pdfs_to_arc),len(self._pdfs),stage,id))
+        if self.debug:
+           logger.debug("  -> PDF list:\n  -> {}".format("\n  -> ".join(pdfs_to_arc) ))
+        
+       # if self.verbose or self.debug:
+       #    self._update_archive_info(pdfs_to_arc)
+           
         return pdfs_to_arc
 
     def _archive(self,stage,id):
@@ -537,7 +559,8 @@ class JuMEG_DSMArchive(object):
         
         self._update_from_kwargs(**kwargs)
         self.Config.update(**kwargs)
-     
+        # self._arc_info = dict()
+        
        #--- for stages
         for st in self.Config.stages:
             self._id_list = []
@@ -557,16 +580,20 @@ class JuMEG_DSMArchive(object):
                 self.update_ids(stage)
             
             if self.verbose:
-               logger.info(" --> Stage: {}\n  -> Found IDs: {}\n{}".format(stage,len(self._id_list),self._id_list))
-               
+               logger.info(" --> Stage: {}\n  -> Found IDs: {}".format(stage,len(self._id_list)))
+            if self.debug:
+               logger.debug(" --> {}".format(self._id_list))
            #--- for ids
             for id in self._id_list:
                 self._pdfs = self.update_pdfs(stage,id) #  for scans
           
                 if self.verbose:
-                   logger.info(" --> Stage: {}\n  -> ID: {}\n  -> Found PDFs: {}\n{}".format(stage,id,len(self._pdfs),self._pdfs))
-                
+                   logger.info(" --> Stage: {}\n  -> ID: {}\n  -> Found PDFs: {}".format(stage,id,len(self._pdfs) ))
+                   
                 if not self._pdfs: continue
+                
+                if self.debug:
+                   logger.debug(" --> {}".format("\n  -> {}".join( self._pdfs )) )
                 
                 self._pdfs = self.GetPDFsToArchive(stage,id)
                 
@@ -575,6 +602,19 @@ class JuMEG_DSMArchive(object):
 
 
 class JuMEG_DSMArchiveEEG(JuMEG_DSMArchive):
+    """
+    CLS to archive EEG data in BrainVision format
+    
+    Example:
+    --------
+     jumeg_logger.setup_script_logging(name=name,opt=opt,logger=logger,level=level)
+
+     if opt.eeg:
+       JDS_EEG = JuMEG_DSMArchiveEEG(data_type="EEG",ids=opt.ids,scans=opt.scans,experiments=opt.experiments,\
+                                     config=opt.config,verbose=opt.verbose,debug=opt.debug)
+       JDS_EEG.archive(ids=opt.ids,scans=opt.scans,data_type="EEG")
+     
+    """
     __slots__ =["run","_experiments","verbose","debug","data_type","_pdfs","_id_list","_path_od","_FIDs","_FPDFs","_CFG","_ids","_scans",
                 "do_archive","do_overwrite","_ext","_remove_tmpfile"]
     
@@ -675,8 +715,10 @@ class JuMEG_DSMArchiveEEG(JuMEG_DSMArchive):
         if self.IDs:
            self._id_list.extend(self.IDs)
            if self.verbose:
-              logger.info(" --> Stage: {}\n  -> Found IDs: {}\n{}".format(stage,len(self._id_list),self._id_list))
-      
+              logger.info(" --> Stage: {}\n  -> Found IDs: {}".format(stage,len(self._id_list) ))
+           if self.debug:
+              logger.debug("  -> {}".format(self._id_list))
+         
        #--- for ids or all eeg data in eeg-dir
         self._pdfs = self.update_pdfs(stage)  #  for scans
         
@@ -719,6 +761,8 @@ class JuMEG_DSMArchiveEEG(JuMEG_DSMArchive):
 
 
 #=======================================================================================================================
+#=== apply
+#=======================================================================================================================
 def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
    #--- init/update logger
     if opt.debug:
@@ -733,10 +777,13 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
        JDS_MEG.archive(ids=opt.ids,scans=opt.scans,data_type="MEG")
     
     if opt.eeg:
-       JDS_EEG = JuMEG_DSMArchiveEEG(data_type="EEG",ids=opt.ids,scans=opt.scans,experiments=opt.experiments,config=opt.config,verbose=opt.verbose,debug=opt.debug)
+       JDS_EEG = JuMEG_DSMArchiveEEG(data_type="EEG",ids=opt.ids,scans=opt.scans,experiments=opt.experiments,\
+                                     config=opt.config,verbose=opt.verbose,debug=opt.debug)
        JDS_EEG.archive(ids=opt.ids,scans=opt.scans,data_type="EEG")
       
-#---
+#=======================================================================================================================
+#=== get_args
+#=======================================================================================================================
 def get_args(argv,parser=None,defaults=None,version=None):
     """
     get args using argparse.ArgumentParser ArgumentParser
@@ -796,12 +843,10 @@ def get_args(argv,parser=None,defaults=None,version=None):
     
     return parser_update_flags(argv=argv,parser=parser)
 
-#=========================================================================================
+#=======================================================================================================================
 #==== MAIN
-#=========================================================================================
+#=======================================================================================================================
 def main(argv):
-   
-    
    
     opt, parser = get_args(argv,version=__version__)
     if len(argv) < 2:
