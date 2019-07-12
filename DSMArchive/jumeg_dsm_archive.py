@@ -76,7 +76,7 @@ from jumeg.base.pipelines.jumeg_pipelines_utils_base import parser_update_flags
 
 logger = logging.getLogger("jumeg")
 
-__version__= "2019.07.12.002"
+__version__= "2019.07.12.005"
 
 
 class JuMEG_DSMConfig(object):
@@ -656,11 +656,17 @@ class JuMEG_DSMArchiveEEG(JuMEG_DSMArchive):
         """
         exps = []
         with self._FPDFs.working_directory(stage):
-             with os.scandir(path=".") as dirs:
-                  for d in dirs:
-                      if d.is_dir():
-                         if os.path.isdir( os.path.join(d.name,"eeg") ):
-                            exps.append(d.name)
+            #--- py 3.6
+            # with os.scandir(path=".") as dirs:
+            #      for d in dirs:
+            #          if d.is_dir():
+            #             if os.path.isdir( os.path.join(d.name,"eeg") ):
+            #                exps.append(d.name)
+             for d in os.listdir(path="."):
+                 if os.path.isdir(d):
+                    if os.path.isdir( os.path.join(d,"eeg") ):
+                       exps.append(d)
+                       
         logger.debug("  -> Experiments with {} data: stage: {}\n  {}".format(self.data_type,stage,exps) )
         return exps
         
