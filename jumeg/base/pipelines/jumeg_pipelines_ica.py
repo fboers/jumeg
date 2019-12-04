@@ -241,7 +241,7 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
         # if necessary include components identified by correlation as well
         ica.exclude = highly_corr
 
-    print("Plot ica sources to remove jumpy component for channels 4, 6, 8, 22")
+    #print("Plot ica sources to remove jumpy component for channels 4, 6, 8, 22")
 
     return ica
 
@@ -528,6 +528,57 @@ class JuMEG_PIPELINES_ICA(object):
             #                                                 reject=reject,save=save)
 
             #raw_chop_clean_filtered_list.append(clean_filt_chop)
+
+        '''
+        # plot topo-plots first because sometimes components are hard to identify
+        # ica.plot_components()
+        # do the most important manual check
+        ica.plot_sources(raw_filt_chop, block=True)
+
+        # save ica object
+        ica.save(ica_fname)
+
+        print('ICA components excluded: ', ica.exclude)
+
+        #######################################################################
+        # apply the ICA to data and save the resulting files
+        #######################################################################
+
+        print('Running cleaning on filtered data...')
+        clean_filt_chop = apply_ica_and_plot_performance(raw_filt_chop, ica, ecg_ch, eog_ver,
+                                                         raw_filt_chop_fname, clean_fname=clean_filt_fname,
+                                                         picks=picks, replace_pre_whitener=True,
+                                                         reject=reject, save=save)
+
+        raw_chop_clean_filtered_list.append(clean_filt_chop)
+
+        if unfiltered:
+
+            print('Running cleaning on unfiltered data...')
+            clean_unfilt_chop = apply_ica_and_plot_performance(raw_unfilt_chop, ica, ecg_ch, eog_ver,
+                                                               raw_unfilt_chop_fname, clean_fname=clean_unfilt_fname,
+                                                               picks=picks, replace_pre_whitener=True,
+                                                               reject=reject, save=save)
+
+            raw_chop_clean_unfiltered_list.append(clean_unfilt_chop)
+
+        # if tmax is None, last chop is reached
+        if tmax is None:
+            break
+        '''
+'''
+#--- cat all chops
+    clean_filt_concat = mne.concatenate_raws(raw_chop_clean_filtered_list)
+
+    if unfiltered:
+
+        clean_unfilt_concat = mne.concatenate_raws(raw_chop_clean_unfiltered_list)
+
+    else:
+        clean_unfilt_concat = None
+
+    return clean_filt_concat, clean_unfilt_concat
+'''
 
         '''
         may try this ???

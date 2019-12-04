@@ -685,21 +685,34 @@ class JuMEG_Base_PickChannels(object):
     def bads2picks(self,raw):
         """
         mne wrapper
-        get picks from bad channel labels
+        get picks from bad channel labels or ICA obj excluded ICs index
         call to < mne.pick_channels >
         picks = mne.pick_channels(raw.info['ch_names'], include=raw.info['bads'])
 
         Parameter
         ---------
-         raw obj
+         raw obj with BADs or ica obj=>exclude ICs
          
         Result
         -------
          bad picks as numpy array int64 (index of bad channels)
         """
-        if raw.info['bads']:
-           return  mne.pick_channels(raw.info['ch_names'],include=raw.info['bads'])
-        return None
+       #--- ICA obj get excluded ICs => BADs
+        bads = None
+
+        try:
+            if raw.info.get('bads'):
+                bads = mne.pick_channels(raw.info['ch_names'],include=raw.info['bads'])
+        except:
+            try:
+                bads = raw.exclude  # ICA obj
+            except AttributeError:
+                try:
+                   bads = raw.GetBadsAsIndex()  # JuMEG IOdata OBJ
+                except:
+                   pass
+        
+        return bads
 
     def channels(self,raw):
         """ call with meg=True,ref_meg=True,eeg=True,ecg=True,eog=True,emg=True,misc=True,stim=False,resp=False,exclude=None """
@@ -1557,10 +1570,13 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
             return None,None
         
         if reset_bads:
-           if "bads" in raw.info:
-              raw.info["bads"] = []
-           logger.debug("  -> resetting bads in raw")
-           
+           try:
+              if "bads" in raw.info:
+                 raw.info["bads"] = []
+                 logger.debug("  -> resetting bads in raw")
+           except AttributeError:
+                logger.exception("ERROR -> cannot reset bads in raw: {}".format(fn))
+            
         return raw,fn #self.get_raw_filename(raw)
 
     def get_files_from_list(self, fin):
