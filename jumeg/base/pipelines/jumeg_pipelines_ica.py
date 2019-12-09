@@ -513,7 +513,8 @@ class JuMEG_PIPELINES_ICA(object):
         self._update_from_kwargs(**kwargs)
         
         print('ICA components excluded: ',self._ica_obj.exclude)
-
+        
+        '''
         #clean_filt_fname = op.join(dirname,prefix_filt + ',{},ar,{}-{}-raw.fif'.format(info_filt,int(tmin),tmaxi))
         #raw_filt_chop_fname = op.join(dirname,prefix_filt + ',{},{}-{}-raw.fif'.format(info_filt,int(tmin),tmaxi))
 
@@ -529,16 +530,17 @@ class JuMEG_PIPELINES_ICA(object):
 
             #raw_chop_clean_filtered_list.append(clean_filt_chop)
 
-        '''
+        
         # plot topo-plots first because sometimes components are hard to identify
         # ica.plot_components()
         # do the most important manual check
-        ica.plot_sources(raw_filt_chop, block=True)
+        #ica.plot_sources(raw_filt_chop, block=True)
 
         # save ica object
-        ica.save(ica_fname)
-
-        print('ICA components excluded: ', ica.exclude)
+        #ica.save(ica_fname)
+        '''
+        
+        logger('ICA components excluded: ', ica.exclude)
 
         #######################################################################
         # apply the ICA to data and save the resulting files
@@ -562,10 +564,8 @@ class JuMEG_PIPELINES_ICA(object):
 
             raw_chop_clean_unfiltered_list.append(clean_unfilt_chop)
 
-        # if tmax is None, last chop is reached
-        if tmax is None:
-            break
-        '''
+      
+        
 '''
 #--- cat all chops
     clean_filt_concat = mne.concatenate_raws(raw_chop_clean_filtered_list)
