@@ -124,15 +124,14 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
        #--- call interploate_bads
         raw_fname,raw = utils.apply_interpolate_bads(raw_fname=raw_fname,raw=raw,config=jpl.config.get("interpolate_bads") )
         
-       #--- call filter
-       # raw_fname,raw = utils.apply_filter(raw_fname,raw=raw,config=jpl.config.get("filtering") )
-
-       #--- call resample
-       # raw_fname,raw = utils.apply_resample(raw_fname,raw=raw,config=jpl.config.get("resampling"))
-
        #--- call interploate_bads
         raw_fname,raw = utils.apply_ica(raw_fname=raw_fname,raw=raw,config=jpl.config.get("ica") )
-      
+
+       #--- call interploate_bads
+        raw_fname,raw = utils.apply_filter(raw_fname=raw_fname,raw=raw,config=jpl.config.get("filter_1"))
+
+       #--- call resample
+        # raw_fname,raw = utils.apply_resample(raw_fname,raw=raw,config=jpl.config.get("resampling"))
 
         logger.info(" --> DONE preproc subject id: {}\n".format(subject_id)+
                     "  -> input  file: {}\n".format(fname)+

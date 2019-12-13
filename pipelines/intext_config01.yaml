@@ -76,16 +76,28 @@ interpolate_bads:
 
 #--- ica
 ica:
-    postfix: "ar"
-    save: True
     run: True
-    do_fit: False
-    do_transform: True
+    overwrite: False
+    postfix: "ar"
+    fit:
+        save: False
+        overwrite: False
+        plot_sources: True
 
-    overwrite: True
+    transform:
+        run: True
+        filtered:
+             run: True
+             save: True
+             save_chops: False
+        unfiltered:
+            run: True
+            save: False
+            save_chops: False
+
     file_extention: [",nr,bcc,int-raw.fif","rfDC,nr,bcc,int-empty.fif"]
 
-    #-- chop_length
+   #-- chop_length
     chops:
         length: 120.0
         epocher:
@@ -97,13 +109,8 @@ ica:
         run: True
         flow:   0.1
         fhigh: 45.0
-        save: True
-
-    post_filter:
-        run: True
-        flow:   0.1
-        fhigh: 120.0
-        save: True
+        save: False
+        overwrite: False
 
     ecg:
         channel: "ECG"
@@ -137,49 +144,13 @@ ica:
     reject:
         'mag': 5.0e-11
 
-#--- ica
-ica_orig:
-    postfix: "ar"
-    save: True
+
+filter_1:
     run: True
-    overwrite: True
-    file_extention: [",nr,bcc,int-raw.fif","rfDC,nr,bcc,int-empty.fif"]
-
-    # Apply ica only to filtered (False) or to both filtered and
-    # unfiltered data (True)
-    unfiltered: False
-
-    # Chop raw data into smaller segments of length given by chop_length
-    # and apply ica on each segment separately. Concatenate results in the end.
-    chop_length: 60.
-
-    # Name of the ECG channel.
-    ecg_ch: 'ECG'
-    # Name of the horizontal EOG channel.
-    eog_hor_ch: 'EOG ver'
-    # Name of the vertical EOG channel.
-    eog_ver_ch: 'EOG hor'
-
-    # Lower frequency for the scoring of ECG sources.
-    flow_ecg: 8
-    # Higher frequency for the scoring of ECG sources.
-    fhigh_ecg: 20
-    # Lower frequency for the scoring of EOG sources.
-    flow_eog: 1
-    # Higher frequency for the scoring of EOG sources.
-    fhigh_eog: 20
-
-    # Threshold for independent ecg components.
-    # ToDo ecg method: ctps, ???
-    ecg_thresh: 0.3
-    # Threshold for independent EOG components.
-    eog_thresh: 0.3
-    # Use jumeg or mne methods for artifact component identification
-    use_jumeg: True
-    # Seed for pseudo random number generator.
-    random_state: 42
-
-    exclude: 'bads'
-
-    reject:
-        'mag': 5.0e-12
+    save: True
+    overwrite: False
+    flow:   0.1
+    fhigh: 120.0
+    postfix: "fi"
+    type: "mne"
+    file_extention: ["ar-raw.fif","ar-empty.fif"]
