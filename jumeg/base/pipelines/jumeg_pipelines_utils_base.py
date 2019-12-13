@@ -179,6 +179,7 @@ class JuMEG_PipelineFrame(object):
         self._raw_fname = None
         self._cfg       = None
         self._raw       = None
+        self._postfix   = None
         self._fname_out = None
         self._verbose   = None
         self._debug     = None
@@ -196,6 +197,12 @@ class JuMEG_PipelineFrame(object):
     def verbose(self,v):
         jb.verbose    = v # set jumeg_base obj
         self._verbose = v
+        
+    @property
+    def postfix(self): return self._postfix
+    @postfix.setter
+    def postfix(self,v):
+        self._postfix=v
         
     @property
     def fname_out(self):
@@ -245,7 +252,10 @@ class JuMEG_PipelineFrame(object):
         self.verbose    = kwargs.get("verbose",self._verbose)
         self._debug     = kwargs.get("debug",self._debug)
         self._reset_bads= kwargs.get("reset_bads",False)
-        
+       
+        if self._cfg:
+           self._postfix = self._cfg.get("postfix","")
+    
     def info(self):
         msg = ["  -> raw obj            : {}".format(self._raw),
                "  -> file extention list: {}".format(self._cfg.get("file_extention")),
@@ -262,7 +272,7 @@ class JuMEG_PipelineFrame(object):
         :param kargs:
         :param kwargs:
         :return:
-         fname_out,raw obj
+         fname_out,raw obj,RawIsChanged,postfix
         """
         
         if len(kargs):
@@ -280,7 +290,11 @@ class JuMEG_PipelineFrame(object):
             kwargs["raw_fname"] = self.raw_fname
             kwargs["fname_out"] = self.fname_out
             kwargs["raw"]       = self.raw
-            self._fname_out,self._raw,self._raw_ischanged = self._function(**kwargs)
+            
+            self._fname_out,self._raw,self._raw_ischanged,postfix = self._function(**kwargs)
+           
+            if postfix:
+                self.postfix = postfix
             
         except:
             logger.exception("---> ERROR in {}\n".format(self.label) + self.info())
@@ -312,7 +326,7 @@ class JuMEG_PipelineFrame(object):
             return None,None
         
         self._fname_out,self._raw = jb.update_and_save_raw(self._raw,fin=self._raw_fname,fout=None,save=False,
-                                                           postfix=self._cfg.get("postfix"),overwrite=False)
+                                                           postfix=self.postfix,overwrite=False)
        #--- return raw_fname,raw
         if not self._cfg.get("run"):
             logger.info(" --> preproc {}:  SKIPPED : <run> is False\n".format(self.label) + self.info())
@@ -341,7 +355,7 @@ class JuMEG_PipelineFrame(object):
         
         #--- update filename in raw and save if save
         self._fname_out,self._raw = jb.update_and_save_raw(self._raw,fin=self._raw_fname,fout=None,save=save,
-                                                           update_raw_filenname=True,postfix=self._cfg.get("postfix"),
+                                                           update_raw_filenname=True,postfix=self.postfix,
                                                            overwrite=True)
         logger.info(" --> done preproc: {} \n".format(self.label) + self.info())
         

@@ -144,6 +144,23 @@ class JuMEG_Base_Basic(object):
     @plot.setter
     def plot(self,v): self._do_plot=v   
    
+    def time2string(self,t):
+        """
+        
+        :param t: time in sec
+        :return:
+        """
+        #import datetime
+        #s = 12345
+        #x = datetime.timedelta(seconds=s)
+        if t // 3600:
+           tout ='{:2.0f}:{:02.0f}:{:02.3}'.format(t // 3600,t % 3600 // 60,t % 60)
+        elif t % 3600 // 60:
+           tout = '{: 5.0f}:{:02.3}'.format(t % 3600 // 60,t % 60)
+        elif t %  60:
+           tout = '{: 6.3}'.format(t % 60)
+
+
     def line(self,n=40,char="-"):
         """ line: prints a line for nice printing  and separate
         Parameters:
@@ -300,7 +317,7 @@ class JuMEG_Base_Basic(object):
               logger.info( "---> " +head+"\n --> file exist: {}\n  -> abs file{:>18} {}".format(fck,':',f))
            return f
        #--- error no such file
-        logger.error("---> " +head+"\n --> no such file or directory: {}\n  -> abs file{:>18} {}".format(fck,':',f))
+        logger.warning("---> " +head+"\n --> no such file or directory: {}\n  -> abs file{:>18} {}".format(fck,':',f))
         if exit_on_error:
            raise SystemError(self.__MSG_CODE_FILE_NOT_EXIST)
         return False

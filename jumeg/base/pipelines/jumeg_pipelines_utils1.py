@@ -31,7 +31,7 @@ from jumeg.base.jumeg_badchannel_table               import update_bads_in_hdf
 from jumeg.base.pipelines.jumeg_pipelines_utils_base import get_args,JuMEG_PipelineFrame
 from jumeg.base.pipelines.jumeg_pipelines_ica        import JuMEG_PIPELINES_ICA
 from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD
-
+from jumeg.filter.jumeg_mne_filter                   import JuMEG_MNE_FILTER
 #--- preproc
 from jumeg.jumeg_noise_reducer     import noise_reducer
 from jumeg.jumeg_suggest_bads      import suggest_bads
@@ -128,7 +128,7 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
           jplt.show()
        jplt.save(fname=fname_out,plot_dir=config.get("plor_dir","plots"))
     
-    return fname_out,raw,RawIsChanged
+    return fname_out,raw,RawIsChanged,None
 
 #---------------------------------------------------
 #--- apply_suggest_bads
@@ -151,7 +151,7 @@ def apply_suggest_bads(raw_fname=None,raw=None,config=None,label="suggest_bads",
     fhdf = os.path.join( config.get("stage"),config.get("hdfname","badchannels.hdf5"))
     update_bads_in_hdf(fhdf=fhdf,bads=marked,fname=raw_fname,verbose=config.get("verbose"))
     
-    return fname_out,raw,True
+    return fname_out,raw,True,None
 
 #---------------------------------------------------
 #--- apply_interpolate_bads
@@ -173,13 +173,13 @@ def apply_interpolate_bads(raw_fname=None,raw=None,config=None,label="interpolat
          if config.get("plot_block"):
             raw.plot(block=config.get("plot_block"))
 
-    return fname_out,raw,True
+    return fname_out,raw,True,None
 
 
 #---------------------------------------------------
 #--- apply_ica
 #---------------------------------------------------
-# @JuMEG_PipelineFrame
+@JuMEG_PipelineFrame
 def apply_ica(raw_fname=None,raw=None,config=None,label="ica",fname_out=None):
     """
 
@@ -192,19 +192,16 @@ def apply_ica(raw_fname=None,raw=None,config=None,label="ica",fname_out=None):
  
     if not config.get("run"): return fname_out,raw
    
-    jICA =JuMEG_PIPELINES_ICA()
+    jICA = JuMEG_PIPELINES_ICA()
     path = os.path.dirname(raw_fname)
-    if config.get("do_fit",False):
-       jICA.apply_fit(raw=raw,raw_fname=raw_fname,path=path,config=config)
-   
-   #--- here needs visual inspection
-   
-    if config.get("do_transform",False):
-        jICA.apply_transfort(raw=raw,raw_fname=raw_fname,path=path,config=config)
-
-    return fname_out,raw
-
-
+    raw,raw_filtered_clean = jICA.run(raw=raw,raw_fname=raw_fname,path=path,config=config)
+    raw_filtered_clean.close()
+    
+    #fname_out = jb.get_raw_filename(raw)
+    fname_out="211890_INTEXT01_190403_0955_6_c,rfDC,meeg,nr,bcc,int,ar-raw.fif"
+    # logger.info("ICA OUT: {}".format(fname_out))
+    
+    return fname_out,raw,True,None
 
 #---------------------------------------------------
 #--- apply_filter
@@ -212,15 +209,27 @@ def apply_ica(raw_fname=None,raw=None,config=None,label="ica",fname_out=None):
 @JuMEG_PipelineFrame
 def apply_filter(raw_fname,raw=None,config=None,label="filter",fname_out=None):
     """
-    ToDo implement call to mne filter
     :param raw_fname:
     :param raw:
     :param cfg:
     :return:
      filename,raw-obj,True
     """
+    #--- ini MNE_Filter class
+    jfi = JuMEG_MNE_FILTER( flow=config.get("flow"),fhigh=config.get("fhigh") )
+
+    if not config.get("run"):
+       return fname_out,raw,False,jfi.postfix
     
-    return fname_out,raw,True
+   
+   #--- filter inplace ; update file name in raw
+    jfi.apply(raw=raw,flow=config.get("flow"),fhigh=config.get("fhigh"),picks=None,save=False,
+              verbose=config.get("verbose"),overwrite=config.get("overwrite"))
+    
+    fname_out = jb.get_raw_filename(raw)
+    
+   #--- add new postfix from filter e.g: fibp01.0-45.0
+    return fname_out,raw,True,jfi.postfix
 
 #---------------------------------------------------
 #--- apply_resample
@@ -235,6 +244,6 @@ def apply_resample(raw_fname,raw=None,config=None,label="resample",fname_out=Non
     :return:
      filename,raw-obj
     """
-    return fname_out,raw,True
+    return fname_out,raw,True,None
 
 

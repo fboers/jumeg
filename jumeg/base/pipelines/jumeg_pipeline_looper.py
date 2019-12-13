@@ -633,7 +633,7 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
                 if isinstance(obj,(dict)):
                    if obj.get(k):
                       v= obj.get(k)
-                      logger.info("---> TEST: {} => {}".format(k,v))
+                     # logger.debug("---> TEST: {} => {}".format(k,v))
                       return v
             return v
     

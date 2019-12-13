@@ -1,32 +1,54 @@
 #!/usr/bin/env python3
 # -+-coding: utf-8 -+-
 
-import contextlib,os,os.path as op
-import logging,yaml
+#--------------------------------------------
+# Authors:
+# Frank Boers      <f.boers@fz-juelich.de>
+# Christian Kiefer <c.kiefer@fz-juelich.de>
+#--------------------------------------------
+# Date: 12.112.19
+#--------------------------------------------
+# License: BSD (3-clause)
+#--------------------------------------------
+# Updates
+#--------------------------------------------
+
+import os,os.path as op
+import contextlib,logging,yaml,time,datetime
 import mne
 import numpy as np
 from distutils.dir_util import mkpath
 
-
-#from utils import set_directory
-
 from jumeg.decompose.ica_replace_mean_std import ICA, read_ica, apply_ica_replace_mean_std
-from jumeg.jumeg_preprocessing import get_ics_cardiac, get_ics_ocular
-from jumeg.jumeg_plot import plot_performance_artifact_rejection  # , plot_artefact_overview
+from jumeg.jumeg_preprocessing            import get_ics_cardiac, get_ics_ocular
+from jumeg.jumeg_plot                     import plot_performance_artifact_rejection  # , plot_artefact_overview
 
-from jumeg.base.jumeg_base import jumeg_base as jb
-from jumeg.base.jumeg_base_config import JuMEG_CONFIG_YAML_BASE
-
-from jumeg.base            import jumeg_logger
+from jumeg.base.jumeg_base         import jumeg_base as jb
+from jumeg.base.jumeg_base_config  import JuMEG_CONFIG_YAML_BASE as jCFG
+from jumeg.base                    import jumeg_logger
+from jumeg.filter.jumeg_mne_filter import JuMEG_MNE_FILTER
 
 logger = logging.getLogger("jumeg")
 
-__version__= "2019.10.08.001"
+__version__= "2019.12.12.001"
 
+'''
+class JuMEG_ICA_CONFIG(JuMEG_CONFIG_YAML_BASE):
+    """
+    CLS for ICA config file obj
 
+    Example:
+    --------
+    self.CFG = JuMEG_ICA_CONFIG(**kwargs)
+    self.CFG.update(**kwargs)
+    """
+    
+    def __init__(self,**kwargs):
+        super().__init__()
+'''
 
-def apply_ica_and_plot_performance(raw, ica, name_ecg, name_eog, raw_fname, clean_fname, picks=None,
-                                   reject=None, replace_pre_whitener=True, save=False):
+def apply_ica_and_plot_performance(raw, ica, name_ecg=None, name_eog=None, raw_fname=None, clean_fname=None,
+                                   picks=None,reject=None, replace_pre_whitener=True, save=False):
     """
     Applies ICA to the raw object and plots the performance of rejecting ECG and EOG artifacts.
 
@@ -74,7 +96,7 @@ def apply_ica_and_plot_performance(raw, ica, name_ecg, name_eog, raw_fname, clea
     """
 
     # apply_ica_replace_mean_std processes in place -> need copy to plot performance
-    raw_copy = raw.copy()
+    #raw_copy = raw.copy()
     ica = ica.copy()
 
     raw_clean = apply_ica_replace_mean_std(raw, ica, picks=picks, reject=reject,
@@ -82,19 +104,21 @@ def apply_ica_and_plot_performance(raw, ica, name_ecg, name_eog, raw_fname, clea
                                            replace_pre_whitener=replace_pre_whitener)
     if save:
         if raw_fname is not None:
-            raw_copy.save(raw_fname, overwrite=True)
+           raw.save(raw_fname, overwrite=True)
         raw_clean.save(clean_fname, overwrite=True)
 
     overview_fname = clean_fname.rsplit('-raw.fif')[0] + ',overview-plot'
-    plot_performance_artifact_rejection(raw_copy, ica, overview_fname,
+   
+   #--- ToDo MNE reports
+    plot_performance_artifact_rejection(raw, ica, overview_fname,
                                         meg_clean=raw_clean,
                                         show=False, verbose=False,
                                         name_ecg=name_ecg,
                                         name_eog=name_eog)
     print('Saved ', overview_fname)
 
-    raw_copy.close()
-
+    #raw_copy.close()
+    
     return raw_clean
 
 
@@ -102,6 +126,8 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
             flow_ecg, fhigh_ecg, flow_eog, fhigh_eog, ecg_thresh,
             eog_thresh, use_jumeg=True, random_state=42):
     """
+    author: C.Kiefer; c.kiefer@fz-juelich.de
+    
     Fit an ICA object to the raw file. Identify cardiac and ocular components
     and mark them for removal.
 
@@ -173,41 +199,46 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
     # fix the number of components to 40, depending on your application you
     # might want to raise the number
     # 'extended-infomax', 'fastica', 'picard'
+    
+    logger.info('---> START ICA FIT: init ICA object')
     ica = ICA(method='fastica', n_components=40, random_state=random_state,
               max_pca_components=None, max_iter=5000, verbose=False)
+    
+    logger.info(' --> ICA FIT: apply ICA.fit')
     ica.fit(raw, picks=picks, decim=None, reject=reject, verbose=True)
 
     #######################################################################
     # identify bad components
     #######################################################################
 
-    # get ECG and EOG related components using MNE
-    print('Computing scores and identifying components..')
-
     if use_jumeg:
-
-        # get ECG/EOG related components using JuMEG
-        ic_ecg = get_ics_cardiac(raw, ica, flow=flow_ecg, fhigh=fhigh_ecg,
-                                 thresh=ecg_thresh, tmin=-0.5, tmax=0.5, name_ecg=ecg_ch,
-                                 use_CTPS=True)[0]
-        ic_eog = get_ics_ocular(raw, ica, flow=flow_eog, fhigh=fhigh_eog,
-                                thresh=eog_thresh, name_eog_hor=eog_hor, name_eog_ver=eog_ver,
-                                score_func='pearsonr')
+        logger.info(" --> JuMEG Computing scores and identifying components ...")
+       #--- get ECG related components using JuMEG
+        ic_ecg,sc_ecg = get_ics_cardiac(raw, ica, flow=flow_ecg, fhigh=fhigh_ecg,
+                                        thresh=ecg_thresh, tmin=-0.5, tmax=0.5, name_ecg=ecg_ch,
+                                        use_CTPS=True) #[0]
         ic_ecg = list(set(ic_ecg))
-        ic_eog = list(set(ic_eog))
         ic_ecg.sort()
+      
+       #--- get EOG related components using JuMEG
+        ic_eog = get_ics_ocular(raw, ica, flow=flow_eog, fhigh=fhigh_eog,
+                                       thresh=eog_thresh, name_eog_hor=eog_hor, name_eog_ver=eog_ver,
+                                       score_func='pearsonr')
+        ic_eog = list(set(ic_eog))
         ic_eog.sort()
 
-        # if necessary include components identified by correlation as well
+       #--- if necessary include components identified by correlation as well
         bads_list = list(set(list(ic_ecg) + list(ic_eog)))
         bads_list.sort()
         ica.exclude = bads_list
-
-        print('Identified ECG components are: ', ic_ecg)
-        print('Identified EOG components are: ', ic_eog)
-
+        msg = [" --> JuMEG identified ICA components",
+               "  -> ECG components: {}".format(ic_ecg),
+               "  ->         scores: {}".format(sc_ecg[ic_ecg]),
+               "  -> EOG components: {}".format(ic_eog)
+              ]
+        logger.debug("\n".join(msg))
     else:
-
+        logger.info(" --> MNE Computing scores and identifying components ...")
         ecg_scores = ica.score_sources(raw, target=ecg_ch, score_func='pearsonr',
                                        l_freq=flow_ecg, h_freq=fhigh_ecg, verbose=False)
         # horizontal channel
@@ -233,100 +264,46 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
         highly_corr_eog1.sort()
         highly_corr_eog2.sort()
 
-        print('Highly correlated artifact components are:')
-        print('    ECG:  ', highly_corr_ecg)
-        print('    EOG 1:', highly_corr_eog1)
-        print('    EOG 2:', highly_corr_eog2)
-
         # if necessary include components identified by correlation as well
         ica.exclude = highly_corr
-
-    #print("Plot ica sources to remove jumpy component for channels 4, 6, 8, 22")
-
+        msg = ["  -> MNE Highly correlated artifact components",
+               "  -> ECG  : {} ".format(highly_corr_ecg),
+               "  -> EOG 1: {} ".format(highly_corr_eog1),
+               "  -> EOG 2: {} ".format(highly_corr_eog2)
+               ]
+               
+        logger.debug("\n".join(msg))
+   
+    logger.info(" --> done ICA FIT\n  -> excluded ICs: {}\n".format(ica.exclude))
     return ica
-
-
-class JuMEG_ICA_CONFIG(JuMEG_CONFIG_YAML_BASE):
-    """
-    CLS for ICA config file obj
-
-    Example:
-    --------
-    self.CFG = JuMEG_ICA_CONFIG(**kwargs)
-    self.CFG.update(**kwargs)
-    """
-    def __init__(self,**kwargs):
-        super().__init__()
-
-class JuMEG_ICA_FILTER(object):
-    __slots__ = ["postfix","raw","flow","fhigh","picks","save"]
-    def __init__(self,**kwargs):
-        super().__init__()
-        for k in self.__slots__:
-            self.__setattr__(k,None)
-        self._update_from_kwargs(**kwargs)
-
-    @property
-    def fname(self): return jb.get_raw_filename(self.raw,index=0)
+ 
     
-    def _update_from_kwargs(self,**kwargs):
-        for k in self.__slots__:
-            self.__setattr__(k,kwargs.get(k,self.__getattribute__(k)))
-        
-    def _update_postfix(self,**kwargs):
-        """return filter extention """
-        self._update_from_kwargs(**kwargs)
-        fi_fix = None
     
-        if self.flow and self.fhigh:
-            fi_fix = "fibp"
-            fi_fix += "%0.2f-%0.1f" % (self.flow,self.fhigh)
-        elif self.flow:
-            fi_fix = "fihp"
-            fi_fix += "%0.2f" % self.flow
-        elif self.fhigh:
-            fi_fix = "filp"
-            fi_fix += "%0.2f" % (self.fhigh)
-        
-        self.postfix = fi_fix
-        return fi_fix
-
-    def apply(self,**kwargs):
-        """
-        :param kwargs:
-         flow,fhigh,raw,picks
-        :return:
-         fname
-        
-        """
-        self._update_from_kwargs(**kwargs)
-        
-        logger.info("---> Filter start: {}".format(self.fname))
-        self.raw.filter(l_freq=self.flow,h_freq=self.fhigh,picks=self.picks)
-        self._update_postfix()
-        fname,ext = self.fname.rsplit('-',1) #raw.fif'
-        fname += ","+ self.postfix +"-"+ ext
-        if self.save:
-           fname= jb.apply_save_mne_data(self.raw,fname=fname,overwrite=True)
-           jb.set_raw_filename(self.raw,fname)
-        logger.info("---> Filter done: {}".format(self.fname))
-        return fname
-    
-
 class JuMEG_PIPELINES_ICA(object):
     def __init__(self,**kwargs):
         super().__init__()
-        self._CFG  = JuMEG_ICA_CONFIG(**kwargs)
-        self._FiPre= JuMEG_ICA_FILTER()
+        self._CFG      = jCFG(**kwargs)
+        self.PreFilter = JuMEG_MNE_FILTER()
         self._clear()
-        
+   
+    @property
+    def stage(self): return self._stage
+    @stage.setter
+    def stage(self,v):
+        self._stage=v
+    
     @property
     def path(self): return self._raw_path
     @path.setter
     def path(self,v):
         if v:
            self._raw_path = jb.isPath(v)
-
+       
+    @property
+    def path_ica(self): return os.path.join(self.path,"ica")
+    @property
+    def path_ica_chops(self): return os.path.join(self.path_ica,"chops")
+    
     @property
     def raw(self): return self._raw
 
@@ -338,26 +315,34 @@ class JuMEG_PIPELINES_ICA(object):
         self._raw_fname = jb.isFile(v,path=self.path)
 
     @property
+    def picks(self): return self._picks
+    
+    @property
     def CFG(self): return self._CFG
     @property
     def cfg(self): return self._CFG._data
 
     def _clear(self):
+        self._start_time = time.time()
+        self._stage     = None
         self._path      = None
+        self._path_ica  = None
+
         self._raw       = None
         self._raw_path  = None
         self._raw_fname = None
         self._raw_isfiltered = False
         
         self._ica_obj    = None
-        self._picks     = None
-        self._chop_times= None
+        self._picks      = None
+        self._chop_times = None
         self._filter_prefix = ""
         self._filter_fname  = ""
         
     def _update_from_kwargs(self,**kwargs):
         self._raw      = kwargs.get("raw",self._raw)
         self.path      = kwargs.get("path",self._path)
+        self._stage    = kwargs.get("stage",self.stage)
         self.raw_fname = kwargs.get("raw_fname",self._raw_fname)
 
     def trunc_nd(self,n,d):
@@ -398,19 +383,189 @@ class JuMEG_PIPELINES_ICA(object):
         
         logger.info("  -> Chop Times:\n{}".format(self._chop_times))
         return self._chop_times
- 
-    def apply_fit(self,**kwargs):
+
+    def _copy_crop_and_chop(self,raw,chop):
+        """
+        copy raw
+        crop
+        :param raw:
+        :param chop:
+        :return:
+        """
+        if self._chop_times.shape[0] > 1:
+            return raw.copy().crop(tmin=chop[0],tmax=chop[1])
+        return raw
+
+    def _initRawObj(self):
+        """
+        load or get RAW obj
+        init & mkdir path tree  <stage>/../ica/chops
+        init picks from RAW
+        """
+        self._raw,self._raw_fname = jb.get_raw_obj(self.raw_fname,raw=self.raw)
+    
+        self._raw_path = os.path.dirname(self._raw_fname)
+        if self.stage:
+            self._raw_path = os.join(self.stage,self._raw_path)
+        #---
+        mkpath(self.path_ica_chops,mode=0o770)
+    
+        #--- get picks from raw
+        self._picks = jb.picks.meg_nobads(self._raw)
+
+    def _get_chop_name(self,raw,chop=None,extention="-ica.fif",postfix=None,fullpath=False):
+        """
+        raw
+        chop     = None
+        extention= "-ica.fif" [-raw.fif]
+        postfix  = None      [ar]
+        fullpath = True
+                   if True: includes path in filename
+        Return:
+        -------
+        fname chop,fname orig
+        """
+        fname = jb.get_raw_filename(raw)
+        fname,fextention = op.basename(fname).rsplit('-',1)
+        if fullpath:
+           if fname.startswith(self.path_ica_chops):
+              fchop = fname
+           else:
+              fchop = op.join(self.path_ica_chops,fname)
+        else:
+           fchop = os.path.basename(fname)
+           
+        if postfix:
+           fchop +=","+postfix
+        try:
+           if len(chop):
+              if np.isnan(chop[1]):
+                 fchop += ',{:06d}-{:06d}'.format(int(chop[0]),int(self.raw.times[-1]))
+              else:
+                 fchop += ',{:06d}-{:06d}'.format(int(chop[0]),int(chop[1]))
+        except:
+            pass
+        if extention:
+           fchop+=extention
+    
+        return fchop,fname
+   
+    def _apply_fit(self,raw_chop=None,chop=None,idx=None):
+        """
+        raw_chop = None
+        chop     = None
+        
+        ToDo
+        if not overwrite
+          if ICA file exist: load ICA
+          else calc ICA
+        
+        :return:
+        ICA obj, ica-filename
+        """
+        self._ica_obj = None
+        fname_ica,fname = self._get_chop_name(raw_chop,chop=None)
+      
+        logger.info("---> start ICA FIT chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]) +
+                    " --> chop id      : {}\n".format(chop) +
+                    "  -> ica fname    : {}\n".format(fname_ica) +
+                    "  -> ica chop path: {}\n".format(self.path_ica_chops) +
+                    "  -> raw filename : {}\n".format(fname))
+     
+       #--- ck for ovewrite & ICA exist
+        load_from_disk = False
+        if not self.cfg.fit.overwrite:
+           load_from_disk = jb.isFile(fname_ica,path=self.path_ica_chops)
+        
+        if load_from_disk:
+           self._ica_obj,fname_ica = jb.get_raw_obj(fname_ica,path=self.path_ica_chops)
+           logger.info("---> DONE LOADING ICA chop form disk: {}\n  -> ica filename: {}".
+                       format(chop,fname_ica))
+        else:
+
+        #   with jumeg_logger.StreamLoggerSTD(label="ICA FIT"): #log print()
+           self._ica_obj = fit_ica(raw=raw_chop,picks=self.picks,reject=self.CFG.GetDataDict(key="reject"),
+                                   ecg_ch=self.cfg.ecg.channel,ecg_thresh=self.cfg.ecg.thresh,
+                                   flow_ecg=self.cfg.ecg.flow,fhigh_ecg=self.cfg.ecg.fhigh,
+                                  #---
+                                   eog_hor = self.cfg.eog.hor_ch,
+                                   eog_ver = self.cfg.eog.ver_ch,
+                                   flow_eog=self.cfg.eog.flow,fhigh_eog=self.cfg.eog.fhigh,
+                                   eog_thresh=self.cfg.eog.thresh,
+                                  #---
+                                   use_jumeg=self.cfg.ecg.use_jumeg,
+                                   random_state=self.cfg.random_state)
+          #--- save ica object
+           if self.cfg.fit.save:
+              logger.info("---> saving ICA chop: {}\n".format(idx + 1,self._chop_times.shape[0]) +
+                          "  -> ica filename   : {}".format(fname_ica))
+              self._ica_obj.save(os.path.join(self.path_ica_chops,fname_ica))
+              
+        logger.info("---> done ICA FIT for chop: {}\n".format(chop)+
+                    "  -> raw chop filename    : {}\n".format(fname_ica)+
+                    "  -> save ica fit         : {}".format(self.cfg.fit.save)
+                   )
+    
+        return self._ica_obj,fname_ica
+
+    def _apply_transform(self,raw_chop,ICA,fname_raw= None,fname_clean=None,save=None):
+        """
+         call  apply_ica_and_plot_performance()
+        :param raw_chop:
+        :param ICA:
+        :return:
+        """
+        logger.info("---> Start ICA Transform")
+     
+        return apply_ica_and_plot_performance(raw_chop,ICA,
+                                              name_ecg    = self.cfg.ecg.channel,
+                                              name_eog    = self.cfg.eog.ver_ch,
+                                              raw_fname   = fname_raw,
+                                              clean_fname = fname_clean,
+                                             #---
+                                              picks  = self.picks,
+                                              reject = self.CFG.GetDataDict(key="reject"),
+                                              save   = save,
+                                              replace_pre_whitener = True
+                                            )
+    
+    def concat_and_save(self,raws,fname=None,save=False):
+        """
+        concat a list of raw obj
+        call to mne.concatenate_raw
+        
+        :param raws:
+        :param save: save concat raw
+        :return:
+         concat raw obj
+        """
+        if raws:
+           raw_concat = mne.concatenate_raws(raws)
+           while raws:
+               raws.pop().close()
+           if fname:
+               jb.set_raw_filename(raw_concat,fname)
+           if save:
+              jb.apply_save_mne_data(raw_concat,fname=fname)
+              
+        return raw_concat
+
+    def run(self,**kwargs):
+        """
+        
+        :param kwargs:
+        :return:
+        raw_unfiltered_clean,raw_filtered_clean
+        
+        """
         self._clear()
         self._update_from_kwargs(**kwargs)
       #--- load config
         self._CFG.update(**kwargs)
  
       #--- init or load raw
-        self._raw,self._raw_fname = jb.get_raw_obj(self.raw_fname,raw=self.raw)
-      
-      #--- get picks from raw
-        self._picks = jb.picks.meg_nobads(self._raw)
-      
+        self._initRawObj()
+  
       #--- chop times
         if self.cfg.chops.epocher.use:
             """ToDo use epocher information chop onset,offset"""
@@ -422,186 +577,99 @@ class JuMEG_PIPELINES_ICA(object):
            logger.error("---> No <chop times> defined for ICA\n" +
                         "  -> raw filename : {}\n".format(self._raw_fname))
            return None
+       
+       #--- chops as string
+        s = ""
+        for cp in self._chop_times:
+            s+="{}-{}  ".format(cp[0],cp[1])
+            
+        msg = [
+            "---> Apply ICA => FIT & Transform",
+            "  -> filename      : {}".format(self._raw_fname),
+            "  -> ica chop path : {}".format(self.path_ica_chops),
+            "  -> chops         : {}".format(s),
+            "-" * 40
+            ]
 
-        #--- ck for 1.filter => filter inplace:
         if self.cfg.pre_filter.run:
-           filename = self._FiPre.apply(
-                                 flow  = self.cfg.pre_filter.flow,
-                                 fhigh = self.cfg.pre_filter.fhigh,
-                                 save  = self.cfg.pre_filter.save,
-                                 raw   = self.raw,
-                                 picks = self._picks
-                                )
-           self._raw_isfiltered = True
-           
+          #--- do filter
+           self.PreFilter.apply(
+                   flow      = self.cfg.pre_filter.flow,
+                   fhigh     = self.cfg.pre_filter.fhigh,
+                   save      = self.cfg.pre_filter.save,
+                   raw       = self.raw.copy(),
+                   picks     = self.picks,
+                  )
+           msg = self.PreFilter.GetInfo(msg=msg)
         else:
-           filename = self._raw_fname
-        
+           self.PreFilter.clear()
            
-        fname,fextention = op.basename(filename).rsplit('-',1) #raw.fif
-        path_ica         = op.join( os.path.dirname(filename),"ica" )
-        path_ica_chops   = op.join( path_ica,"chops" )
-        
-        mkpath(path_ica_chops,mode=0o770)
-        
-        msg=["---> Apply ICA => FIT ICA -> mkdirs\n  -> ica     : {}\n  -> chops   : {}\n  -> filename: {}\n  -> raw filename: {}".format(path_ica,path_ica_chops,fname,self._raw_fname),
-             "  -> is filtered: {}".format(self._raw_isfiltered)]
-        logger.info( "\n".join(msg))
-        
-        for idx in range( self._chop_times.shape[0] ) :
-           
+        logger.info("\n".join(msg) )
+       
+       #--- reset output
+        raw_filtered_clean = None
+        raw_filtered_chops_clean_list = []
+       #---
+        raw_unfiltered_clean = None
+        raw_unfiltered_chops_clean_list = []
+    
+       #--- loop for chpos
+        for idx in range(self._chop_times.shape[0]):
             chop = self._chop_times[idx]
-            
-            ica_fname = op.join(path_ica_chops,fname)
-            
-            if np.isnan(chop[1]):
-               ica_fname = fname + ',{:06d}-{:06d}-ica.fif'.format(int(chop[0]),int(self.raw.times[-1]))
-            else:
-               ica_fname = fname + ',{:06d}-{:06d}-ica.fif'.format(int(chop[0]),int(chop[1]))
           
-            logger.info("---> Start ICA chop: {} / {}\n".format(idx+1,self._chop_times.shape[0])+
-                        " --> chop id      : {}\n".format(chop)+
-                        "  -> ica fname    : {}\n".format(ica_fname)+
-                        "  -> ica chop path: {}\n".format(path_ica_chops)+
-                        "  -> raw filename : {}\n".format(self._raw_fname))
-            
-            if self._chop_times.shape[0] > 1:
-               raw_chop = self._raw.copy().crop(tmin=chop[0],tmax=chop[1])
+            logger.info("---> Start ICA FIT & Transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
+    
+            if self.PreFilter.isFiltered:
+               raw_chop = self._copy_crop_and_chop(self.PreFilter.raw,chop)
             else:
-               raw_chop = self._raw
-          #--- get dict from struct
-            reject = self.CFG.GetDataDict(key="reject")
+               raw_chop = self._copy_crop_and_chop(self.raw,chop)
+ 
+           #---  ICA FIT filtered or unfilterd obj
+            fname_chop,fname_raw = self._get_chop_name(raw_chop,chop=chop,extention="-raw.fif")
+            jb.set_raw_filename(raw_chop,fname_chop)
+            ICA,fname_ica = self._apply_fit(raw_chop=raw_chop,chop=chop,idx=idx)
+       
+           #--- ICA Transform
+            if self.cfg.transform.run:
+              #--- filtered
+               if self.cfg.transform.filtered.run:
+                  if self.PreFilter.isFiltered:
+                  #--- filtered
+                     fname_chop,_  = self._get_chop_name(raw_chop,extention="-raw.fif")
+                     fname_filtered_clean,_ = self._get_chop_name(raw_chop,extention="-raw.fif",postfix="ar")
+                     raw_filtered_chops_clean_list.append( self._apply_transform(raw_chop,ICA,
+                                                                fname_raw   = fname_chop,
+                                                                fname_clean = fname_filtered_clean,
+                                                                save        = self.cfg.transform.filtered.save_chops))
+                                         
+             #--- unliterd
+               if self.cfg.transform.unfiltered.run:
+                  raw_chop      = self._copy_crop_and_chop(self.raw,chop)
+                  fname_chop,_  = self._get_chop_name(raw_chop,extention="-raw.fif")
+                  fname_unfiltered_clean,_ = self._get_chop_name(raw_chop,extention="-raw.fif",postfix="ar")
+                  raw_unfiltered_chops_clean_list.append( self._apply_transform(raw_chop,ICA,
+                                                               fname_raw   = fname_chop,
+                                                               fname_clean = fname_unfiltered_clean,
+                                                               save        = self.cfg.transform.unfiltered.save_chops) )
+                  
+            logger.info(" --> done ICA FIT & transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
             
-            self._ica_obj = fit_ica(raw=raw_chop,picks=self._picks,reject=reject,
-                          ecg_ch=self.cfg.ecg.channel,eog_hor=self.cfg.eog.hor_ch,eog_ver=self.cfg.eog.ver_ch,
-                          flow_ecg=self.cfg.ecg.flow,fhigh_ecg=self.cfg.ecg.fhigh,
-                          flow_eog=self.cfg.eog.flow,fhigh_eog=self.cfg.eog.fhigh,
-                          ecg_thresh=self.cfg.ecg.thresh,eog_thresh=self.cfg.eog.thresh,use_jumeg=self.cfg.ecg.use_jumeg,
-                          random_state=self.cfg.random_state)
-  
-           #--- save ica object
-            if self.cfg.save:
-               self._ica_obj.save( os.path.join(path_ica_chops,ica_fname) )
-            
-            logger.info("---> DONE ICA chop: {} / {} -> ica filename: {}".format(idx+1,self._chop_times.shape[0],ica_fname))
-            
-        logger.info("---> DONE ICA FITs: {} -> raw filename: {}".format(self._chop_times.shape[0],self._raw_fname))
-            #title = ('ICA decomposition using %s (took %.1fs)' % (method, fit_time))
-            #self._ica_obj.plot_components(title=title)
-            
-            #return self._ica_obj
-
-          # use TSV visual inspection deselect ICs
-          
-    def apply_transform(self,**kwargs):
-        """
-        ToDo
-        jb.load ica from file or obj
-        calc chop times
-        check chops exists
-        mk filename
-        for chops:
-            apply_ica_and_plot_performance
-        
-        append cleand chops to new raw
-        save raw-ar
-        
-        :param kwargs:
-        :return:
-        """
-        self._clear()
-        self._update_from_kwargs(**kwargs)
-        
-        print('ICA components excluded: ',self._ica_obj.exclude)
-        
-        '''
-        #clean_filt_fname = op.join(dirname,prefix_filt + ',{},ar,{}-{}-raw.fif'.format(info_filt,int(tmin),tmaxi))
-        #raw_filt_chop_fname = op.join(dirname,prefix_filt + ',{},{}-{}-raw.fif'.format(info_filt,int(tmin),tmaxi))
-
-        #######################################################################
-        # apply the ICA to data and save the resulting files
-        #######################################################################
-
-            #print('Running cleaning on filtered data...')
-            #clean_filt_chop = apply_ica_and_plot_performance(raw_filt_chop,ica,ecg_ch,eog_ver,
-            #                                                 raw_filt_chop_fname,clean_fname=clean_filt_fname,
-            #                                                 picks=picks,replace_pre_whitener=True,
-            #                                                 reject=reject,save=save)
-
-            #raw_chop_clean_filtered_list.append(clean_filt_chop)
-
-        
-        # plot topo-plots first because sometimes components are hard to identify
-        # ica.plot_components()
-        # do the most important manual check
-        #ica.plot_sources(raw_filt_chop, block=True)
-
-        # save ica object
-        #ica.save(ica_fname)
-        '''
-        
-        logger('ICA components excluded: ', ica.exclude)
-
-        #######################################################################
-        # apply the ICA to data and save the resulting files
-        #######################################################################
-
-        print('Running cleaning on filtered data...')
-        clean_filt_chop = apply_ica_and_plot_performance(raw_filt_chop, ica, ecg_ch, eog_ver,
-                                                         raw_filt_chop_fname, clean_fname=clean_filt_fname,
-                                                         picks=picks, replace_pre_whitener=True,
-                                                         reject=reject, save=save)
-
-        raw_chop_clean_filtered_list.append(clean_filt_chop)
-
-        if unfiltered:
-
-            print('Running cleaning on unfiltered data...')
-            clean_unfilt_chop = apply_ica_and_plot_performance(raw_unfilt_chop, ica, ecg_ch, eog_ver,
-                                                               raw_unfilt_chop_fname, clean_fname=clean_unfilt_fname,
-                                                               picks=picks, replace_pre_whitener=True,
-                                                               reject=reject, save=save)
-
-            raw_chop_clean_unfiltered_list.append(clean_unfilt_chop)
-
+       #--- concat filtered raws
+        if raw_filtered_chops_clean_list:
+           raw_filtered_clean = self.concat_and_save(raw_filtered_chops_clean_list,
+                                                       fname = self.PreFilter.fname.replace("-raw.fif",",ar-raw.fif"),
+                                                       save  = self.cfg.transform.filtered.save)
+       #--- concat unfiltered raws
+        if raw_unfiltered_chops_clean_list:
+           raw_unfiltered_clean = self.concat_and_save(raw_unfiltered_chops_clean_list,
+                                                         fname = self._raw_fname.replace("-raw.fif",",ar-raw.fif"),
+                                                         save  = self.cfg.transform.unfiltered.save)
+        logger.info("---> DONE ICA FIT & Transpose\n"+
+                    "  -> filename : {}\n".format( jb.get_raw_filename(raw_unfiltered_clean) )+
+                    "  -> time to process :{}".format( datetime.timedelta(seconds= time.time() - self._start_time ) ))
       
-        
-'''
-#--- cat all chops
-    clean_filt_concat = mne.concatenate_raws(raw_chop_clean_filtered_list)
-
-    if unfiltered:
-
-        clean_unfilt_concat = mne.concatenate_raws(raw_chop_clean_unfiltered_list)
-
-    else:
-        clean_unfilt_concat = None
-
-    return clean_filt_concat, clean_unfilt_concat
-'''
-
-        '''
-        may try this ???
-        
-        from mne.decoding import UnsupervisedSpatialFilter
-
-        from sklearn.decomposition import PCA,FastICA
-        x=raw.get_data()
-        ica= UnsupervisedSpatialFilter(FastICA(30), average=False)
-        ica_data = ica.fit_transform(X)
-        ev1 = mne.EvokedArray(np.mean(ica_data, axis=0),
-                      mne.create_info(30, epochs.info['sfreq'],
-                                      ch_types='eeg'), tmin=tmin)
-        ev1.plot(show=False, window_title='ICA', time_unit='s')
-        plt.show()
-        '''
-        
-    def info(self):
-        logger.info("Apply ICA\n"+
-                    "  -> raw obj:   {}\n".format(self._raw)+
-                    "  -> raw fname: {}\n".format(self._raw_fname)+
-                    "  -> raw path:  {}\n".format(self._raw_path)+
-                    "  -> config:    {}\n".format(self.CFG.filename))
+        return raw_unfiltered_clean,raw_filtered_clean
+       
 
 if __name__ == "__main__":
   
@@ -620,4 +688,6 @@ if __name__ == "__main__":
    logger.info("JuMEG Apply ICA mne-version: {}".format(mne.__version__))
  #--
    jICA = JuMEG_PIPELINES_ICA()
-   jICA.apply_fit( path=path,raw_fname=raw_fname,config=fcfg,key="ica")
+   jICA.run( path=path,raw_fname=raw_fname,config=fcfg,key="ica")
+
+
