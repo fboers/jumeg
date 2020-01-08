@@ -21,7 +21,7 @@ from jumeg.epocher.jumeg_epocher_plot    import jumeg_epocher_plot as jplt
 
 #--- setup logger
 logger = logging.getLogger('jumeg')
-__version__="2019.05.14.001"
+__version__="2020.01.08.001"
 
 class JuMEG_Epocher_Marker(JuMEG_Epocher_Events_Channel):
     '''
@@ -55,7 +55,7 @@ class JuMEG_Epocher_OutputMode(object):
     """
     
     """
-    __slots__ =["events","epochs","evoked","stage","use_condition_in_path","path"]
+    __slots__ =["events","epochs","evoked","stage","annotations","use_condition_in_path","path"]
     
     def __init__(self,**kwargs):
         super().__init__()
@@ -173,7 +173,7 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
                   time={"time_pre":None,"time_post":None},
                   baseline={"type":None,"type_input":None,"baseline":None},
                   #baseline={"type":None,"channel":None,"output":None,"baseline":None},
-                  weights=None,     
+                  weights=None,save_raw=False,
                   output_mode={"events":True,"epochs":True,"evoked":True,"stage":None,"use_condition_in_path":True},
                   exclude_events = {"eog_events":None,"ecg_events":None},
                   verbose=False):
@@ -201,12 +201,18 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         self.proj           = proj                     
         self.verbose        = verbose
         self.type_result    = type_result
+        self.save_raw       = save_raw
         self.OutputMode     = JuMEG_Epocher_OutputMode(**output_mode)
 #--- 
     def apply_hdf_to_epochs(self,**kwargs):
         """ apply(**kwargs) refer to CLS docstring """
         self._epochs_update(**kwargs)
         self._epochs_run()
+      
+      #--  e.g. save events in mne.annotations
+        if self.save_raw:
+           self.fname = jumeg_base.apply_save_mne_data(raw=self.raw,fname=self.fname,overwrite=True)
+           
         return self.raw,self.fname 
    
 #---
@@ -247,7 +253,10 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         
       #--- read hdf get dataframe
         #print(condi)
-        df,ep_param,info_param = self._epochs_read_hdf_data(condi) 
+        result = self._epochs_read_hdf_data(condi)
+        if not result: return
+        
+        df,ep_param,info_param = result
         
         #print("  --> EP param")
         #print(ep_param)
@@ -302,8 +311,11 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         for condi in self.condition_list:
             logger.info( "---> JuMEG EpocherEpochs Apply condition: "+condi)
           #---
-            df,evt,ep_param,info_param = self._epochs_get_events(condi,ck_weights_skip_first=True,ck_weights_equalize=False)
-       
+            result = self._epochs_get_events(condi,ck_weights_skip_first=True,ck_weights_equalize=False)
+            if not result: continue
+         
+            df,evt,ep_param,info_param = result
+         
             #print("EP param")
             #print(ep_param)
             #print("TEST")
@@ -382,8 +394,8 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         <pandas dataframe> 
         """       
      
-        self.marker   = None
-
+        self.marker = None
+        
         logger.info("---> EPOCHER HDF to MNE events -> extract condition : " + condi)
       
        #--- check and get hdf key make node
@@ -391,8 +403,9 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         if not ep_key :
            logger.exception("  -> No HDF-key found for condition: {}\n".format(condi)+
                             "  -> HDF file: {}".format(self.hdf_filename))
-           sys.exit()
-
+           #sys.exit()
+           return
+           
        #--- get pandas data frame from HDF
         df = self.hdf_obj_get_dataframe(ep_key)
        #--- get stored attributes -> epocher_parameter -> ...
@@ -610,12 +623,15 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         evt['events']  = np.array([])
         evt['event_id']= None #np.array([])
         evt['baseline_corrected'] = False
-        
+     
         if events_idx.size:      
            evt['events']      = np.zeros(( events_idx.size, 3),dtype=np.int64)
           #--- init onset 
            evt['events'][:,0] += df[ self.marker.type_output ][events_idx]
-          #--- init event ids 
+          #--- init offset
+          #--ToDo define duration & calculation for raw.annotations
+           evt['events'][:,1] += 1
+          #--- init event ids
            evt['events'][:,2] += df[ self.marker.type_id ][events_idx]
           # evt['event_id']    = np.asarray( np.unique( evt['events'][:,2] ),dtype=np.int  ) #.min()
            evt['event_id']    = np.unique( evt['events'][:,2] ).tolist()
@@ -1121,7 +1137,39 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
          #--- plot evoked
           fname = jplt.plot_evoked(evt,fname=fname,condition=condition,show_plot=False,save_plot=True,plot_dir='plots')
           logger.info("---> done jumeg epocher plot evoked (averaged) :" +fname)
+      
+      #--- store event info into raw.anotations
+       if self.OutputMode.annotations:
+          
+          time_format = '%Y-%m-%d %H:%M:%S.%f'
+          raw_annot = None
+          orig_time = self.raw.info.get("meas_date",self.raw.times[0])
+          
+          onset    = evt['events'][:,0] / self.raw.info["sfreq"]
+         #--- ToDo set real duration
+          duration = evt['events'][:,1] * 10.0/ self.raw.info["sfreq"]
+       
+          ep_annot = mne.Annotations(onset       = onset.tolist(),
+                                     duration    = duration.tolist(),
+                                     description = [ condition for x in range( evt["events"].shape[0] ) ],
+                                     orig_time   = orig_time)
+          
+          # logger.info("mne annotations: {}".format(ep_annot))
+          
+          try:
+              raw_annot = self.raw.annotations
+          except:
+              pass
+         
+          if raw_annot:
+             self.raw.set_annotations(raw_annot + ep_annot)
+          else:
+             self.raw.set_annotations(ep_annot)
              
+          logger.info(" --> storing mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
+          
+           
+           
 #---
     def __clear(self):
         """ clear all CLs parameter"""
