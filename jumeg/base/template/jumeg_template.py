@@ -30,18 +30,19 @@ from jumeg.template.jumeg_template import JuMEG_Template_Experiments
 #--------------------------------------------
 # Updates
 # 13.03.19 PY3
+# 19.12.19 update template read yaml & json
 #--------------------------------------------
 
 
 import glob, os, re, sys
-import json,time
+import json,yaml,time
 
 import logging
 logger = logging.getLogger("jumeg")
 
 from jumeg.base.jumeg_base import JuMEG_Base_Basic
 
-__version__='2019.05.14.001'
+__version__='2019.12.19.001'
 logger = logging.getLogger(__name__)
 
 class dict2obj(dict):
@@ -122,9 +123,9 @@ class JuMEG_Template(JuMEG_Base_Basic):
         self._template_suffix   = '.json'
         self._template_dic      = {}
         self._template_data     = dict()
-        self._verbose           = False
         self._template_isUpdate = False
-
+        self._use_yaml          = False
+        self._verbose           = False
         self._template_path = self.template_path_default
         self.template_update_name_list()
         
@@ -158,6 +159,17 @@ class JuMEG_Template(JuMEG_Base_Basic):
     def template_suffix(self):    return  self._template_suffix
     @template_suffix.setter
     def template_suffix(self,v):  self._template_suffix = v
+   #---
+    @property
+    def use_yaml(self): return self._use_yaml
+    @use_yaml.setter
+    def use_yaml(self,v):
+        self._use_yaml =v
+        if self._use_yaml:
+           self.template_suffix=".yaml"
+        else:
+           self.template_suffix = ".json"
+           
    #---template_isUpdate
     @property
     def template_isUpdate(self): return self._template_isUpdate
@@ -227,8 +239,14 @@ class JuMEG_Template(JuMEG_Base_Basic):
         self.template_data.clear() # clear all copies
         
         try:
+          
            with open(self.template_full_filename) as FH: # PY3
-                self.template_data = json.load(FH) # close  anyway
+
+                if self.use_yaml:
+                   self.template_data = yaml.full_load(FH)
+                else:
+                   self.template_data = json.load(FH) # close  anyway
+          
            if dict2obj:
               self.template_data = dict2obj(self.template_data)
               self._template_isUpdate = True

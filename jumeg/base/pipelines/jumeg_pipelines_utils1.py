@@ -100,12 +100,13 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
     RawIsChanged = False
    #--- check dead channes and mark them as bad
     jb.picks.check_dead_channels(raw=raw)
-        
    #--- start plot denoising orig raw psd, avoid reloading raw data
     if config.get("plot"):
-       jplt = JuMEG_PLOT_PSD(n_plots=2,name="denoising",verbose=True)
+       jplt = JuMEG_PLOT_PSD(n_plots=2,name="denoising",verbose=True) #,pick_types=["meg","ref"])
        jplt.plot(raw,title="orig: " + os.path.basename(raw_fname),check_dead_channels=False,fmax=config.get("fmax"))
-        
+    
+    
+       
    #--- with redirect stdout/err
     with jumeg_logger.StreamLoggerSTD(label=label):
         #--- 1 nr low pass filter for freq below 5 hz
@@ -197,9 +198,8 @@ def apply_ica(raw_fname=None,raw=None,config=None,label="ica",fname_out=None):
     raw,raw_filtered_clean = jICA.run(raw=raw,raw_fname=raw_fname,path=path,config=config)
     raw_filtered_clean.close()
     
-    #fname_out = jb.get_raw_filename(raw)
-    fname_out="211890_INTEXT01_190403_0955_6_c,rfDC,meeg,nr,bcc,int,ar-raw.fif"
-    # logger.info("ICA OUT: {}".format(fname_out))
+    fname_out = jb.get_raw_filename(raw)
+    logger.info("ICA OUT: {}".format(fname_out))
     
     return fname_out,raw,True,None
 

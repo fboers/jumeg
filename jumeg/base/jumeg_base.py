@@ -58,7 +58,7 @@ import logging
 logger = logging.getLogger("jumeg")
 #logger.setLevel('DEBUG')
 
-__version__="2019.09.13.001"
+__version__="2020.01.07.001"
 
 '''
 class AccessorType(type):
@@ -971,9 +971,66 @@ class JuMEG_Base_StringHelper(JuMEG_Base_Basic):
         if self.isString(s):
            if s.strip(): return True
         return False
-         
+
+    def range_to_list(self,seq):
+        """
+        make a list or a string of inergers to a list
+        ref:
+        http://stackoverflow.com/questions/6405208/how-to-convert-numeric-string-ranges-to-a-list-in-python
+
+        Parameters
+        ----------
+        seq_str: string/list
+
+        Returns
+        --------
+        list of numbers
+
+        Example
+        --------
+        from jumeg.jumeg_base import jumeg_base as jb
+
+        jb.range_to_list("1,2,3-6,8,111")
+
+        "1,3,5"         => [1,3,5]
+        "1-5"           => [1,2,3,4,5]
+        "1,2,3-6,8,111" => [1,2,3,4,5,6,8,111]
+        
+        jb.range_to_list([1,2,"3-6",8,])
+        "1,3,5"         => [1,3,5]
+        "1-5"           => [1,2,3,4,5]
+        "1,2,3-6,8,111" => [1,2,3,4,5,6,8,111]
+        
+        """
+        #xranges = [(lambda l: range(l[0], l[-1]+1))(map(int, r.split('-'))) for r in seq_str.split(',')]
+        #--- py3 range instead of xrange
+    
+       
+        if self.isString(seq):
+           return self.str_range_to_list(seq)
+        if isinstance(seq,(int)):
+           return [seq]
+        
+        xrange = []
+        for r in seq:
+            if self.isString(str):
+               for s in r.split(','):
+                   l = s.split('-')
+                   if len(l) > 1:
+                      xrange += list(range(int(l[0]),int(l[-1]) + 1))
+                   else:
+                      xrange.append(int(l[0]))
+            else:
+               xrange.append(int(r))
+       #--- mk unique & list & sort
+        xrange = list(set(xrange))
+        xrange.sort()
+        # flatten list of xranges
+        #return [y for x in xranges for y in x]
+        return xrange
+    
     def str_range_to_list(self, seq_str):
-        """make a list of inergers from string
+        """make a list of inergers from string 
         ref:
         http://stackoverflow.com/questions/6405208/how-to-convert-numeric-string-ranges-to-a-list-in-python
            
@@ -1012,7 +1069,7 @@ class JuMEG_Base_StringHelper(JuMEG_Base_Basic):
         #return [y for x in xranges for y in x]
         return xrange
     
-    def str_range_to_numpy(self, seq_str,exclude_zero=False,unique=False): 
+    def str_range_to_numpy(self, seq,exclude_zero=False,unique=False):
         """converts integer string to numpy array 
         Parameters
         ----------
@@ -1046,19 +1103,66 @@ class JuMEG_Base_StringHelper(JuMEG_Base_Basic):
         """
         import numpy as np
 
-        if seq_str is None:
+        if seq is None:
            return np.unique( np.asarray( [ ] ) )
-        if self.isString(seq_str):
+        if self.isString(seq):
            s = re.sub(r",+",",",seq_str.replace(" ",",") )
-           anr = np.asarray (self.str_range_to_list( s ) )
+           anr = np.asarray (self.range_to_list( s ) )
         else:
-           anr = np.asarray( [seq_str] )
+           anr = np.asarray (self.range_to_list( seq ) )
            
         if unique:
            anr = np.unique( anr ) 
         if exclude_zero:
            return anr[ np.where(anr) ] 
         return anr
+
+    def range_to_numpy(self,seq,exclude_zero=False,unique=False):
+        """converts integer string or a list to numpy array
+        Parameters
+        ----------
+        input       : integer numbers as string
+        exclude_zero: exclude 0  <False>
+        unique      : return only unique numbers <False>
+
+        Returns
+        --------
+        integer numbers as numpy array dtype('int64')
+
+        Example
+        --------
+
+        from jumeg.jumeg_base import jumeg_base as jb
+
+        s = "0,1,2,3,0,1,4,3,0"
+
+        jb.range_to_numpy(s)
+          array([0, 1, 2, 3, 0, 1, 4, 3, 0])
+
+        jb.range_to_numpy(s,unique=True)
+          array([0, 1, 2, 3, 4])
+
+        jb.range_to_numpy(s,exclude_zero=True)
+          array([1, 2, 3, 1, 4, 3])
+
+        jb.range_to_numpy(s,unique=True,exclude_zero=True)
+          array([1, 2, 3, 4])
+
+        """
+        import numpy as np
+    
+        if seq is None:
+            return np.unique(np.asarray([]))
+        if self.isString(seq):
+            seq = re.sub(r",+",",",seq.replace(" ",","))
+        anr = np.asarray(self.range_to_list(seq))
+    
+        if unique:
+            anr = np.unique(anr)
+        if exclude_zero:
+            return anr[np.where(anr)]
+        return anr
+
 
 class JuMEG_Base_FIF_IO(JuMEG_Base_StringHelper):
     """ handels mne fif I/O for meg and eeg [BrainVision] data
