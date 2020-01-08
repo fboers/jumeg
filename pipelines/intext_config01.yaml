@@ -65,7 +65,7 @@ interpolate_bads:
     postfix: "int"
     save: True
     run: False
-    overwrite: True
+    overwrite: False
     file_extention: [",nr,bcc-raw.fif","rfDC,nr,bcc-empty.fif"]
 
     plot_block: False
@@ -144,9 +144,8 @@ ica:
     reject:
         'mag': 5.0e-11
 
-
 filter_1:
-    run: True
+    run: False
     save: True
     overwrite: False
     flow:   0.1
