@@ -30,7 +30,7 @@ logger = logging.getLogger('jumeg')
 __version__="2019.05.14.001"
 
 class JuMEG_PLOT_BASE(object):
-    __slots__ = ["picks","fmin","fmax","tmin","tmax","proj","n_fft","color","area_mode","area_alpha","n_jobs","dpi","verbose",
+    __slots__ = ["picks","fmin","fmax","tmin","tmax","proj","n_fft","color","area_mode","area_alpha","pick_types","n_jobs","dpi","verbose",
                  "check_dead_channels","info","fnout","n_plots","file_extention","name",
                  "_fig","_plot_index","_axes","_yoffset","_ylim"]
 
@@ -61,10 +61,11 @@ class JuMEG_PLOT_BASE(object):
         self.area_mode  = 'range'
         self.area_alpha = 0.33
         self.proj       = False
+        self.pick_type  = None
         self.n_jobs     = 1
         self.n_plots    = 1
         self.name       = "PLOT"
-        self.file_extention = ".pdf"
+        self.file_extention = ".png" #".pdf"
         self.check_dead_channels = True
         self._plot_index = 1
         self._axes       = []
@@ -128,7 +129,10 @@ class JuMEG_PLOT_BASE(object):
                return
     
         if fnout:
-            self.fig.savefig(os.path.join(fout_path,fnout),dpi=self.dpi)
+            if fnout.endswith("png"):
+                self.fig.savefig(os.path.join(fout_path,fnout),format="png")
+            else:
+                self.fig.savefig(os.path.join(fout_path,fnout),dpi=self.dpi)
             if self.verbose:
                logger.info("---> done saving plot: {}".format(os.path.join(fout_path,fnout)))
 
@@ -236,6 +240,7 @@ class JuMEG_PLOT_PSD(JuMEG_PLOT_BASE):
            self.picks = jb.picks.check_dead_channels(raw,picks=self.picks,verbose=self.verbose)
         else:
            self.picks = jb.picks.meg_and_ref_nobads(raw)
+           #self.picks = jb.picks.meg_nobads(raw)
            
         self.tmax = self.tmax if self.tmax else raw.times[-1]
         self.fmax = self.fmax if self.fmax else raw.info.get("sfreq",1000.0)/2.0
