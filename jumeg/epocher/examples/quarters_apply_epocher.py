@@ -12,14 +12,15 @@ import os.path as op
 
 from jumeg.base.jumeg_base import jumeg_base as jb
 from jumeg.epocher.jumeg_epocher import jumeg_epocher
-
+from jumeg.filter.jumeg_mne_filter import JuMEG_MNE_FILTER
 from jumeg.base import jumeg_logger
 
 logger = logging.getLogger("jumeg")
 logger = jumeg_logger.setup_script_logging(logger=logger,fname="quaters_epocher.log",level="INFO",logfile=True)#,mode="w" )
 
 #---
-DO_EVENTS    = False
+DO_EVENTS    = True
+DO_FILTER    = True
 DO_EPOCHS    = True
 verbose      = True
 debug        = False
@@ -39,7 +40,10 @@ condition_list = ["RCC_ST","RCC_FB"]#,"RCI_ST","RCI_FB","RII_ST","RII_FB","RIC_S
                  # "PCC_ST","PCC_FB","PCI_ST","PCI_FB","PII_ST","PII_FB","PIC_ST","PIC_FB"]
                   
 fraws=[
-"210857/QUATERS01/191210_1325/1/210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr,bcc,int,ar-raw.fif",
+#"207048/QUATERS01/191218_1447/2/207049_QUATERS01_191218_1447_2_c,rfDC,meeg-raw.fif",
+#"207049/QUATERS01/191218_1447/1/207049_QUATERS01_191218_1447_1_c,rfDC,meeg-raw.fif",
+"207049/QUATERS01/191218_1447/3/207049_QUATERS01_191218_1447_3_c,rfDC,meeg-raw.fif",
+#"210857/QUATERS01/191210_1325/1/210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr,bcc,int,ar-raw.fif",
 #"210857/QUATERS01/191210_1325/2/210857_QUATERS01_191210_1325_2_c,rfDC,meeg,nr,bcc,int,ar-raw.fif",
 #"210857/QUATERS01/191210_1325/3/210857_QUATERS01_191210_1325_3_c,rfDC,meeg,nr,bcc,int,ar-raw.fif",
 #"210857/QUATERS01/191210_1325/4/210857_QUATERS01_191210_1325_4_c,rfDC,meeg,nr,bcc,int,ar-raw.fif"
@@ -52,7 +56,9 @@ fi45=[
 ]
 fi120=["210857/QUATERS01/191210_1325/1/210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr,bcc,int,ar,fibp0.10-120.0-raw.fif"]
 
-flist=fi120
+flist=fraws
+
+MNEFilter = JuMEG_MNE_FILTER()
 
 for f in flist:
 
@@ -92,6 +98,10 @@ for f in flist:
                 raw, fname = jumeg_epocher.apply_events(fraw,raw=raw, **evt_param)
             except:
                 logger.exception(" error in calling jumeg_epocher.apply_events")
+
+    if DO_FILTER:
+       picks = jb.picks.exclude_trigger(raw)
+       fname = MNEFilter.apply(raw=raw,fname=fraw,flow=0.01,fhigh=45.0,picks=picks)
 
    #--- EPOCHER epochs
     if DO_EPOCHS:

@@ -58,7 +58,7 @@ import logging
 logger = logging.getLogger("jumeg")
 #logger.setLevel('DEBUG')
 
-__version__="2020.01.07.001"
+__version__="2020.01.16.001"
 
 '''
 class AccessorType(type):
@@ -1835,7 +1835,8 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
 
           # channel_type = mne.io.pick.channel_type(raw.info, 75)
 
-    def update_and_save_raw(self,raw,fin=None,fout=None,save=False,overwrite=True,postfix=None,separator="-",update_raw_filenname=False):
+    def update_and_save_raw(self,raw,fin=None,fout=None,save=False,overwrite=True,postfix=None,separator="-",
+                            update_raw_filenname=False): #,include_path=False):
         """
         new filename from fin or fout with postfix
         saving mne raw obj to fif format
@@ -1850,12 +1851,15 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
          separator : split to generate output filename with postfix  <"-">
          save      : save raw to disk
          overwrite : if overwrite  save <raw obj> to existing <raw file>  <True>
+        
          update_raw_filenname: <False>
-
+         
         Returns
         --------
          filename,raw-obj
         """
+        #  include_path        : include alsolute path in raw.filename <False>
+        
         from distutils.dir_util import mkpath
         #--- use full filname
         if fout:
@@ -1912,7 +1916,13 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
               logger.info(">>>> writing data to disk...\n --> saving: "+ fname)
               mkpath( os.path.dirname(fname) )
               raw.save(fname,overwrite=True)
-              logger.info(' --> Bads:' + str( raw.info['bads'] ) +"\n --> Done writing data to disk...")
+              msg= []
+              try:
+                 msg.append(" --> mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
+              except:
+                 msg.append(" --> mne.annotations in RAW: not found")
+              msg.extend( [' --> Bads:' + str( raw.info['bads'] )," --> Done writing data to disk..."])
+              logger.info("\n".join(msg))
         except:
            logger.exception("---> error in saving raw object:\n  -> file: {}".format(fname))
            

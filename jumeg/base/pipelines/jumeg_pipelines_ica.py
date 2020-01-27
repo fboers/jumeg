@@ -17,17 +17,24 @@ import os,os.path as op
 #import contextlib,
 
 import logging,time,datetime
-import mne
+
 import numpy as np
 from distutils.dir_util import mkpath
+
+import matplotlib.pyplot as pl
+
+import mne
+from mne.preprocessing import find_ecg_events, find_eog_events
 
 from jumeg.decompose.ica_replace_mean_std import ICA, read_ica, apply_ica_replace_mean_std
 from jumeg.jumeg_preprocessing            import get_ics_cardiac, get_ics_ocular
 # from jumeg.jumeg_plot                     import plot_performance_artifact_rejection  # , plot_artefact_overview
 
+from jumeg.base                    import jumeg_logger
 from jumeg.base.jumeg_base         import jumeg_base as jb
 from jumeg.base.jumeg_base_config  import JuMEG_CONFIG_YAML_BASE as jCFG
-from jumeg.base                    import jumeg_logger
+from jumeg.base.pipelines.jumeg_pipelines_ica_perfromance  import JuMEG_ICA_PERFORMANCE
+
 from jumeg.filter.jumeg_mne_filter import JuMEG_MNE_FILTER
 
 logger = logging.getLogger("jumeg")
@@ -49,79 +56,50 @@ class JuMEG_ICA_CONFIG(JuMEG_CONFIG_YAML_BASE):
         super().__init__()
 '''
 
-def apply_ica_and_plot_performance(raw, ica, name_ecg=None, name_eog=None, raw_fname=None, clean_fname=None,
-                                   picks=None,reject=None, replace_pre_whitener=True, save=False):
+
+#######################################################
+#
+#  calculate the frequency-correlation value
+#
+#######################################################
+def calc_frequency_correlation(evoked_raw, evoked_clean):
+
     """
-    Applies ICA to the raw object and plots the performance of rejecting ECG and EOG artifacts.
-
-    Parameters
-    ----------
-    raw : mne.io.Raw()
-        Raw object ICA is applied to
-    ica : ICA object
-        ICA object being applied d to the raw object
-    name_ecg : str
-        Name of the ECG channel in the raw data
-    name_eog : str
-        Name of the (vertical) EOG channel in the raw data
-    raw_fname : str | None
-        Path for saving the raw object
-    clean_fname : str | None
-        Path for saving the ICA cleaned raw object
-    picks : array-like of int | None
-        Channels to be included for the calculation of pca_mean_ and _pre_whitener.
-        This selection SHOULD BE THE SAME AS the one used in ica.fit().
-    reject : dict | None
-        Rejection parameters based on peak-to-peak amplitude. This parameter SHOULD BE
-        THE SAME AS the one used in ica.fit().
-        Valid keys are 'grad', 'mag', 'eeg', 'seeg', 'ecog', 'eog', 'ecg',
-        'hbo', 'hbr'.
-        If reject is None then no rejection is done. Example::
-
-            reject = dict(grad=4000e-13, # T / m (gradiometers)
-                          mag=4e-12, # T (magnetometers)
-                          eeg=40e-6, # V (EEG channels)
-                          eog=250e-6 # V (EOG channels)
-                          )
-
-        It only applies if `inst` is of type Raw.
-    replace_pre_whitener : bool
-        If True, pre_whitener is replaced when applying ICA to
-        unfiltered data otherwise the original pre_whitener is used.
-    save : bool
-        Save the raw object and cleaned raw object
-
-    Returns
-    -------
-    raw_clean : mne.io.Raw()
-        Raw object after ICA cleaning
+    Function to estimate the frequency-correlation value
+    as introduced by Krishnaveni et al. (2006),
+    Journal of Neural Engineering.
     """
 
-    # apply_ica_replace_mean_std processes in place -> need copy to plot performance
-    #raw_copy = raw.copy()
-    ica = ica.copy()
+    # transform signal to frequency range
+    fft_raw = np.fft.fft(evoked_raw.data)
+    fft_cleaned = np.fft.fft(evoked_clean.data)
 
-    raw_clean = apply_ica_replace_mean_std(raw, ica, picks=picks, reject=reject,
-                                           exclude=ica.exclude, n_pca_components=None,
-                                           replace_pre_whitener=replace_pre_whitener)
-    if save:
-        if raw_fname is not None:
-           raw.save(raw_fname, overwrite=True)
-        raw_clean.save(clean_fname, overwrite=True)
+    # get numerator
+    numerator = np.sum(np.abs(np.real(fft_raw) * np.real(fft_cleaned)) +
+                       np.abs(np.imag(fft_raw) * np.imag(fft_cleaned)))
 
-    overview_fname = clean_fname.rsplit('-raw.fif')[0] + ',overview-plot'
-   
-   #--- ToDo MNE reports
-    plot_performance_artifact_rejection(raw, ica, overview_fname,
-                                        meg_clean=raw_clean,
-                                        show=False, verbose=False,
-                                        name_ecg=name_ecg,
-                                        name_eog=name_eog)
-    print('Saved ', overview_fname)
+    # get denominator
+    denominator = np.sqrt(np.sum(np.abs(fft_raw) ** 2) *
+                          np.sum(np.abs(fft_cleaned) ** 2))
 
-    #raw_copy.close()
-    
-    return raw_clean
+    return np.round(numerator / denominator * 100.)
+
+#######################################################
+#
+#  calculate the performance of artifact rejection
+#
+#######################################################
+def calc_performance(evoked_raw, evoked_clean):
+    ''' Gives a measure of the performance of the artifact reduction.
+        Percentage value returned as output.
+    '''
+    from jumeg import jumeg_math as jmath
+
+    diff = evoked_raw.data - evoked_clean.data
+    rms_diff = jmath.calc_rms(diff, average=1)
+    rms_meg = jmath.calc_rms(evoked_raw.data, average=1)
+    arp = (rms_diff / rms_meg) * 100.0
+    return np.round(arp)
 
 
 def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
@@ -230,7 +208,9 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
         ic_eog.sort()
 
        #--- if necessary include components identified by correlation as well
-        bads_list = list(set(list(ic_ecg) + list(ic_eog)))
+        bads_list = []
+        bads_list.extend( ic_ecg )
+        bads_list.extend( ic_eog )
         bads_list.sort()
         ica.exclude = bads_list
         msg = [" --> JuMEG identified ICA components",
@@ -278,175 +258,14 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
    
     logger.info(" --> done ICA FIT\n  -> excluded ICs: {}\n".format(ica.exclude))
     return ica
- 
 
 
-def plot_performance_artifact_rejection(meg_raw, ica, fnout_fig,
-                                        meg_clean=None, show=False,
-                                        proj=False, verbose=False,
-                                        name_ecg='ECG 001', name_eog='EOG 002'):
-    '''
-    Creates a performance image of the data before
-    and after the cleaning process.
-    '''
-
-    import matplotlib.pyplot as pl
-    from mne.preprocessing import find_ecg_events, find_eog_events
-    from jumeg import jumeg_math as jmath
-
-    # name_ecg = 'ECG 001'
-    # name_eog_hor = 'EOG 001'
-    # name_eog_ver = 'EOG 002'
-    event_id_ecg = 999
-    event_id_eog = 998
-    tmin_ecg = -0.4
-    tmax_ecg = 0.4
-    tmin_eog = -0.4
-    tmax_eog = 0.4
-
-    picks = mne.pick_types(meg_raw.info, meg=True, ref_meg=False,
-                           exclude='bads')
-    # as we defined x% of the explained variance as noise (e.g. 5%)
-    # we will remove this noise from the data
-    if meg_clean:
-        meg_clean_given = True
-    else:
-        meg_clean_given = False
-        meg_clean = ica.apply(meg_raw.copy(), exclude=ica.exclude,
-                              n_pca_components=ica.n_components_)
-
-    # plotting parameter
-    props = dict(boxstyle='round', facecolor='wheat', alpha=0.5)
-    # check if ECG and EOG was recorded in addition
-    # to the MEG data
-    ch_names = meg_raw.info['ch_names']
-
-    # ECG
-    if name_ecg in ch_names:
-        nstart = 0
-        nrange = 1
-    else:
-        nstart = 1
-        nrange = 1
-
-    # EOG
-    if name_eog in ch_names:
-        nrange = 2
-
-    y_figsize = 6 * nrange
-    perf_art_rej = np.zeros(2)
-
-    # ToDo:  How can we avoid popping up the window if show=False ?
-    pl.ioff()
-    pl.figure('performance image', figsize=(12, y_figsize))
-    pl.clf()
-
-    # ECG, EOG:  loop over all artifact events
-    for i in range(nstart, nrange):
-        # get event indices
-        if i == 0:
-            baseline = (None, None)
-            event_id = event_id_ecg
-            idx_event, _, _ = find_ecg_events(meg_raw, event_id,
-                                              ch_name=name_ecg,
-                                              verbose=verbose)
-            idx_ref_chan = meg_raw.ch_names.index(name_ecg)
-            tmin = tmin_ecg
-            tmax = tmax_ecg
-            pl1 = nrange * 100 + 21
-            pl2 = nrange * 100 + 22
-            text1 = "CA: original data"
-            text2 = "CA: cleaned data"
-        elif i == 1:
-            baseline = (None, None)
-            event_id = event_id_eog
-            idx_event = find_eog_events(meg_raw, event_id, ch_name=name_eog,
-                                        verbose=verbose)
-            idx_ref_chan = meg_raw.ch_names.index(name_eog)
-            tmin = tmin_eog
-            tmax = tmax_eog
-            pl1 = nrange * 100 + 21 + (nrange - nstart - 1) * 2
-            pl2 = nrange * 100 + 22 + (nrange - nstart - 1) * 2
-            text1 = "OA: original data"
-            text2 = "OA: cleaned data"
-
-        # average the signals
-        raw_epochs = mne.Epochs(meg_raw, idx_event, event_id, tmin, tmax,
-                                picks=picks, baseline=baseline, proj=proj,
-                                verbose=verbose)
-        cleaned_epochs = mne.Epochs(meg_clean, idx_event, event_id, tmin, tmax,
-                                    picks=picks, baseline=baseline, proj=proj,
-                                    verbose=verbose)
-        ref_epochs = mne.Epochs(meg_raw, idx_event, event_id, tmin, tmax,
-                                picks=[idx_ref_chan], baseline=baseline,
-                                proj=proj, verbose=verbose)
-
-        raw_epochs_avg = raw_epochs.average()
-        cleaned_epochs_avg = cleaned_epochs.average()
-        ref_epochs_avg = np.average(ref_epochs.get_data(), axis=0).flatten() * -1.0
-        times = raw_epochs_avg.times * 1e3
-        if np.max(raw_epochs_avg.data) < 1:
-            factor = 1e15
-        else:
-            factor = 1
-        ymin = np.min(raw_epochs_avg.data) * factor
-        ymax = np.max(raw_epochs_avg.data) * factor
-
-        # plotting data before cleaning
-        pl.subplot(pl1)
-        pl.plot(times, raw_epochs_avg.data.T * factor, 'k')
-        pl.title(text1)
-        # plotting reference signal
-        pl.plot(times, jmath.rescale(ref_epochs_avg, ymin, ymax), 'r')
-        pl.xlim(times[0], times[len(times) - 1])
-        pl.ylim(1.1 * ymin, 1.1 * ymax)
-        # print some info
-        textstr1 = 'num_events=%d\nEpochs: tmin, tmax = %0.1f, %0.1f' \
-                   % (len(idx_event), tmin, tmax)
-        pl.text(times[10], 1.09 * ymax, textstr1, fontsize=10,
-                verticalalignment='top', bbox=props)
-
-        # plotting data after cleaning
-        pl.subplot(pl2)
-        pl.plot(times, cleaned_epochs_avg.data.T * factor, 'k')
-        pl.title(text2)
-        # plotting reference signal again
-        pl.plot(times, jmath.rescale(ref_epochs_avg, ymin, ymax), 'r')
-        pl.xlim(times[0], times[len(times) - 1])
-        pl.ylim(1.1 * ymin, 1.1 * ymax)
-        # print some info
-        perf_art_rej[i] = calc_performance(raw_epochs_avg, cleaned_epochs_avg)
-        # ToDo: would be nice to add info about ica.excluded
-        if meg_clean_given:
-            textstr1 = 'Performance: %d\nFrequency Correlation: %d'\
-                       % (perf_art_rej[i],
-                          calc_frequency_correlation(raw_epochs_avg, cleaned_epochs_avg))
-        else:
-            textstr1 = 'Performance: %d\nFrequency Correlation: %d\n# ICs: %d\nExplained Var.: %d'\
-                       % (perf_art_rej[i],
-                          calc_frequency_correlation(raw_epochs_avg, cleaned_epochs_avg),
-                          ica.n_components_, ica.n_components * 100)
-
-        pl.text(times[10], 1.09 * ymax, textstr1, fontsize=10,
-                verticalalignment='top', bbox=props)
-
-    if show:
-        pl.show()
-
-    # save image
-    pl.savefig(fnout_fig + '.png', format='png')
-    pl.close('performance image')
-    pl.ion()
-
-    return perf_art_rej
-
-
-    
 class JuMEG_PIPELINES_ICA(object):
     def __init__(self,**kwargs):
         super().__init__()
-        self._CFG      = jCFG(**kwargs)
-        self.PreFilter = JuMEG_MNE_FILTER()
+        self._CFG           = jCFG(**kwargs)
+        self.PreFilter      = JuMEG_MNE_FILTER()
+        self.ICAPerformance = JuMEG_ICA_PERFORMANCE()
         self._clear()
    
     @property
@@ -615,6 +434,7 @@ class JuMEG_PIPELINES_ICA(object):
    
     def _apply_fit(self,raw_chop=None,chop=None,idx=None):
         """
+        call to jumeg fit_ica
         raw_chop = None
         chop     = None
         
@@ -648,7 +468,7 @@ class JuMEG_PIPELINES_ICA(object):
 
         #   with jumeg_logger.StreamLoggerSTD(label="ICA FIT"): #log print()
            self._ica_obj = fit_ica(raw=raw_chop,picks=self.picks,reject=self.CFG.GetDataDict(key="reject"),
-                                   ecg_ch=self.cfg.ecg.channel,ecg_thresh=self.cfg.ecg.thresh,
+                                   ecg_ch=self.cfg.ecg.ch_name,ecg_thresh=self.cfg.ecg.thresh,
                                    flow_ecg=self.cfg.ecg.flow,fhigh_ecg=self.cfg.ecg.fhigh,
                                   #---
                                    eog_hor = self.cfg.eog.hor_ch,
@@ -671,28 +491,52 @@ class JuMEG_PIPELINES_ICA(object):
     
         return self._ica_obj,fname_ica
 
-    def _apply_transform(self,raw_chop,ICA,fname_raw= None,fname_clean=None,save=None):
+   #--- apply ica transform
+    def apply_ica_artefact_rejection(self,raw,ICA,fname_raw= None,fname_clean=None,replace_pre_whitener=True,save_chop=False):
         """
-         call  apply_ica_and_plot_performance()
-        :param raw_chop:
-        :param ICA:
-        :return:
+        Applies ICA to the raw object.
+
+        Parameters
+        ----------
+            raw : mne.io.Raw()  (raw chop)
+                  Raw object ICA is applied to
+            ica : ICA object
+                  ICA object being applied d to the raw object
+            fname_raw : str | None
+                  Path for saving the raw object
+            fname_clean : str | None
+                  Path for saving the ICA cleaned raw object
+            picks : array-like of int | None
+                  Channels to be included for the calculation of pca_mean_ and _pre_whitener.
+                  This selection SHOULD BE THE SAME AS the one used in ica.fit().
+            replace_pre_whitener : bool
+                  If True, pre_whitener is replaced when applying ICA to
+                  unfiltered data otherwise the original pre_whitener is used.
+            save_chop: bool
+                  Save the raw object and cleaned raw object
+
+        Returns
+        -------
+            raw_clean : mne.io.Raw()
+                       Raw object after ICA cleaning
         """
         logger.info("---> Start ICA Transform")
      
-        return apply_ica_and_plot_performance(raw_chop,ICA,
-                                              name_ecg    = self.cfg.ecg.channel,
-                                              name_eog    = self.cfg.eog.ver_ch,
-                                              raw_fname   = fname_raw,
-                                              clean_fname = fname_clean,
-                                             #---
-                                              picks  = self.picks,
-                                              reject = self.CFG.GetDataDict(key="reject"),
-                                              save   = save,
-                                              replace_pre_whitener = True
-                                            )
-    
-    def concat_and_save(self,raws,fname=None,save=False):
+        ica = ICA.copy()
+        # raw = raw_chop.copy()
+        
+        raw_clean = apply_ica_replace_mean_std(raw,ica,picks=self.picks,
+                                               reject=self.CFG.GetDataDict(key="reject"),
+                                               exclude=ica.exclude,n_pca_components=None,
+                                               replace_pre_whitener=replace_pre_whitener)
+        if save_chop:
+            if fname_raw is not None:
+                raw.save(fname_raw,overwrite=True)
+            raw_clean.save(fname_clean,overwrite=True)
+   
+        return raw_clean
+
+    def concat_and_save(self,raws,fname=None,save=False,annotations=None):
         """
         concat a list of raw obj
         call to mne.concatenate_raw
@@ -705,14 +549,20 @@ class JuMEG_PIPELINES_ICA(object):
         if raws:
            raw_concat = mne.concatenate_raws(raws)
            while raws:
-               raws.pop().close()
+                 raws.pop().close()
            if fname:
-               jb.set_raw_filename(raw_concat,fname)
+              jb.set_raw_filename(raw_concat,fname)
            if save:
+              if not fname.startswith(self.path):
+                 fname = os.path.join(self.path,fname)
               jb.apply_save_mne_data(raw_concat,fname=fname)
+           
+           if annotations:
+              raw_concat.set_annotations(annotations)
               
         return raw_concat
 
+#==== MAIN function
     def run(self,**kwargs):
         """
         
@@ -728,7 +578,7 @@ class JuMEG_PIPELINES_ICA(object):
  
       #--- init or load raw
         self._initRawObj()
-  
+        
       #--- chop times
         if self.cfg.chops.epocher.use:
             """ToDo use epocher information chop onset,offset"""
@@ -740,10 +590,21 @@ class JuMEG_PIPELINES_ICA(object):
            logger.exception("---> No <chop times> defined for ICA\n" +
                              "  -> raw filename : {}\n".format(self._raw_fname))
            return None
-       
-       #--- chops as string
+
+       #--- init ICAPerformance get ecg & eog events
+       #--- find ECG in raw
+        self.ICAPerformance.ECG.find_events(raw=self.raw,**self.CFG.GetDataDict("ecg"))
+        # self.ICAPerformance.ECG.GetInfo(debug=self.debug)
+        
+       #--- find EOG in raw
+        annotations = self.ICAPerformance.EOG.find_events(raw=self.raw,**self.CFG.GetDataDict("eog"))
+        self.raw.set_annotations(annotations)
+        
+        # self.ICAPerformance.EOG.GetInfo(debug=self.debug)
+
+       #--- logger INFO
         s = ""
-        for cp in self._chop_times:
+        for cp in self._chop_times:   # chops as string
             s+="{}-{}  ".format(cp[0],cp[1])
             
         msg = [
@@ -753,21 +614,29 @@ class JuMEG_PIPELINES_ICA(object):
             "  -> chops         : {}".format(s),
             "-" * 40
             ]
-
+       #--- apply pre-filter
         if self.cfg.pre_filter.run:
-          #--- do filter
            self.PreFilter.apply(
                    flow      = self.cfg.pre_filter.flow,
                    fhigh     = self.cfg.pre_filter.fhigh,
                    save      = self.cfg.pre_filter.save,
                    raw       = self.raw.copy(),
                    picks     = self.picks,
+                   annotations = annotations
                   )
+           
            msg = self.PreFilter.GetInfo(msg=msg)
+    
         else:
            self.PreFilter.clear()
            
         logger.info("\n".join(msg) )
+     
+       #--- init performance plots for raw vs clean  & chops
+        self.ICAPerformance.Plot.init(n_figs=self._chop_times.shape[0] + 1)
+
+       
+       TODO check annotations  set for raw ar cleaned  and_saved
        
        #--- reset output
         raw_filtered_clean = None
@@ -790,6 +659,9 @@ class JuMEG_PIPELINES_ICA(object):
            #---  ICA FIT filtered or unfilterd obj
             fname_chop,fname_raw = self._get_chop_name(raw_chop,chop=chop,extention="-raw.fif")
             jb.set_raw_filename(raw_chop,fname_chop)
+           
+           #--- plot performance chop raw
+            
             ICA,fname_ica = self._apply_fit(raw_chop=raw_chop,chop=chop,idx=idx)
        
            #--- ICA Transform
@@ -800,33 +672,36 @@ class JuMEG_PIPELINES_ICA(object):
                   #--- filtered
                      fname_chop,_  = self._get_chop_name(raw_chop,extention="-raw.fif")
                      fname_filtered_clean,_ = self._get_chop_name(raw_chop,extention="-raw.fif",postfix="ar")
-                     raw_filtered_chops_clean_list.append( self._apply_transform(raw_chop,ICA,
+                     raw_filtered_chops_clean_list.append( self.apply_ica_artefact_rejection(raw_chop,ICA,
                                                                 fname_raw   = fname_chop,
                                                                 fname_clean = fname_filtered_clean,
-                                                                save        = self.cfg.transform.filtered.save_chops))
+                                                                save_chop  = self.cfg.transform.filtered.save_chop))
                                          
              #--- unliterd
                if self.cfg.transform.unfiltered.run:
                   raw_chop      = self._copy_crop_and_chop(self.raw,chop)
                   fname_chop,_  = self._get_chop_name(raw_chop,extention="-raw.fif")
                   fname_unfiltered_clean,_ = self._get_chop_name(raw_chop,extention="-raw.fif",postfix="ar")
-                  raw_unfiltered_chops_clean_list.append( self._apply_transform(raw_chop,ICA,
+                  raw_unfiltered_chops_clean_list.append( self.apply_ica_artefact_rejection(raw_chop,ICA,
                                                                fname_raw   = fname_chop,
                                                                fname_clean = fname_unfiltered_clean,
-                                                               save        = self.cfg.transform.unfiltered.save_chops) )
+                                                               save_chop  = self.cfg.transform.unfiltered.save_chop) )
                   
             logger.info(" --> done ICA FIT & transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
             
        #--- concat filtered raws
         if raw_filtered_chops_clean_list:
            raw_filtered_clean = self.concat_and_save(raw_filtered_chops_clean_list,
-                                                       fname = self.PreFilter.fname.replace("-raw.fif",",ar-raw.fif"),
-                                                       save  = self.cfg.transform.filtered.save)
+                                                       fname       = self.PreFilter.fname.replace("-raw.fif",",ar-raw.fif"),
+                                                       annotations = self.raw.annotations,
+                                                       save        = self.cfg.transform.filtered.save)
        #--- concat unfiltered raws
         if raw_unfiltered_chops_clean_list:
            raw_unfiltered_clean = self.concat_and_save(raw_unfiltered_chops_clean_list,
-                                                         fname = self._raw_fname.replace("-raw.fif",",ar-raw.fif"),
-                                                         save  = self.cfg.transform.unfiltered.save)
+                                                         fname       = self._raw_fname.replace("-raw.fif",",ar-raw.fif"),
+                                                         annotations = self.raw.annotations,
+                                                         save        = self.cfg.transform.unfiltered.save
+                                                       )
         logger.info("---> DONE ICA FIT & Transpose\n"+
                     "  -> filename : {}\n".format( jb.get_raw_filename(raw_unfiltered_clean) )+
                     "  -> time to process :{}".format( datetime.timedelta(seconds= time.time() - self._start_time ) ))
@@ -834,23 +709,33 @@ class JuMEG_PIPELINES_ICA(object):
         return raw_unfiltered_clean,raw_filtered_clean
        
 
-if __name__ == "__main__":
-  
-  #--- init/update logger
-   jumeg_logger.setup_script_logging(logger=logger)
- 
-   stage = "${JUMEG_TEST_DATA}/mne"
-   fcfg  = "intext_config01.yaml"
+def test1():
+   #--- init/update logger
+    jumeg_logger.setup_script_logging(logger=logger)
+    
+    stage = "$JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne"
+    fcfg  = os.path.join(stage,"meg94t_config01.yaml")
+    fpath = "206720/MEG94T0T2/130820_1335/1/"
+    
+    path = os.path.join(stage,fpath)
+    raw_fname = "206720_MEG94T0T2_130820_1335_1_c,rfDC,meeg,nr,bcc,int-raw.fif"
    
-   raw       = None
-   fpath     = "211855/INTEXT01/190329_1004/6"
-   path      = os.path.join(stage,fpath)
-   # raw_fname = "211855_INTEXT01_190329_1004_6_c,rfDC,meeg,nr,bcc-raw.fif"
-   raw_fname = "211855_INTEXT01_190329_1004_6_c,rfDC,meeg,nr,bcc,int-raw.fif"
+    #stage = "${JUMEG_TEST_DATA}/mne"
+    #fcfg = "intext_config01.yaml"
+    
+    raw = None
+    #fpath = "211855/INTEXT01/190329_1004/6"
+    #path = os.path.join(stage,fpath)
+    # raw_fname = "211855_INTEXT01_190329_1004_6_c,rfDC,meeg,nr,bcc-raw.fif"
+    #raw_fname = "211855_INTEXT01_190329_1004_6_c,rfDC,meeg,nr,bcc,int-raw.fif"
+    
+    logger.info("JuMEG Apply ICA mne-version: {}".format(mne.__version__))
+    #--
+    jICA = JuMEG_PIPELINES_ICA()
+    jICA.run(path=path,raw_fname=raw_fname,config=fcfg,key="ica")
 
-   logger.info("JuMEG Apply ICA mne-version: {}".format(mne.__version__))
- #--
-   jICA = JuMEG_PIPELINES_ICA()
-   jICA.run( path=path,raw_fname=raw_fname,config=fcfg,key="ica")
 
 
+if __name__ == "__main__":
+  test1()
+  

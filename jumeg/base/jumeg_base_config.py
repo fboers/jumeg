@@ -19,8 +19,14 @@
 https://stackoverflow.com/questions/6866600/how-to-parse-read-a-yaml-file-into-a-python-object
 """
 import os,os.path as op
-import logging,yaml,pprint
+import logging,pprint
 
+try:
+   from ruamel.yaml import YAML
+   yaml = YAML()
+except:
+   import yaml
+   
 from jumeg.base.jumeg_base import jumeg_base as jb
 from jumeg.base            import jumeg_logger
 
@@ -112,14 +118,26 @@ class JuMEG_CONFIG_YAML_BASE(object):
     
     def load_cfg(self,fname=None,key=None):
         if fname:
-            self._fname = fname
+            self._fname = jb.expandvars( fname )
         with open(self._fname,'r') as f:
-            self._cfg = yaml.full_load(f)
+            # self._cfg = yaml.full_load(f)
+            self._cfg = yaml.load(f)
+
             if key:
                 self._cfg = self._cfg.get(key)
             self._data = Struct( self._cfg )
             
         return self._data
+    
+    def save_cfg(self,fname=None,cfg=None):
+        if fname:
+           self._fname = jb.expandvars( fname )
+        if cfg:
+           self._cfg = cfg
+        
+        with open(self._fname,'w') as f:
+            self._cfg = yaml.dump(self._cfg)
+   
     
     def update(self,**kwargs):
         """

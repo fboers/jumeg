@@ -86,7 +86,7 @@ def calc_tkeo(signal):
 #######################################################
 #
 #  calculate the performance of artifact rejection
-#
+# from .jumeg_math import calc_performance,
 #######################################################
 def calc_performance(evoked_raw, evoked_clean):
     ''' Gives a measure of the performance of the artifact reduction.

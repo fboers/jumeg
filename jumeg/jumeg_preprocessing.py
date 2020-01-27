@@ -384,6 +384,10 @@ def get_ics_cardiac(meg_raw, ica, flow=10, fhigh=20, tmin=-0.3, tmax=0.3,
                     score_func='pearsonr', thresh=0.3):
     '''
     Identify components with cardiac artefacts
+    
+    return:
+    ------
+     idx_ecg, ecg_scores
     '''
 
     from mne.preprocessing import find_ecg_events

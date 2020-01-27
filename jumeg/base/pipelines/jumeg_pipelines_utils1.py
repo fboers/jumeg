@@ -30,7 +30,7 @@ from jumeg.base.jumeg_base                           import jumeg_base as jb
 from jumeg.base.jumeg_badchannel_table               import update_bads_in_hdf
 from jumeg.base.pipelines.jumeg_pipelines_utils_base import get_args,JuMEG_PipelineFrame
 from jumeg.base.pipelines.jumeg_pipelines_ica        import JuMEG_PIPELINES_ICA
-from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD
+from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD,JuMEG_PLOT_BADS
 from jumeg.filter.jumeg_mne_filter                   import JuMEG_MNE_FILTER
 #--- preproc
 from jumeg.jumeg_noise_reducer     import noise_reducer
@@ -102,11 +102,11 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
     jb.picks.check_dead_channels(raw=raw)
    #--- start plot denoising orig raw psd, avoid reloading raw data
     if config.get("plot"):
-       jplt = JuMEG_PLOT_PSD(n_plots=2,name="denoising",verbose=True) #,pick_types=["meg","ref"])
-       jplt.plot(raw,title="orig: " + os.path.basename(raw_fname),check_dead_channels=False,fmax=config.get("fmax"))
-    
-    
-       
+       jplt = JuMEG_PLOT_PSD(n_plots=3,name="denoising",verbose=True) #,pick_types=["meg","ref"])
+       jplt.plot(raw,color="green",title="REF: " + os.path.basename(raw_fname),check_dead_channels=False,fmax=config.get("fmax"),picks=jb.picks.ref_nobads(raw))
+       jplt.plot(raw,color="blue",title="MEG orig: " + os.path.basename(raw_fname),check_dead_channels=False,fmax=config.get("fmax"),picks=jb.picks.meg_nobads(raw))
+           #self.picks = jb.picks.meg_nobads(raw))
+         
    #--- with redirect stdout/err
     with jumeg_logger.StreamLoggerSTD(label=label):
         #--- 1 nr low pass filter for freq below 5 hz
@@ -124,7 +124,7 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
         
    #--- plot results, avoid reloading raw data
     if config.get("plot"):
-       jplt.plot(raw,title="denoised: " + os.path.basename(fname_out),check_dead_channels=False,fmax=config.get("fmax"))
+       jplt.plot(raw,title="MEG denoised: " + os.path.basename(fname_out),check_dead_channels=False,fmax=config.get("fmax"))
        if config.get("plot_show"):
           jplt.show()
        jplt.save(fname=fname_out,plot_dir=config.get("plor_dir","plots"))
@@ -151,6 +151,20 @@ def apply_suggest_bads(raw_fname=None,raw=None,config=None,label="suggest_bads",
    #--- set bads in global HDF
     fhdf = os.path.join( config.get("stage"),config.get("hdfname","badchannels.hdf5"))
     update_bads_in_hdf(fhdf=fhdf,bads=marked,fname=raw_fname,verbose=config.get("verbose"))
+    
+   #---
+    # ToDo subplot n_plots BADs PSD if not MIN==MAX else zero line
+    #if config.get("plot"):
+    #   picks = jb.picks.bads2picks(raw)
+    #   if isinstance(picks,(list)):
+    #
+    #       logger.info(" --> BADS: {} picks: {}".format( raw.info["bads"],picks))
+    #       jplt = JuMEG_PLOT_BADS(n_plots=len( picks ),name="BADs",verbose=True)
+    #       jplt.plot(raw,colour="red",title="BADs: "+os.path.basename(raw_fname),check_dead_channels=False,picks=picks)
+    #
+    #       if config.get("plot_show"):
+    #          jplt.show()
+    #       jplt.save(fname=jb.get_raw_filename(raw),plot_dir=config.get("plor_dir","plots"))
     
     return fname_out,raw,True,None
 

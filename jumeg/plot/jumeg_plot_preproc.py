@@ -30,7 +30,7 @@ logger = logging.getLogger('jumeg')
 __version__="2019.05.14.001"
 
 class JuMEG_PLOT_BASE(object):
-    __slots__ = ["picks","fmin","fmax","tmin","tmax","proj","n_fft","color","area_mode","area_alpha","pick_types","n_jobs","dpi","verbose",
+    __slots__ = ["picks","fmin","fmax","tmin","tmax","proj","n_fft","color","fill_color","area_mode","area_alpha","pick_types","n_jobs","dpi","verbose",
                  "check_dead_channels","info","fnout","n_plots","file_extention","name",
                  "_fig","_plot_index","_axes","_yoffset","_ylim"]
 
@@ -57,6 +57,7 @@ class JuMEG_PLOT_BASE(object):
         self.tmin       = 0.0
         self.n_fft      = 4096
         self.color      = 'blue'
+        self.fill_color = "blue"
         self.dpi        = 100
         self.area_mode  = 'range'
         self.area_alpha = 0.33
@@ -95,12 +96,26 @@ class JuMEG_PLOT_BASE(object):
 
     def _init_figure(self):
         #--- A4 landscape
-        plt.rc('figure',figsize=(11.69,8.27))
+        # plt.rc('figure',figsize=(11.69,8.27))
+        plt.rc('figure',figsize=(16.0,9.0))
         plt.rcParams.update({ 'font.size':8 })
-    
+        '''
+        https: // matplotlib.org / 3.1.0 / api / _as_gen / matplotlib.pyplot.subplots_adjust.html
+        left = 0.125  # the left side of the subplots of the figure
+        right = 0.9  # the right side of the subplots of the figure
+        bottom = 0.1  # the bottom of the subplots of the figure
+        top = 0.9  # the top of the subplots of the figure
+        wspace = 0.2  # the amount of width reserved for space between subplots,
+        # expressed as a fraction of the average axis width
+        hspace = 0.2  # the amount of height reserved for space between subplots,
+        # expressed as a fraction of the average axis height
+        '''
+        plt.subplots_adjust(left=0.1,right=0.95,bottom=0.05,top=0.95,hspace=0.35)
+
         self._fig = plt.figure(self.name)
         plt.clf()
         plt.title(self.name)
+       
         #fig = pl.figure(name,figsize=(10, 8), dpi=100))
    
     def save(self,fname=None,plot_dir="plots"):
@@ -131,11 +146,14 @@ class JuMEG_PLOT_BASE(object):
         if fnout:
             if fnout.endswith("png"):
                 self.fig.savefig(os.path.join(fout_path,fnout),format="png")
-            else:
+            elif fnout.endswith("svg"):
+                self.fig.savefig(os.path.join(fout_path,fnout),format="svg")
+            else: # pdf ?
                 self.fig.savefig(os.path.join(fout_path,fnout),dpi=self.dpi)
             if self.verbose:
                logger.info("---> done saving plot: {}".format(os.path.join(fout_path,fnout)))
 
+            
     def set_ylim(self,ylim=None):
         
         self.update_global_ylim(ylim)
@@ -238,7 +256,7 @@ class JuMEG_PLOT_PSD(JuMEG_PLOT_BASE):
         
         if self.check_dead_channels:
            self.picks = jb.picks.check_dead_channels(raw,picks=self.picks,verbose=self.verbose)
-        else:
+        elif not self.picks.shape:
            self.picks = jb.picks.meg_and_ref_nobads(raw)
            #self.picks = jb.picks.meg_nobads(raw)
            
@@ -296,12 +314,12 @@ class JuMEG_PLOT_PSD(JuMEG_PLOT_BASE):
         
         if hyp_limits is not None:
            ax.fill_between(freqs,hyp_limits[0],y2=hyp_limits[1],
-                           color=self.color,alpha=self.area_alpha)
+                           color=self.fill_color,alpha=self.area_alpha)
             
         self.update_global_ylim( [np.min(psd_mean) - self._yoffset,np.max(psd_mean) + self._yoffset] )
         
         if title:
-           ax.set_title(title)
+           ax.set_title(title,loc="left")
 
         ax.set_xlabel('Freq (Hz)')
         ax.set_ylabel('Power Spectral Density (dB/Hz)')
@@ -315,7 +333,7 @@ class JuMEG_PLOT_PSD(JuMEG_PLOT_BASE):
 
         if self.plot_index > self.n_plots:
            self.set_ylim()
-
+       
     def plot(self,raw,**kwargs):
         """
         
@@ -325,6 +343,62 @@ class JuMEG_PLOT_PSD(JuMEG_PLOT_BASE):
         """
         psd,freqs = self._calc_psd_welch(raw,**kwargs)
         self.plot_power_spectrum(psd=psd,freqs=freqs,title=kwargs.get("title"))
+
+class JuMEG_PLOT_BADS(JuMEG_PLOT_BASE):
+    """
+    copy from jumeg_noise_reducer.plot_denoising
+    plot power spectrum density (PSD) from fif files
+
+    :param picks: channels to process and plot <meg,ref,no bads>
+    :param color: str | tuple                  <blue>
+                  A matplotlib-compatible color to use.
+    :param dpi: plot resolution                <100>
+    :param verbose:                            <False>
+    :param fnout: full filenameof the saved output figure.
+    :param n_plots: Number of plots to plot, only one page is used. <1>
+    :param file_extention: output filee xtention <.pdf>
+    :param name: main title
+    :return:
+
+    Example
+    --------
+    from jumeg.base.jumeg_base         import jumeg_base as jb
+    from jumeg.plot.jumeg_plot_preproc import JuMEG_PLOT_BADS
+   
+    """
+    
+    def __init__(self,**kwargs):
+        super().__init__(**kwargs)
+       
+    def plot(self,raw,**kwargs):
+        """
+
+        :param raw:
+        :param kwargs:
+        :return:
+        """
+        
+        logger.info(self.picks)
+        for idx in range(len(self.picks)):
+            logger.info(idx)
+           #--- subplot(nrows,ncols,idx)
+            ax = plt.subplot(self.n_plots,1,idx+1)
+            data = raw._data[self.picks[idx],:]# * 10^12 # pT
+            label= raw.info["bads"][idx]
+           
+            ax.plot(raw.times,data,color=self.color)
+            ymin = data.min()
+            ymin = - ymin *0.1
+           #---
+            ymax = data.max()
+            max = - ymax *0.1
+
+            ax.set_title(label,loc="left")
+            ax.set_xlabel('[s]')
+            ax.set_ylabel('[pT]')
+            ax.set_ylim(ymin,ymax)
+            ax.grid(kwargs.get("grid",False) )
+            self._axes.append(ax)
 
 
 #--- testing
@@ -369,12 +443,35 @@ def test():
     
     plot_name = fraw2.rsplit('-raw.fif')[0] + '-plot'
     jplt.save(fname=os.path.join(p,plot_name))
+   #---
+
+def test_bads():
+    from jumeg.base import jumeg_logger
+    jumeg_logger.setup_script_logging(logger=logger,level="DEBUG")
+   #--- logfile  prefix
+    p = "/home/fboers/MEGBoers/data/exp/MEG94T/mne" #$JUMEG_LOCAL_DATA/exp/JUMEGTest/FV/211747"
+
+    fraw = "./205720/MEG94T0T2/131016_1325/1/205720_MEG94T0T2_131016_1325_1_c,rfDC,meeg,nr,bcc-raw.fif"
     
+    raw,raw_fname = jb.get_raw_obj(os.path.join(p,fraw))
+
+    picks = jb.picks.bads2picks(raw)
+    print(picks)
+    print(type(picks))
+    if isinstance(picks,(list,np.ndarray)):
+       logger.info(" --> BADS: {} picks: {}".format(raw.info["bads"],picks))
+       jplt = JuMEG_PLOT_BADS(n_plots=len(picks),name="BADs",verbose=True,picks=picks)
+       jplt.plot(raw,colour="red",title="BADs: " + os.path.basename(raw_fname),check_dead_channels=False,picks=picks)
+       
+       jplt.show()
+       jplt.save(fname=jb.get_raw_filename(raw),plot_dir=".")
+
+
 #=========================================================================================
 #==== MAIN
 #=========================================================================================
 def main():
-    pass
+    test_bads()
     
 if __name__ == "__main__":
    main()

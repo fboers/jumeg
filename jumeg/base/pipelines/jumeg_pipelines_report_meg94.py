@@ -70,55 +70,61 @@ ggf GFP
 
 #--- mk report HDF5
 verbose=True
-experiment   = "INTEXT"
+experiment   = "MEG94T0T2"
 type         = "preproc"
-report_path  = os.path.expandvars("$JUMEG_TEST_DATA/reports")
+stage        = os.path.expandvars("$JUMEG_TEST_DATA/../MEG94T/")
+report_path  = os.path.join(stage,"reports",experiment)
 report_fname = experiment+"_"+type
-mkpath(report_path)
+mkpath( report_path )
 report_hdf   = os.path.join(report_path,report_fname +".hdf5")
 report_html  = os.path.join(report_path,report_fname +".html")
+
+path_mne = os.path.join(stage,"mne")
 
 #--- open as hdf to add data
 #MNEReport = mne.open_report(report_hdf)
 
 os.remove( report_html )
 
-MNEReport = mne.Report(info_fname=None,title="JuMEG Preproc",image_format='png',raw_psd=False,verbose=verbose)
+MNEReport = mne.Report(info_fname=None,title="JuMEG Preproc "+experimnet,image_format='png',raw_psd=False,verbose=verbose)
 
-ids = ["211855,211890"]
+ids = []
+flist= [
+"./205720/MEG94T0T2/131016_1325/1/205720_MEG94T0T2_131016_1325_1_c,rfDC,meeg-raw.fif",
+#./205720/MEG94T0T2/131016_1325/2/205720_MEG94T0T2_131016_1325_2_c,rfDC,meeg-raw.fif
+#./205720/MEG94T0T2/131016_1326/1/205720_MEG94T0T2_131016_1326_1_c,rfDC,meeg-raw.fif
+#./205720/MEG94T0T2/131016_1326/2/205720_MEG94T0T2_131016_1326_2_c,rfDC,meeg-raw.fif
 
-flist=[
-       "211855/INTEXT01/190329_1004/6/211855_INTEXT01_190329_1004_6_c,rfDC,meeg-raw.fif",
-       "211890/INTEXT01/190403_0955/1/211890_INTEXT01_190403_0955_1_c,rfDC,meeg-raw.fif"
-    
-      ]
+"./206720/MEG94T0T2/130820_1334/1/206720_MEG94T0T2_130820_1334_1_c,rfDC,meeg-raw.fif"
+#./206720/MEG94T0T2/130820_1334/1/206720_MEG94T0T2_130820_1334_2_c,rfDC,meeg-raw.fif
+#./206720/MEG94T0T2/130820_1335/1/206720_MEG94T0T2_130820_1335_1_c,rfDC,meeg-raw.fif
+#./206720/MEG94T0T2/130820_1335/2/206720_MEG94T0T2_130820_1335_2_c,rfDC,meeg-raw.fif
+#./206720/MEG94T0T2/130820_1336/1/206720_MEG94T0T2_130820_1336_1_c,rfDC,meeg-raw.fif
+#./206720/MEG94T0T2/130820_1336/2/206720_MEG94T0T2_130820_1336_2_c,rfDC,meeg-raw.fif
+#./206720/MEG94T0T2/130820_1455/1/206720_MEG94T0T2_130820_1455_1_c,rfDC,meeg-raw.fif
+#./206720/MEG94T0T2/130820_1455/2/206720_MEG94T0T2_130820_1455_2_c,rfDC,meeg-raw.fif
+#./206720/MEG94T0T2/130820_1456/1/206720_MEG94T0T2_130820_1456_1_c,rfDC,meeg-raw.fif
+#./206720/MEG94T0T2/130820_1456/2/206720_MEG94T0T2_130820_1456_2_c,rfDC,meeg-raw.fif
+]
 
-path_mne = os.path.expandvars("$JUMEG_TEST_DATA/mne")
-
-_flist=[
-        "210857/QUATERS01/191210_1325/1/210857_QUATERS01_191210_1325_1_c,rfDC,meeg-raw.fif",
-        "210857/QUATERS01/191210_1325/2/210857_QUATERS01_191210_1325_2_c,rfDC,meeg-raw.fif",
-        "210857/QUATERS01/191210_1325/3/210857_QUATERS01_191210_1325_3_c,rfDC,meeg-raw.fif",
-        "210857/QUATERS01/191210_1325/4/210857_QUATERS01_191210_1325_4_c,rfDC,meeg-raw.fif",
-        "210857/QUATERS01/191210_1437/1/210857_QUATERS01_191210_1437_1_c,rfDC,meeg-raw.fif",
-        "210857/QUATERS01/191210_1437/2/210857_QUATERS01_191210_1437_2_c,rfDC,meeg-raw.fif"
-      ]
-# "210857/QUATERS01/191210_1325/1/210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr,bcc,int,fibp0.10-45.0,ar-raw.fif",
-
-_path_mne = "/data/MEG/meg_store1/exp/QUATERS/mne"
 
 #ids runs sectio nr, ica
 
+report_ids = dict()
+
 for f in flist:
-    
-    
     run_dir = os.path.dirname( os.path.join(path_mne,f ) )
     fname   = os.path.basename(f)
-    id= fname.split("_")[0]
-    section= fname.replace("-raw.fif","")
+    id      = fname.split("_")[0]
+    if not report_ids.get(id,None):
+       reports_ids[id][report] = mne.Report(info_fname=None,title="JuMEG Preproc " + experiment +" "+id,image_format='png',raw_psd=False,
+                                    verbose=verbose)
+       reports_ids[id][fname]  = experiment+"_"+type +"_"+id
+       
+    section = fname.replace("-raw.fif","")
 
     #MNEReport.parse_folder(run_dir,pattern='*meeg-raw.fif',render_bem=False)
-    
+   #--- NR
     caption = "NR-"+fname
     comment = "noise reducer"
     section = "NoiseReducer"
@@ -130,22 +136,25 @@ for f in flist:
        img  = Image.open(fimg)
        fimg = fimg.replace(".pdf",".png")
        img.save(fimg,"PNG")
-       print(" ---> done saving: "+ fimg)
+       print(" ---> done saving img: "+ fimg)
     else:
        fimg = fimg.replace(".pdf",".png")
        
     fimages.append(fimg)
     
-    print(fimages)
-    MNEReport.add_images_to_section(fimages, caption, section=section) #"noise reducer")
+    # print(fimages)
+    reports_ids[id][report].add_images_to_section(fimages, caption, section=section,comment=comment)
  
+   #--- BADs
+ 
+   #--- ICA
     caption= "ICA-"+fname
     comment="ica"
     section="ICA"
     fimages = []
    
     fimages.append(os.path.join(run_dir,fname.replace("-raw.fif",",nr,bcc,int,ar,overview-plot.png")))
-    MNEReport.add_images_to_section(fimages,caption,section=section,replace=True,comments="ALL")  #"noise reducer")
+    reports_ids[id][report].add_images_to_section(fimages,caption,section=section,replace=True,comments=comment)
 
     #id = f.split("/")
 
@@ -166,21 +175,22 @@ for f in flist:
     
     
   
+    reports_ids[id][report].save( reports_ids[id][fname] )
     
     print(MNEReport)
     print(report_html)
 
     #MNEReport.add_htmls_to_section(report,captions, section='custom', replace=False)
 
-id      = "211890"
-fhtml   =  os.path.join(report_path,"211890_INTEXT01_preproc.html")
-import codecs
+#id      = "211890"
+#fhtml   =  os.path.join(report_path,"211890_INTEXT01_preproc.html")
+#import codecs
 
-file=codecs.open(fhtml,"r") #b")
-htmls=str( file.read() )
+#file=codecs.open(fhtml,"r") #b")
+#htmls=str( file.read() )
 
 
-caption = id
-MNEReport.add_htmls_to_section(htmls, id, section="TEST HTML", replace=False)
+#caption = id
+#MNEReport.add_htmls_to_section(htmls, id, section="TEST HTML", replace=False)
 
-MNEReport.save(report_html)
+#MNEReport.save(report_html)

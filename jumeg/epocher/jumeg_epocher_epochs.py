@@ -21,7 +21,7 @@ from jumeg.epocher.jumeg_epocher_plot    import jumeg_epocher_plot as jplt
 
 #--- setup logger
 logger = logging.getLogger('jumeg')
-__version__="2020.01.08.001"
+__version__="2020.01.24.001"
 
 class JuMEG_Epocher_Marker(JuMEG_Epocher_Events_Channel):
     '''
@@ -1134,43 +1134,61 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
           mne.write_evokeds( fname,evt['epochs'].average( picks = jumeg_base.picks.all(self.raw) ) ) # in case avg only trigger or response
           logger.info("---> done jumeg epocher save events as => EVOKED (averaged) : " +fname)
           fname = jumeg_base.get_fif_name(raw=self.raw,postfix=postfix,extention="-ave",update_raw_fname=False,path=self.OutputMode.path)
+       
+        #--- store event info into raw.anotations
+          if self.OutputMode.annotations:
+             self.set_anotations(evt)
+       
          #--- plot evoked
           fname = jplt.plot_evoked(evt,fname=fname,condition=condition,show_plot=False,save_plot=True,plot_dir='plots')
           logger.info("---> done jumeg epocher plot evoked (averaged) :" +fname)
-      
-      #--- store event info into raw.anotations
-       if self.OutputMode.annotations:
-          
-          time_format = '%Y-%m-%d %H:%M:%S.%f'
-          raw_annot = None
-          orig_time = self.raw.info.get("meas_date",self.raw.times[0])
-          
-          onset    = evt['events'][:,0] / self.raw.info["sfreq"]
-         #--- ToDo set real duration
-          duration = evt['events'][:,1] * 10.0/ self.raw.info["sfreq"]
-       
-          ep_annot = mne.Annotations(onset       = onset.tolist(),
-                                     duration    = duration.tolist(),
-                                     description = [ condition for x in range( evt["events"].shape[0] ) ],
-                                     orig_time   = orig_time)
-          
-          # logger.info("mne annotations: {}".format(ep_annot))
-          
-          try:
-              raw_annot = self.raw.annotations
-          except:
-              pass
          
-          if raw_annot:
-             self.raw.set_annotations(raw_annot + ep_annot)
-          else:
-             self.raw.set_annotations(ep_annot)
-             
-          logger.info(" --> storing mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
-          
-           
-           
-#---
+
+    def set_anotations(self,events=None,condition=None):
+        """
+        update raw.anotattions with condition events
+        
+        :param events:
+        :param condition:
+        :return:
+        """
+        msg = ["---> update raw.annotations: {}".format(condition)]
+
+        raw_annot = None
+        evt_annot = None
+        try:
+            raw_annot = self.raw.annotations
+        except:
+            pass
+    
+        #--- store event info into raw.anotations
+        time_format = '%Y-%m-%d %H:%M:%S.%f'
+        orig_time = self.raw.info.get("meas_date",self.raw.times[0])
+    
+        onset    = evt['events'][:,0] / self.raw.info["sfreq"]
+        duration = evt['events'][:,1] / self.raw.info["sfreq"]
+        ep_annot = mne.Annotations(onset       = onset.tolist(),
+                                   duration    = duration.tolist(),
+                                   description = condition,
+                                   orig_time   = orig_time)
+       
+        if raw_annot:
+           msg.append(" --> found mne.annotations in RAW:\n  -> {}".format(raw_annot))
+         #--- clear old annotations
+           kidx = np.where(raw_annot.description == condition)[0]  # get index
+           if kidx.any():
+              msg.append("  -> delete existing annotation {} counts: {}".format(condition,kidx.shape[0]))
+              raw_annot.delete(kidx)
+              self.raw.set_annotations(raw_annot + ep_annot)
+              raw_annot = self.raw.annotations
+           else:
+              self.raw.set_annotations(ep_annot)
+              raw_annot = self.raw.annotations
+    
+        msg.append(" --> storing mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
+        logger.info("\n".join(msg))
+
+    #---
     def __clear(self):
         """ clear all CLs parameter"""
         self.raw            = None
