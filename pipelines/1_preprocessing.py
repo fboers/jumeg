@@ -54,6 +54,9 @@ find | grep empty.fif > empty_filelist.txt
 
 #--- INTEXT
 1_preprocessing.py -c intext_config01.yaml -subj 201772,203404 -v -r
+
+#---MEG94T
+1_preprocessing.py -lpath $JUMEG_PATH_LOCAL_DATA/meg94t/mne -lname meg94t0t2.txt -c $JUMEG_PATH_LOCAL_DATA/meg94t/mne/meg94t_config01.yaml -v -r
 """
 
 import os,sys,logging
