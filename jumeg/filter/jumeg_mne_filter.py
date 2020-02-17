@@ -190,19 +190,13 @@ class JuMEG_MNE_FILTER(object):
             self._is_filtered = True
           
             if self.annotations:
-               self.raw.set_annotations(self.annotations)
+               self.raw.set_annotations( self.annotations.copy() )
             
-            if self.save:
-                logger.info("  -> Filter saving data")
-                fname = jb.apply_save_mne_data(self.raw,fname=fname,overwrite=True)
-            else:
-                jb.set_raw_filename(self.raw,fname)
+            fname,_ = jb.update_and_save_raw(self.raw,fout=fname,save=self.save,overwrite=True,update_raw_filename=True)
+          
+        if self.verbose:
+           self.GetInfo()
         
-        logger.info("---> Filter done: {}\n".format(self.fname) +
-                    "  -> reloaded from disk: {}".format(self._is_reloaded)
-                    )
-        
-        jb.verbose = v
         return fname
     
     def GetInfo(self,msg=None):
