@@ -22,7 +22,8 @@ import matplotlib.pyplot as pl
 from   matplotlib.backends.backend_pdf import PdfPages
 
 import mne
-from jumeg.base.jumeg_base import JuMEG_Base_IO
+from jumeg.base.jumeg_base         import JuMEG_Base_IO
+from jumeg.base.jumeg_plot_preproc import JuMEG_PLOT_BASE
 
 logger = logging.getLogger('jumeg')
 __version__="2020.01.24.001"
@@ -34,25 +35,13 @@ pl.rcParams.update({'font.size': 8})
 
 
 
-class JuMEG_ICA_PERFORMANCE_PLOT(object):
+class JuMEG_ICA_PERFORMANCE_PLOT(JuMEG_PLOT_BASE):
     """
      from jumeg.base.pipelies.jumeg_base_pipelines_plot import JuMEG_ICA_PERFORMANCE_PLOT
     """
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
-        self._init(**kwargs)
-
-    def _init(self):
-        self._figs   = []
-        self._n_figs = None
-    
-        
-    def init(self,**kwargs):
-        try:
-           plt.clear('all')
-        except:
-           pass
-        self._figs = []
+       # self._init(**kwargs)
 
     def plot(self,raw=None,raw_cleaned=None,picks=None,ref_picks=None):
       #--- init fig
@@ -225,4 +214,78 @@ def plot_performance_artifact_rejection(meg_raw, ica, fnout_fig,
     return perf_art_rej
 
 
+'''
+'''
+https://stackoverflow.com/questions/48481290/a-simple-way-to-view-ipython-notebook
+
+jupyter nbconvert --to html --execute YOUR_FILE.ipynb --output OUTPUT.html
+
+
+
+anto_evt = mne.events_from_annotations(raw, event_id={'ECG':999},use_rounding=True,chunk_duration=None)
+print(anto_evt)
+
+evt_ecg=anto_evt[0]
+
+
+picks = jb.picks.meg_nobads(raw)
+
+avg_ecg       = np.average(ep_ecg.get_data(), axis=0).flatten()# * -1.0
+
+avg_ecg       = np.average(ep_ecg.get_data(), axis=0).flatten()# * -1.0
+
+
+avg_raw       = ep_raw.average()
+d   = avg_raw._data
+avg_raw_range = [d.min(axis=0),d.max(axis=0)]
+print(avg_raw_range)
+
+
+
+#--- subplot(nrows,ncols,idx)
+fig = plt.figure()
+ax = plt.subplot(2,1,1)
+#hyp_limits = self._calc_hyp_limits(psd,psd_mean=psd_mean)
+
+t = avg_raw.times
+#print(t)
+d = np.average(avg_raw._data,axis=0).flatten()
+#print(d.shape)
+#print(avg_raw_range[0].shape)
+ax.plot(t,d,color="blue")
+
+ax.fill_between(t,avg_raw_range[0],y2=avg_raw_range[1],
+                color="cyan",alpha=0.1)
+
+d = np.average(avg_raw_clean._data,axis=0).flatten()
+#print(d.shape)
+#print(avg_raw_range[0].shape)
+ax.plot(t,d,color="red")
+
+ax.fill_between(t,avg_clean_range[0],y2=avg_clean_range[1],
+                color="magenta",alpha=0.1)
+
+ax1 = plt.subplot(2,1,2)
+ax1.plot(t,avg_ecg,color="blue")
+
+#plt.show()
+# fig.show()
+
+#        self.update_global_ylim( [np.min(psd_mean) - self._yoffset,np.max(psd_mean) + self._yoffset] )
+
+#        if title:
+#           ax.set_title(title,loc="left")
+
+#        ax.set_xlabel('Freq (Hz)')
+#        ax.set_ylabel('Power Spectral Density (dB/Hz)')
+#        ax.set_xlim(freqs[0],freqs[-1])
+#        #ax.set_ylim(self.ylim[0],self.ylim[1])
+#        ax.grid(grid)
+
+#        self._axes.append(ax)
+
+#        self._plot_index += 1
+
+#        if self.plot_index > self.n_plots:
+#           self.set_ylim()
 '''

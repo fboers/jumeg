@@ -174,6 +174,8 @@ for f in flist:
 
 id      = "211890"
 fhtml   =  os.path.join(report_path,"211890_INTEXT01_preproc.html")
+fhtml="/home/fboers/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers-2019-09-13/jumeg/jumeg/base/pipelines/test01.html"
+
 import codecs
 
 file=codecs.open(fhtml,"r") #b")
@@ -181,6 +183,7 @@ htmls=str( file.read() )
 
 
 caption = id
+
 MNEReport.add_htmls_to_section(htmls, id, section="TEST HTML", replace=False)
 
 MNEReport.save(report_html)

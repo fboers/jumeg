@@ -355,7 +355,7 @@ class JuMEG_PipelineFrame(object):
         
         #--- update filename in raw and save if save
         self._fname_out,self._raw = jb.update_and_save_raw(self._raw,fin=self._raw_fname,fout=None,save=save,
-                                                           update_raw_filenname=True,postfix=self.postfix,
+                                                           update_raw_filename=True,postfix=self.postfix,
                                                            overwrite=True)
         logger.info(" --> done preproc: {} \n".format(self.label) + self.info())
         

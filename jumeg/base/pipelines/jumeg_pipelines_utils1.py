@@ -45,6 +45,33 @@ __version__= "2019.08.07.001"
 #--- init Class JuMEG_PipelineFrame as instance
 #JPL=JuMEG_PipelineFrame()
 
+
+
+def init_mne_report(raw_fname=None,raw=None,config=None):
+    """
+    """
+   
+    verbose=True
+experiment   = "MEG94T0T2"
+type         = "preproc"
+stage        = os.path.expandvars("$JUMEG_TEST_DATA/../MEG94T/")
+report_path  = os.path.join(stage,"reports",experiment)
+report_fname = experiment+"_"+type
+mkpath( report_path )
+report_hdf   = os.path.join(report_path,report_fname +".hdf5")
+report_html  = os.path.join(report_path,report_fname +".html")
+
+path_mne = os.path.join(stage,"mne")
+
+#--- open as hdf to add data
+#MNEReport = mne.open_report(report_hdf)
+
+os.remove( report_html )
+
+MNEReport = mne.Report(info_fname=None,title="JuMEG Preproc "+experimnet,image_format='png',raw_psd=False,verbose=verbose)
+
+
+
 #---------------------------------------------------
 #--- apply_noise_reducer
 #---------------------------------------------------
