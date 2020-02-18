@@ -70,8 +70,8 @@ class JuMEG_MNE_FILTER(object):
         #super().__init__()
         
         self.clear()
-        
         self._update_from_kwargs(**kwargs)
+        
     @property
     def fname_orig(self): return self._fname_orig
     @property

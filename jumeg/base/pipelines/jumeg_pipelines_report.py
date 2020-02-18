@@ -67,6 +67,32 @@ epocher results
 
 ggf GFP
 '''
+class JuMEG_REPORT(object):
+    def __init__(self,**kwargs):
+        self.experiment = None
+        self._mne_report= None
+        self._cfg       = None
+        self.path       = None
+        self.fname      = None
+        self.id         = None
+        self.html       = None
+        self._isInitReport= False
+
+   
+    @property
+    def Report(self): return self._mne_report
+    
+    
+    def initReport(self,**kwargs):
+        self._mne_report = mne.Report(info_fname=None,title="JuMEG Preproc",image_format='png',raw_psd=False,verbose=verbose)
+        self._isInitReport = True
+        
+    def rp_noisereducer(self,**kwargs):
+        pass
+    
+    def rp_ica(self,**kwargs):
+        pass
+
 
 #--- mk report HDF5
 verbose=True

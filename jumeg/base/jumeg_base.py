@@ -334,7 +334,7 @@ class JuMEG_Base_Basic(object):
         if os.path.isdir(v): return v
         return False
    
-    def isPath(self,pin,head="check path exist",exit_on_error=False,logmsg=False):
+    def isPath(self,pin,head="check path exist",exit_on_error=False,logmsg=False,mkdir=False):
         """
         check if file exist
 
@@ -343,6 +343,7 @@ class JuMEG_Base_Basic(object):
         :param <string>     : full path to check
         :param head         : log msg/error title
         :param logmsg       : log msg <False>
+        :param mkdir        : makedir <False>
         :param exit_on_error: will exit pgr if not file exist <False>
 
         :return:
@@ -354,6 +355,11 @@ class JuMEG_Base_Basic(object):
            if logmsg:
               logger.info("--->"+head+"\n --> dir exist: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
            return p
+        elif mkdir:
+            os.makedirs(p)
+            if logmsg:
+               logger.info("--->"+head+"\n --> make dirs: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
+            return p
        #--- error no such file
         logger.error("---> "+head+"\n --> no such directory: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
         if exit_on_error:
@@ -1648,7 +1654,8 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
                  "  -> file: {}\n".format(fname),
                  "  -> path: {}\n".format(path)]
            if raw:
-               msg.append("  -> Bads: {}".format(str(raw.info.get('bads'))))
+               msg.append("  -> Bads: {}\n".format(str(raw.info.get('bads'))))
+      
            logger.debug("".join(msg) )
 
         if raw:
@@ -1697,8 +1704,22 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
                  logger.debug("  -> resetting bads in raw")
            except AttributeError:
                 logger.exception("ERROR -> cannot reset bads in raw: {}".format(fn))
-            
+
+        if raw:
+           msg = [" --> done loading raw data:\n",
+                  "  -> raw : {}\n".format(raw),
+                  "  -> file: {}\n".format(fname),
+                  "  -> path: {}\n".format(path),
+                  "  -> Bads: {}\n".format(str(raw.info.get('bads')))]
+
+           try:
+               msg.append(" --> mne.annotations in RAW:\n  -> {}\n".format(self.raw.annotations))
+           except:
+               msg.append(" --> mne.annotations in RAW: None\n")
+           logger.info("".join(msg))
+
         return raw,fn #self.get_raw_filename(raw)
+    
 
     def get_files_from_list(self, fin):
         """ get filename or filenames from a list
@@ -1836,7 +1857,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
           # channel_type = mne.io.pick.channel_type(raw.info, 75)
 
     def update_and_save_raw(self,raw,fin=None,fout=None,save=False,overwrite=True,postfix=None,separator="-",
-                            update_raw_filenname=False): #,include_path=False):
+                            update_raw_filename=False): #,include_path=False):
         """
         new filename from fin or fout with postfix
         saving mne raw obj to fif format
@@ -1852,7 +1873,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
          save      : save raw to disk
          overwrite : if overwrite  save <raw obj> to existing <raw file>  <True>
         
-         update_raw_filenname: <False>
+         update_raw_filename: <False>
          
         Returns
         --------
@@ -1883,11 +1904,16 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
                     logger.info(">>>> writing data to disk...\n --> saving: " + fname)
                     mkpath(os.path.dirname(fname))
                     raw.save(fname,overwrite=True)
-                    logger.info(' --> Bads:' + str(raw.info['bads']) + "\n --> Done writing data to disk...")
+                    msg=[' --> Done writing data to disk ...',' --> Bads:' + str(raw.info['bads'])]
+                    try:
+                        msg.append(" --> mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
+                    except:
+                        msg.append(" --> mne.annotations in RAW: None")
+                    logger.info("\n".join(msg))
             except:
                 logger.exception("---> error in saving raw object:\n  -> file: {}".format(fname))
     
-        if update_raw_filenname:
+        if update_raw_filename:
            self.set_raw_filename(raw,fname)
         return fname,raw
 
@@ -1918,8 +1944,10 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
               raw.save(fname,overwrite=True)
               msg= []
               try:
-                 msg.append(" --> mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
+                 msg.append(" --> mne.annotations in RAW:\n  -> {}".format(raw.annotations))
               except:
+                 logger.exception(raw.annotations() )
+                 
                  msg.append(" --> mne.annotations in RAW: not found")
               msg.extend( [' --> Bads:' + str( raw.info['bads'] )," --> Done writing data to disk..."])
               logger.info("\n".join(msg))

@@ -66,7 +66,17 @@ class _BASE(object):
                     self.__setattr__(k,kwargs.get(k))
             except:
                 pass
-            
+
+    def clear(self,**kwargs):
+        """
+        set all values to None
+        :param kwargs:
+        :return:
+        """
+       #--- clear slots
+        for k in self.__slots__:
+            self.__setattr__(k,None)
+
     def update(self,**kwargs):
         self._update_from_kwargs(**kwargs)
 
@@ -400,8 +410,9 @@ class CalcSignal(_BASE):
       r = np.concatenate(ranges)
       min = r.min() * factor
       max = r.max() * factor
-      return min - offset,max + offset
-
+     # return min - (abs(min) * offset), max + (abs(max) * offset)
+      return min - offset, max + offset
+  
   def _calc_data(self,raw,raw_clean,evt,event_id=999,tmin=-0.4,tmax=0.4,picks=None,type="avg"):
       """
 
@@ -443,7 +454,7 @@ class CalcSignal(_BASE):
 class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
     __slots__ = ["raw","plot_path","raw_clean","ch_name","event_id","picks","tmin","tmax","title","colors","alpha","grid","show",
                  "scale","offset","fontsize","_n_cols","n_rows","idx","plot_ypos","figure","figsize","type","dpi","orientation","fout",
-                 "plot_extention","verbose","set_title" ]
+                 "plot_extention","verbose","set_title","text" ]
     """
     """
     
@@ -460,7 +471,7 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         self.tmin      = -0.4
         self.tmax      = 0.4
         self.alpha     = 0.33
-        self.offset    = 0.1
+        self.offset    = 0.15
         self.fontsize  = 12
 
         #self.figsize   = (11.69,8.27)
@@ -505,6 +516,8 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
              plt.close('all')
         except:
           pass
+        super.clear()
+        
        
     def plot(self,**kwargs):
         
@@ -549,31 +562,20 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
        #--- ref channel e.g.: ECG
         sig_ref,_,_ = self._calc_signal(self.raw,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,
                                         picks=jb.picks.labels2picks(self.raw,self.ch_name))
- 
+    
         if not self.figure:
            self.figure = plt.figure()
            #self.figure.suptitle(os.path.basename(jb.get_raw_filename(self.raw)),fontsize=12)
            
-      #--- subplot(nrows,ncols,idx)
+       #--- subplot(nrows,ncols,idx)
         ax1 = plt.subplot(self.n_rows,self.n_cols,self.idx)
-      #--- sig raw
+       #--- sig raw
         scl = self.scale.get("raw")
         ylim = self._calc_ylimits(ranges=range,factor=scl.get("factor"),offset=self.offset)
-
         self._plot(ax1,t,sig_raw * scl.get("factor"),scl.get("unit"),"black")
-
-        #title = self.ch_name +" RAW: "+os.path.basename(jb.get_raw_filename(self.raw))
-        #ax1.set_title(title,fontsize=self.fontsize)
-        ax1.set_ylim(ylim[0],ylim[1])
-    
        #--- sig clean
         ax2 = plt.subplot(self.n_rows,self.n_cols,self.idx + self.n_cols)
-        scl = self.scale.get("raw")
         self._plot(ax2,t,sig_clean * scl.get("factor"),scl.get("unit"),"black")
-
-        #title = self.ch_name +" Clean: " + os.path.basename(jb.get_raw_filename(self.raw_clean))
-        #ax2.set_title(title,fontsize=self.fontsize)
-        ax2.set_ylim(ylim[0],ylim[1])
         
        #---
         scl = self.scale.get("ref")
@@ -581,13 +583,16 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         color = 'tab:blue'
         self._plot(ax3,t,sig_ref * scl.get("factor"),scl.get("unit"),"red")
         ax3.tick_params(axis='y',labelcolor=color)
-        ax3.legend([self.ch_name +" counts: {}".format(counts)], loc=2,prop={'size':8})
+        ax3.legend([self.ch_name +" cnts {}".format(counts)], loc=2,prop={'size':8})
 
         ax4 = ax2.twinx()  # instantiate a second axes that shares the same x-axis
         color = 'tab:blue'
         self._plot(ax4,t,sig_ref * scl.get("factor"),scl.get("unit"),"green")
         ax4.tick_params(axis='y',labelcolor=color)
-        ax4.legend(["Clean "+self.ch_name + " counts: {}".format(counts)],loc=2,prop={ 'size':8 })
+        ax4.legend(["Clean "+self.ch_name + " cnts {}".format(counts)],loc=2,prop={ 'size':8 })
+
+        ax1.set_ylim(ylim[0],ylim[1])
+        ax2.set_ylim(ylim[0],ylim[1])
 
         if self.save:
            self.save_figure()
@@ -619,8 +624,12 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         
         if self.set_title:
            txt = os.path.basename(fout).rsplit(".",1)[0]
+           if self.text:
+              txt+= "   " +self.text
            self.figure.suptitle(txt,fontsize=10,y=0.02,x=0.05,ha="left")
-           
+        elif self.text:
+           self.figure.suptitle(self.text,fontsize=10,y=0.02,x=0.05,ha="left")
+        
         self.figure.savefig(fout,dpi=self.dpi,orientation=self.orientation)
         
         if self.verbose:
@@ -710,7 +719,7 @@ class JuMEG_ICA_PERFORMANCE(_BASE):  # JuMEG_PLOT_BASE):
         #self.EOG.GetInfo(debug=True)
         
         self.Plot.n_cols = len(ch_names)
-        
+      
         for obj in [self.ECG,self.EOG]:
             ch_names = []
             ids      = []
