@@ -210,7 +210,7 @@ class JuMEG_PIPELINES_ICA(object):
         self.PreFilter      = JuMEG_MNE_FILTER()
         self.ICAPerformance = JuMEG_ICA_PERFORMANCE()
         self.SVM            = JuMEG_ICA_SVM()
-        self.use_svm        = False
+        self.useSVM         = False
         self._clear()
    
     @property
@@ -426,17 +426,17 @@ class JuMEG_PIPELINES_ICA(object):
            self._ica_obj,fname_ica = jb.get_raw_obj(fname_ica,path=self.path_ica_chops)
            logger.info("---> DONE LOADING ICA chop form disk: {}\n  -> ica filename: {}".
                        format(chop,fname_ica))
-        elif self.use_svm:
+        elif self.useSVN:
            logger.info('---> SVM start ICA FIT: init ICA object')
            self._ica_obj = ICA(method='fastica',n_components=40,random_state=42,
                                max_pca_components=None,max_iter=5000,verbose=False)
     
-           logger.info('---> SVM ICA FIT: apply ICA.fit')
            self._ica_obj.fit(raw_chop,picks=self.picks,decim=None,reject=self.CFG.GetDataDict(key="reject"),verbose=True)
-          
+           
           #--- !!! do_copy = True => resample
            self._ica_obj,_ = self.SVM.run(raw=self.raw,ICA=self._ica_obj,picks=self.picks,do_crop=False,do_copy=True )
-     
+           logger.info('---> DONE SVM ICA FIT: apply ICA.fit')
+
         else:
            with jumeg_logger.StreamLoggerSTD(label="ica fit"):
                 self._ica_obj = fit_ica(raw=raw_chop,picks=self.picks,reject=self.CFG.GetDataDict(key="reject"),
@@ -599,7 +599,7 @@ class JuMEG_PIPELINES_ICA(object):
              #--- plot performance
                txt = None
                if ICA.exclude:
-                  if self.use_svm:
+                  if self.useSVM:
                      txt = " SVM used "
                   txt += "ICs excluded: " + ",".join(str(i) for i in ICA.exclude)
                   
@@ -642,7 +642,8 @@ class JuMEG_PIPELINES_ICA(object):
         """
         self._clear()
         self._update_from_kwargs(**kwargs)
-        self.use_svm=True
+        self.useSVM = self.cfg.get("use_svm")
+        
       #--- load config
         self._CFG.update(**kwargs)
  

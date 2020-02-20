@@ -32,6 +32,7 @@ from jumeg.base.pipelines.jumeg_pipelines_utils_base import get_args,JuMEG_Pipel
 from jumeg.base.pipelines.jumeg_pipelines_ica        import JuMEG_PIPELINES_ICA
 from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD,JuMEG_PLOT_BADS
 from jumeg.filter.jumeg_mne_filter                   import JuMEG_MNE_FILTER
+from jumeg.base.pipelines.jumeg_pipelines_report     import JuMEG_REPORT 
 #--- preproc
 from jumeg.jumeg_noise_reducer     import noise_reducer
 from jumeg.jumeg_suggest_bads      import suggest_bads
@@ -47,29 +48,16 @@ __version__= "2019.08.07.001"
 
 
 
-def init_mne_report(raw_fname=None,raw=None,config=None):
-    """
+def apply_report(**kwargs):
     """
    
-    verbose=True
-experiment   = "MEG94T0T2"
-type         = "preproc"
-stage        = os.path.expandvars("$JUMEG_TEST_DATA/../MEG94T/")
-report_path  = os.path.join(stage,"reports",experiment)
-report_fname = experiment+"_"+type
-mkpath( report_path )
-report_hdf   = os.path.join(report_path,report_fname +".hdf5")
-report_html  = os.path.join(report_path,report_fname +".html")
-
-path_mne = os.path.join(stage,"mne")
-
-#--- open as hdf to add data
-#MNEReport = mne.open_report(report_hdf)
-
-os.remove( report_html )
-
-MNEReport = mne.Report(info_fname=None,title="JuMEG Preproc "+experimnet,image_format='png',raw_psd=False,verbose=verbose)
-
+    :param fname:
+    :param stage
+    :param config
+    :return: 
+    """
+    report = JuMEG_REPORT(**kwargs)
+    report.run()
 
 
 #---------------------------------------------------
@@ -156,6 +144,10 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
           jplt.show()
        jplt.save(fname=fname_out,plot_dir=config.get("plor_dir","plots"))
     
+    
+    if config.report:
+       report = JuMEGReport()
+       
     return fname_out,raw,RawIsChanged,None
 
 #---------------------------------------------------

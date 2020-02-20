@@ -91,7 +91,11 @@ class JuMEG_CONFIG_YAML_BASE(object):
     
     @property
     def data(self): return self._data
-   
+
+    @property
+    def config(self):
+        return self._cfg
+
     @property
     def filename(self): return self._fname
     
