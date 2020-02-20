@@ -83,7 +83,8 @@ ica:
     postfix: "ar"
     plot: True
     plot_show : True
-  
+    svm: True
+
     fit:
         save: True
         overwrite: False
@@ -180,9 +181,14 @@ epocher:
     do_epochs: False
     conditions: None
 
-#--- reports
-reports:
+#--- report
+report:
     run: True 
     save: True
     overwrite: False
-   
+
+    noise_reducer:
+      run: True
+    ica:
+      run: True
+
