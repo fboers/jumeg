@@ -116,8 +116,12 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
     for fname,subject_id,raw_dir in jpl.file_list():
       
         if not opt.run: continue
-           
-        raw = None # !!! important  !!!
+       
+        raw = None # !!!
+       
+       #--- setup mne report
+       # report = JuMEGreport(raw_fname=fname,subject_id=subject_id,stage=stage,config=jpl.config.get("report"))
+       
        #--- call noise reduction
         raw_fname,raw = utils.apply_noise_reducer(raw_fname=fname,raw=None,config=jpl.config.get("noise_reducer"))
 
@@ -135,6 +139,9 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
 
        #--- call resample
         # raw_fname,raw = utils.apply_resample(raw_fname,raw=raw,config=jpl.config.get("resampling"))
+
+        if jpl.config.reports.run:
+           utils.apply_report(stage=jpl.stage,subject_id=subject_id,fname=fname,config=jpl.config)
 
         logger.info(" --> DONE preproc subject id: {}\n".format(subject_id)+
                     "  -> input  file: {}\n".format(fname)+
