@@ -632,6 +632,8 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         
         self.figure.savefig(fout,dpi=self.dpi,orientation=self.orientation)
         
+        self.figure.savefig()
+        
         if self.verbose:
            logger.info("---> done saving plot: " +fout)
 

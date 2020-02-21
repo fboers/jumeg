@@ -426,7 +426,7 @@ class JuMEG_PIPELINES_ICA(object):
            self._ica_obj,fname_ica = jb.get_raw_obj(fname_ica,path=self.path_ica_chops)
            logger.info("---> DONE LOADING ICA chop form disk: {}\n  -> ica filename: {}".
                        format(chop,fname_ica))
-        elif self.useSVN:
+        elif self.useSVM:
            logger.info('---> SVM start ICA FIT: init ICA object')
            self._ica_obj = ICA(method='fastica',n_components=40,random_state=42,
                                max_pca_components=None,max_iter=5000,verbose=False)
@@ -642,11 +642,11 @@ class JuMEG_PIPELINES_ICA(object):
         """
         self._clear()
         self._update_from_kwargs(**kwargs)
-        self.useSVM = self.cfg.get("use_svm")
         
       #--- load config
         self._CFG.update(**kwargs)
- 
+        self.useSVM = self.cfg.svm
+        
       #--- init or load raw
         self._initRawObj()
         
@@ -756,7 +756,7 @@ def test1():
 
 
     stage = "$JUMEG_PATH_LOCAL_DATA/exp/QUATERS/mne"
-    fcfg  = os.path.join(stage,"quaters_config01.yaml")
+    fcfg  = os.path.join(stage,"jumeg_config.yaml") #""quaters_config01.yaml")
     fpath = "210857/QUATERS01/191210_1325/1"
     path = os.path.join(stage,fpath)
     raw_fname = "210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr,bcc,int-raw.fif"

@@ -168,7 +168,7 @@ class JuMEG_REPORT(object):
             if not fimg : continue
             if file.endswith( config.get("postfix","nr") +"-raw"+self.image_extention ):
                img_files.append(fimg)
-               captions.append(  os.path.basename( fimg.rsplit(self.image_extention,1)[0] ) )
+               captions.append("NR-" + os.path.basename( fimg.rsplit(self.image_extention,1)[0] ) )
                
         self.Report.add_images_to_section(img_files,captions=captions,section="Noise Reducer",replace=True)  #,comments=comments)
         
@@ -177,7 +177,36 @@ class JuMEG_REPORT(object):
         return True
 
     def _report_ica(self,config=None):
-        pass
+        
+        ToDo sort chops
+        filtered non fitered
+        use slider for each  as fig
+        
+        if not config: return False
+        p = os.path.dirname(self.fname)
+        plot_dir = os.path.join(p,"ica/plots") #config.get("plot_dir"))
+      
+        img_files = []
+        captions = []
+        
+        ext = "-"+config.get("postfix","ar") + self.image_extention
+        
+        for file in os.listdir(plot_dir):
+            fimg = self._check_image_extention(os.path.join(plot_dir,file))
+            if not fimg: continue
+            if file.endswith(ext):
+               img_files.append(fimg)
+        img_files.sort()
+        img_files.reverse()
+        for fimg in img_files:
+            captions.append( "AR-"+os.path.basename(fimg.replace(ext,"")))
+    
+        self.Report.add_images_to_section(img_files,captions=captions,section="ICA",
+                                          replace=True)  #,comments=comments)
+    
+        logger.info("---> report ica files found:\n {}".format(img_files))
+    
+      
     
     
     def save(self,fname=None):
@@ -210,8 +239,8 @@ class JuMEG_REPORT(object):
             self._report_noise_reducer(config=self.config.GetDataDict("noise_reducer"))
     
       #--- ica
-       # if cfg.get("ica",False):
-       #    self._report_ica(config=self.config.GetDataDict("ica"))
+        if cfg.get("ica",False):
+           self._report_ica(config=self.config.GetDataDict("ica"))
    
         if cfg.get("save",False):
            self.save()
@@ -238,7 +267,7 @@ def test1():
     #CFG.info()
     
     jReport = JuMEG_REPORT()
-    jReport.run(stage=stage,fname=fname,config=CFG)
+    jReport.run(stage=stage,fname=fname,subject_id=210857,config=CFG)
     
     
 if __name__ == "__main__":
