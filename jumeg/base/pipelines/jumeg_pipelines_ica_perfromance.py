@@ -15,10 +15,9 @@
 # Updates
 #--------------------------------------------
 
-
+#import copy
 import os,os.path as op
-#import contextlib,
-
+import warnings
 import logging,time,datetime
 
 import numpy as np
@@ -27,61 +26,18 @@ from distutils.dir_util import mkpath
 import matplotlib.pyplot as plt
 
 import mne
-
 from mne.preprocessing import find_ecg_events, find_eog_events
 
-#from jumeg.decompose.ica_replace_mean_std import ICA, read_ica, apply_ica_replace_mean_std
-#from jumeg.jumeg_preprocessing            import get_ics_cardiac, get_ics_ocular
-#from jumeg.jumeg_plot                     import plot_performance_artifact_rejection  # , plot_artefact_overview
-
 from jumeg.base.jumeg_base            import jumeg_base as jb
-from jumeg.base.jumeg_base_config     import JuMEG_CONFIG_YAML_BASE as jCFG
+from jumeg.base.jumeg_base            import JUMEG_SLOTS
+from jumeg.base.jumeg_base_config     import JuMEG_CONFIG as jCFG
 from jumeg.base                       import jumeg_logger
-
-# from jumeg.base.pipelines.jumeg_pipelines_plot import JuMEG_ICA_PERFORMANCE_PLOT
-
-#from jumeg.filter.jumeg_mne_filter import JuMEG_MNE_FILTER
 
 logger = logging.getLogger("jumeg")
 
-__version__= "2019.12.12.001"
+__version__= "2020.03.06.001"
 
-
-class _BASE(object):
-    __slots__=[]
-    def __init__(self,**kwargs):
-        super().__init__()
-    
-    def _init(self,**kwargs):
-        #--- init slots
-        for k in self.__slots__:
-            self.__setattr__(k,None)
-        self._update_from_kwargs(**kwargs)
-    
-    def _update_from_kwargs(self,**kwargs):
-        if not kwargs: return
-        for k in kwargs:
-            try:
-                if k in self.__slots__:
-                    self.__setattr__(k,kwargs.get(k))
-            except:
-                pass
-
-    def clear(self,**kwargs):
-        """
-        set all values to None
-        :param kwargs:
-        :return:
-        """
-       #--- clear slots
-        for k in self.__slots__:
-            self.__setattr__(k,None)
-
-    def update(self,**kwargs):
-        self._update_from_kwargs(**kwargs)
-
-        
-class ARTEFACT_EVENTS(_BASE):
+class ARTEFACT_EVENTS(JUMEG_SLOTS):
     """
      artefact event dict:
        ch_name:  str or list of str
@@ -125,7 +81,7 @@ class ARTEFACT_EVENTS(_BASE):
     
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
-        self._init(**kwargs)
+        self.init(**kwargs)
        #--- default for set annotations = True
         self.set_annotations = kwargs.get("set_annotations",True)
 
@@ -262,10 +218,12 @@ class ARTEFACT_EVENTS(_BASE):
         logger.info( "\n".join(msg) )
         
 
-class CalcSignal(_BASE):
+class CalcSignal(JUMEG_SLOTS):
+  
   def __init__(self,**kwargs):
       super().__init__(**kwargs)
-    
+      self.init(**kwargs)
+      
   def calc_rms(self,data,average=None,rmsmean=None):
     ''' Calculate the rms value of the signal.
         Ported from Dr. J. Dammers IDL code.
@@ -450,18 +408,20 @@ class CalcSignal(_BASE):
     
       return sig_raw,sig_cln,range,t
   
+  
 
 class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
     __slots__ = ["raw","plot_path","raw_clean","ch_name","event_id","picks","tmin","tmax","title","colors","alpha","grid","show",
-                 "scale","offset","fontsize","_n_cols","n_rows","idx","plot_ypos","figure","figsize","type","dpi","orientation","fout",
-                 "plot_extention","verbose","set_title","text" ]
+                 "scale","offset","fontsize","_n_cols","n_rows","idx","plot_ypos","_figure","figsize","type","dpi","orientation","fout",
+                 "plot_extention","verbose","set_title","text","save_as_png","save_as_fig"]
     """
+      plotting ica performance plots as png
     """
     
     def __init__(self,**kwargs):
         super().__init__()
 
-        self._init()
+        self.init(**kwargs)
 
         self.type   = "avg"  # type = "avg" # gfp,avg,sig
         self.n_rows = 2
@@ -475,14 +435,14 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         self.fontsize  = 12
 
         #self.figsize   = (11.69,8.27)
-        self.figsize   = (16.0,9.0)
-        self.dpi       = 300
+        self.figsize     = (16.0,9.0)
+        self.dpi         = 300
         self.orientation    = 'portrait' #"landscape"
         self.plot_extention = ".png"
 
         self.grid      = True
         self.show      = False
-        self.save      = False
+        self.save      = True
         self.colors    = ["black","yellow","red","magenta","green"]
         self.scale     = { "raw":{ "factor":10.0 ** 15,"unit":"fT" },"ref":{ "factor":10.0 ** 3,"unit":"mV" } }
         
@@ -492,13 +452,10 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         plt.rcParams.update({ 'font.size':self.fontsize })
         plt.subplots_adjust(left=0.1,right=0.95,bottom=0.05,top=0.95,hspace=0.35)
         plt.rcParams['savefig.facecolor'] = "0.9"
-        
-        # type = "avg" # gfp,avg,sig
-      
-      
-    def init(self,**kwargs):
-        self._update_from_kwargs(**kwargs)
-        
+
+    @property
+    def figure(self): return self._figure
+    
     def _plot(self,ax,t,data,ylabel,color,range=None,range_color="cyan"):
         ax.plot(t,data,color=color)
         
@@ -514,11 +471,14 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         try:
           if self.figure:
              plt.close('all')
+             self._figure = None
         except:
           pass
-        super.clear()
         
-       
+        #s = super()
+        #if hasattr(s, "clear"):
+        #   s.clear()
+   
     def plot(self,**kwargs):
         
         #raw=None,raw_clean=None,ch_name="ECG",event_id=999,picks=None,tmin=-0.4,tmax=0.4,title=None,
@@ -545,6 +505,7 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         
         self._update_from_kwargs(**kwargs)
         
+        
         logger.info("---> RAW annotations: {}".format(self.raw.annotations))
         
    #--- get epochs  calc avgs + ref
@@ -556,15 +517,14 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
 
         evt    = annotat[0]
         counts = evt.shape[0]
-        
+      
         sig_raw,sig_clean,range,t = self._calc_data(self.raw,self.raw_clean,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=self.picks)
        
        #--- ref channel e.g.: ECG
-        sig_ref,_,_ = self._calc_signal(self.raw,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,
-                                        picks=jb.picks.labels2picks(self.raw,self.ch_name))
+        sig_ref,_,_ = self._calc_signal(self.raw,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=jb.picks.labels2picks(self.raw,self.ch_name))
     
         if not self.figure:
-           self.figure = plt.figure()
+           self._figure = plt.figure()
            #self.figure.suptitle(os.path.basename(jb.get_raw_filename(self.raw)),fontsize=12)
            
        #--- subplot(nrows,ncols,idx)
@@ -594,16 +554,22 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         ax1.set_ylim(ylim[0],ylim[1])
         ax2.set_ylim(ylim[0],ylim[1])
 
-        if self.save:
-           self.save_figure()
+        #if self.save:
+        #   self.save_figure()
 
         if self.show:
+           ion()
            self.figure.tight_layout()
            plt.show()
 
-        # return self.figure
+        return self.figure
     
     def save_figure(self,**kwargs):
+        """
+        
+        :param kwargs:
+        :return: fig
+        """
         self._update_from_kwargs(**kwargs)
         
         self.figure.tight_layout()
@@ -629,17 +595,16 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
            self.figure.suptitle(txt,fontsize=10,y=0.02,x=0.05,ha="left")
         elif self.text:
            self.figure.suptitle(self.text,fontsize=10,y=0.02,x=0.05,ha="left")
-        
-        self.figure.savefig(fout,dpi=self.dpi,orientation=self.orientation)
-        
-        self.figure.savefig()
-        
-        if self.verbose:
+       
+       #--- save img
+        if self.save:
+           self.figure.savefig(fout,dpi=self.dpi,orientation=self.orientation)
            logger.info("---> done saving plot: " +fout)
 
         self.fout=fout
         
-class JuMEG_ICA_PERFORMANCE(_BASE):  # JuMEG_PLOT_BASE):
+
+class JuMEG_ICA_PERFORMANCE(JUMEG_SLOTS): 
     """
     find ecg,eog artifacts in raw
      ->use jumeg or mne
@@ -721,7 +686,8 @@ class JuMEG_ICA_PERFORMANCE(_BASE):  # JuMEG_PLOT_BASE):
         #self.EOG.GetInfo(debug=True)
         
         self.Plot.n_cols = len(ch_names)
-      
+        self.Plot.n_rows = 2
+        
         for obj in [self.ECG,self.EOG]:
             ch_names = []
             ids      = []
@@ -732,92 +698,9 @@ class JuMEG_ICA_PERFORMANCE(_BASE):  # JuMEG_PLOT_BASE):
                 self.Plot.idx = idx
             
         #self.Plot.figure.show()
-        self.Plot.save_figure()
-        
-   
-    def report(self):
-        
-        figs     = []
-        flist=[]
-        captions = []
-        sctions=[]
-        comments=[]
-        fraw = os.path.basename(jb.get_raw_filename(self.raw))
-        
-        self.Plot.n_plots = 2
-        self.Plot.save    = False
-        self.Plot.verbose = True
-        self.Plot.fout = fraw.rsplit("-",1)[0]
-        self.Plot.fout += "-ar"
-        
-        channels = [ ["ECG",999],["EOG ver",997],["EOG hor",998]]
-        
-        self.Plot.n_rows = 2
-        self.Plot.n_cols = 3# len(channels) / 2
-        self.Plot.idx    = 1
-        idx = 1
-
-        for ch in channels:
-            idx+=1
-            #self.Plot.fout= fout+ ch[0]+".png"
-            #self.Plot.fout.replace(" ","_")
-            print(ch[0])
-            print(ch[1])
-            self.plot(ch_name=ch[0],event_id=ch[1],picks=self.picks,tmin=-0.4,tmax=0.4,show=False)
-            self.Plot.idx = idx
-            
-        #self.Plot.figure.show()
-        self.Plot.save_figure()
-        flist.append(self.Plot.fout)
-        figs.append(self.Plot.figure)
-        captions.append(self.Plot.fout)
-        comments.append(ch[0])
-            #sections.append(ch[0])
-    
-        report_html = 'test02.html'
-        verbose = True
-        
-        try:
-            os.remove(report_html)
-        except:
-            pass
-    
-        #sections = captions #fraw
-        #captions = [fraw,fraw,fraw]
-        
-        report = mne.Report(info_fname=None,title="JuMEG Preproc",image_format='png',raw_psd=False,verbose=verbose)
-        report.add_images_to_section(flist, captions=captions, section="ICA",replace=True) #,comments=comments)
-        
-       # report.add_figs_to_section(figs, captions=captions, section="ICA",replace=True)
-    
-        #report.add_slider_to_section(figs, captions=captions, section='ICA', title='Slider',replace=True)
-        
-        #report.add_slider_to_section(figs,captions=captions,section="ICA",title=fraw,replace=True)
-    
-        report.save(report_html)
-        
-        '''
-        fimg = os.path.join(run_dir,"plots",fname.replace("-raw.fif",",nr-raw.png"))
-
-        if os.path.isfile(fimg):
-            img = Image.open(fimg)
-            fimg = fimg.replace(".pdf",".png")
-            img.save(fimg,"PNG")
-            print(" ---> done saving img: " + fimg)
-        else:
-            fimg = fimg.replace(".pdf",".png")
-
-        fimages.append(fimg)
-        '''
-        while figs:
-              plt.close(fig=figs.pop() )
+        self.Plot.save_figure(save=True)
         self.Plot.clear()
-
-
-
-# close all figs
-#mne.report
-
+        return self.Plot.fout
 
 def test1():
     #--- init/update logger
@@ -892,61 +775,14 @@ def test2():
     CFG.update(config=fcfg)
     config = CFG.GetDataDict("ica")
     
-   #---get annotations
-    ids = { "ECG":1 }
-    (events_from_annot,event_dict) = mne.events_from_annotations(raw_ar,event_id=ids)
-    logger.info("---> events: {}\n {}".format(event_dict,events_from_annot))
-   #--- do avg epochs MIn-MAX range
-   
-   #--- plot raw & raw_ar meg MIN-MAX + ECG as ref
-
-    # ICAPerformance = JuMEG_ICA_PERFORMANCE(raw=raw,path=path,fname=raw_fname,)
-    
+   #
     jIP = JuMEG_ICA_PERFORMANCE(raw=raw,raw_clean=raw_ar,picks=picks)
     #jIP.report()
     
     fout = raw_fname.rsplit("-",1)[0] + "-ar"
     jIP.plot(verbose=True,fout=fout)
     
-    #ToDo: save fig,pdf,png
-    #class picks,tmin,tmax,event_id,ch_name,show 0true
-    #plot legend
-    #plot counts
-    #p#lot rmms???
-    '''
-    figs     = []
-    captions =[]
- 
-    jIP.Plot.n_plots=2
-    jIP.plot(ch_name="ECG",event_id=999,picks=picks,tmin=-0.4,tmax=0.4,show=True)
-    figs.append(jIP.Plot.figure)
-    captions.append("ECG")
-
-    jIP.plot(ch_name="EOG ver",event_id=997,picks=picks,tmin=-0.2,tmax=2.0,show=True,figure=None,plot_ypos=1)
-    figs.append(jIP.Plot.figure)
-    captions.append("EOGver")
-
-    jIP.plot(ch_name="EOG hor",event_id=998,picks=picks,tmin=-0.2,tmax=2.0,show=True,figure=None,plot_ypos=1)
-    figs.append(jIP.Plot.figure)
-    captions.append("EOGhor")
     
-    report_html = 'test01.html'
-    verbose=True
-    try:
-       os.remove( report_html )
-    except:
-       pass
-   
-    #sections = captions #fraw
-    #captions = [fraw,fraw,fraw]
-    report = mne.Report(info_fname=None,title="JuMEG Preproc",image_format='png',raw_psd=False,verbose=verbose)
-    #report.add_figs_to_section(figs, captions=captions, section="ICA")
-    
-    #report.add_slider_to_section(figs, captions=captions, section='ICA', title='Slider',replace=True)
-    report.add_slider_to_section(figs,captions=captions,section="ICA",title=fraw,replace=True)
-
-    report.save(report_html )
-    '''
 if __name__ == "__main__":
     # test1()
     test2()

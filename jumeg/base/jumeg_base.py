@@ -85,6 +85,45 @@ class AccessorType(type):
 
 '''
 
+class JUMEG_SLOTS(object):
+    __slots__ = []
+    
+    def __init__(self,**kwargs):
+        super().__init__()
+    
+    def _init(self):
+        #--- init slots
+        for k in self.__slots__:
+            self.__setattr__(k,None)
+        # self._update_from_kwargs(**kwargs)
+    
+    def init(self,**kwargs):
+        self._init()
+        self._update_from_kwargs(**kwargs)
+        
+    def _update_from_kwargs(self,**kwargs):
+        if not kwargs: return
+        for k in kwargs:
+            try:
+                if k in self.__slots__:
+                    self.__setattr__(k,kwargs.get(k))
+            except:
+                pass
+    
+    def clear(self,**kwargs):
+        """
+        set all values to None
+        :param kwargs:
+        :return:
+        """
+        #--- clear slots
+        for k in self.__slots__:
+            self.__setattr__(k,None)
+    
+    def update(self,**kwargs):
+        self._update_from_kwargs(**kwargs)
+
+
 class JuMEG_Base_Basic(object):
     def __init__ (self):
         super(JuMEG_Base_Basic, self).__init__()

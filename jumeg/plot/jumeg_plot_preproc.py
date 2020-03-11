@@ -27,7 +27,7 @@ from jumeg.base.jumeg_base import jumeg_base as jb
 
 logger = logging.getLogger('jumeg')
 
-__version__="2019.05.14.001"
+__version__="2020.03.10.001"
 
 class JuMEG_PLOT_BASE(object):
     __slots__ = ["picks","fmin","fmax","tmin","tmax","proj","n_fft","color","fill_color","area_mode","area_alpha","pick_types","n_jobs","dpi","verbose",
@@ -118,12 +118,13 @@ class JuMEG_PLOT_BASE(object):
        
         #fig = pl.figure(name,figsize=(10, 8), dpi=100))
    
-    def save(self,fname=None,plot_dir="plots"):
+    def save(self,fname=None,plot_dir="report"):
         """
 
         :param fname:
-        :param plot_dir:
+        :param plot_dir: <report>
         :return:
+          full filename e.g.  .../report/xyz.png
         """
         if fname:
            fname     = os.path.expandvars( os.path.expanduser( fname ) )
@@ -141,18 +142,21 @@ class JuMEG_PLOT_BASE(object):
                logger.exception("---> can not create plot\n" +
                                 "  -> directory: {}\n".format(fout_path) +
                                 "  -> filename : {}".format(fname))
-               return
+               return False
     
         if fnout:
-            if fnout.endswith("png"):
-                self.fig.savefig(os.path.join(fout_path,fnout),format="png")
-            elif fnout.endswith("svg"):
-                self.fig.savefig(os.path.join(fout_path,fnout),format="svg")
-            else: # pdf ?
-                self.fig.savefig(os.path.join(fout_path,fnout),dpi=self.dpi)
-            if self.verbose:
-               logger.info("---> done saving plot: {}".format(os.path.join(fout_path,fnout)))
-
+           fout = os.path.join(fout_path,fnout)
+           
+           if fout.endswith("png"):
+              self.fig.savefig(fout,format="png")
+           elif fout.endswith("svg"):
+               self.fig.savefig(fout,format="svg")
+           else: # pdf ?
+               self.fig.savefig(fout,dpi=self.dpi)
+           if self.verbose:
+              logger.info("---> done saving plot: {}".format(fout))
+            
+           return fout
             
     def set_ylim(self,ylim=None):
         
@@ -343,7 +347,7 @@ class JuMEG_PLOT_PSD(JuMEG_PLOT_BASE):
         """
         psd,freqs = self._calc_psd_welch(raw,**kwargs)
         self.plot_power_spectrum(psd=psd,freqs=freqs,title=kwargs.get("title"))
-
+'''
 class JuMEG_PLOT_BADS(JuMEG_PLOT_BASE):
     """
     copy from jumeg_noise_reducer.plot_denoising
@@ -400,7 +404,7 @@ class JuMEG_PLOT_BADS(JuMEG_PLOT_BASE):
             ax.grid(kwargs.get("grid",False) )
             self._axes.append(ax)
 
-
+'''
 #--- testing
 def nr_plot_denoising(f1,f2,fnout):
     """
@@ -443,28 +447,7 @@ def test():
     
     plot_name = fraw2.rsplit('-raw.fif')[0] + '-plot'
     jplt.save(fname=os.path.join(p,plot_name))
-   #---
 
-def test_bads():
-    from jumeg.base import jumeg_logger
-    jumeg_logger.setup_script_logging(logger=logger,level="DEBUG")
-   #--- logfile  prefix
-    p = "/home/fboers/MEGBoers/data/exp/MEG94T/mne" #$JUMEG_LOCAL_DATA/exp/JUMEGTest/FV/211747"
-
-    fraw = "./205720/MEG94T0T2/131016_1325/1/205720_MEG94T0T2_131016_1325_1_c,rfDC,meeg,nr,bcc-raw.fif"
-    
-    raw,raw_fname = jb.get_raw_obj(os.path.join(p,fraw))
-
-    picks = jb.picks.bads2picks(raw)
-    print(picks)
-    print(type(picks))
-    if isinstance(picks,(list,np.ndarray)):
-       logger.info(" --> BADS: {} picks: {}".format(raw.info["bads"],picks))
-       jplt = JuMEG_PLOT_BADS(n_plots=len(picks),name="BADs",verbose=True,picks=picks)
-       jplt.plot(raw,colour="red",title="BADs: " + os.path.basename(raw_fname),check_dead_channels=False,picks=picks)
-       
-       jplt.show()
-       jplt.save(fname=jb.get_raw_filename(raw),plot_dir=".")
 
 
 #=========================================================================================

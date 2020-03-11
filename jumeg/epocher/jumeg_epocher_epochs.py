@@ -1126,6 +1126,8 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
        if self.OutputMode.epochs:
           fname = jumeg_base.get_fif_name(raw=self.raw,postfix=postfix,extention="-epo.fif",update_raw_fname=False,path=self.OutputMode.path)
           evt['epochs'].save( fname )
+          # evt['epochs'].plot_image(combine='gfp',sigma=2.,cmap="YlGnBu_r")
+          
           logger.info("---> done jumeg epocher save events as => EPOCHS : " +fname)
           
       #--- save averaged data

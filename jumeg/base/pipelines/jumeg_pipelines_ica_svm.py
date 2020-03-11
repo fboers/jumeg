@@ -27,7 +27,11 @@ class JuMEG_ICA_SVM():
         self._raw        = None
         self._fname      = None
         self.picks       = None
-        self.ICA         = None
+        
+        self.ICA            = None
+        self._ics_found     = None
+        self._ics_found_svm = None
+        
         self._models     = None
         self._systemtype = "4d"
         self._isModelLoaded = False
@@ -73,12 +77,19 @@ class JuMEG_ICA_SVM():
         self.ICA          = kwargs.get("ICA",self.ICA)
 
     @property
-    def systentype(self): return self._systemtype
-    @systentype.setter
+    def ICsMNE(self):
+        return self._ics_found
+
+    @property
+    def ICsSVM(self):
+        return self._ics_found_svm
+
+    @property
+    def systemtype(self): return self._systemtype
+    @systemtype.setter
     def systemtype(self,type):
         if type in self.systemtypes:
            self._systemtype=type
-           
            
     @property
     def isModelLoaded(self): return self._isModelLoaded
@@ -140,6 +151,9 @@ class JuMEG_ICA_SVM():
 
         """
         self.update_from_kwargs(**kwargs)
+        self._ics_found     = None
+        self._ics_found_svm = None
+        
         self.predict_proba = None
         
       #--- we are fitting the ica on filtered copy of the original
@@ -156,7 +170,10 @@ class JuMEG_ICA_SVM():
               self.picks = jb.picks.meg_nobads(raw_c)
            self.ICA = mne.preprocessing.ICA(n_components=self.n_components,method=self.method)
            self.ICA.fit(raw_c,picks=self.picks)  # ,start=0.0,stop=20.0)
-    
+        
+        self._ics_found = list(set( self.ICA.exclude ))
+        self._ics_found.sort()
+        
        #--- get topo-maps
         topos = np.dot(self.ICA.mixing_matrix_[:,:].T,self.ICA.pca_components_[:self.ICA.n_components_])
        #--- compatibility section -- 3d interpolation to 4d sensorlayout
@@ -165,7 +182,10 @@ class JuMEG_ICA_SVM():
        
        #--- artifact annotation
         self.ICA.exclude = list(set(art_inds))
-    
+        # self._ics_found_svm = [item for item in self.ICA.exclude if item not in self._ics_found ]
+        self._ics_found_svm = self.ICA.exclude
+        self._ics_found_svm.sort()
+        
         return self.ICA,self.predict_proba
     
     def clear(self):
@@ -173,7 +193,9 @@ class JuMEG_ICA_SVM():
         self.ICA           = None
         self.predict_proba = None
         self.picks         = None
-    
+        self._ics_found     = None
+        self._ics_found_svm = None
+        
     def run(self,**kwargs):
         """
         raw

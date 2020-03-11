@@ -24,15 +24,17 @@ preproc functions:
 import sys,os,logging,yaml,argparse,glob
 
 import mne
-
+#---
 from jumeg.base                                      import jumeg_logger
 from jumeg.base.jumeg_base                           import jumeg_base as jb
 from jumeg.base.jumeg_badchannel_table               import update_bads_in_hdf
+#---
 from jumeg.base.pipelines.jumeg_pipelines_utils_base import get_args,JuMEG_PipelineFrame
 from jumeg.base.pipelines.jumeg_pipelines_ica        import JuMEG_PIPELINES_ICA
-from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD,JuMEG_PLOT_BADS
+from jumeg.base.pipelines.jumeg_pipelines_report     import JuMEG_REPORT
+#---
+from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD
 from jumeg.filter.jumeg_mne_filter                   import JuMEG_MNE_FILTER
-from jumeg.base.pipelines.jumeg_pipelines_report     import JuMEG_REPORT 
 #--- preproc
 from jumeg.jumeg_noise_reducer     import noise_reducer
 from jumeg.jumeg_suggest_bads      import suggest_bads
@@ -41,24 +43,6 @@ from jumeg.jumeg_interpolate_bads  import interpolate_bads as jumeg_interpolate_
 logger = logging.getLogger("jumeg")
 
 __version__= "2019.08.07.001"
-
-
-#--- init Class JuMEG_PipelineFrame as instance
-#JPL=JuMEG_PipelineFrame()
-
-
-
-def apply_report(**kwargs):
-    """
-   
-    :param fname:
-    :param stage
-    :param config
-    :return: 
-    """
-    report = JuMEG_REPORT(**kwargs)
-    report.run()
-
 
 #---------------------------------------------------
 #--- apply_noise_reducer
@@ -115,6 +99,7 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
     RawIsChanged = False
    #--- check dead channes and mark them as bad
     jb.picks.check_dead_channels(raw=raw)
+    
    #--- start plot denoising orig raw psd, avoid reloading raw data
     if config.get("plot"):
        jplt = JuMEG_PLOT_PSD(n_plots=3,name="denoising",verbose=True) #,pick_types=["meg","ref"])
@@ -139,14 +124,22 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
         
    #--- plot results, avoid reloading raw data
     if config.get("plot"):
-       jplt.plot(raw,title="MEG denoised: " + os.path.basename(fname_out),check_dead_channels=False,fmax=config.get("fmax"))
+       jplt.plot(raw,title="MEG denoised: " + os.path.basename(fname_out),check_dead_channels=False,fmax=config.get("fmax"),picks=jb.picks.meg_nobads(raw))
        if config.get("plot_show"):
           jplt.show()
-       jplt.save(fname=fname_out,plot_dir=config.get("plor_dir","plots"))
-    
-    
-    if config.report:
-       report = JuMEGReport()
+       fout = jplt.save(fname=fname_out,plot_dir=config.get("plot_dir","report"))
+   
+     #--- update report config
+       RP  = JuMEG_REPORT()
+       data = None
+       report_path   = os.path.dirname(fout)
+       report_config = os.path.join(report_path,raw_fname.rsplit("_",1)[0]+"-report.yaml")
+       
+       if not RP.CFG.load_cfg( fname=report_config ):
+          data = {"noise_reducer":{ "files": os.path.basename(fout) } }
+       else:
+          RP.CFG.config["noise_reducer"] = { "files": os.path.basename(fout) }
+       RP.CFG.save_cfg(fname=report_config,data=data)
        
     return fname_out,raw,RawIsChanged,None
 
@@ -214,7 +207,7 @@ def apply_interpolate_bads(raw_fname=None,raw=None,config=None,label="interpolat
 #--- apply_ica
 #---------------------------------------------------
 @JuMEG_PipelineFrame
-def apply_ica(raw_fname=None,raw=None,config=None,label="ica",fname_out=None):
+def apply_ica(raw_fname=None,raw=None,path=None,config=None,label="ica",fname_out=None):
     """
 
     :param raw_fname:
@@ -227,15 +220,33 @@ def apply_ica(raw_fname=None,raw=None,config=None,label="ica",fname_out=None):
     if not config.get("run"): return fname_out,raw
    
     jICA = JuMEG_PIPELINES_ICA()
-    path = os.path.dirname(raw_fname)
+    
+    if not path:
+       path = os.path.dirname(raw_fname)
+
     raw,raw_filtered_clean = jICA.run(raw=raw,raw_fname=raw_fname,path=path,config=config)
     raw_filtered_clean.close()
     
     fname_out = jb.get_raw_filename(raw)
-    logger.info("ICA OUT: {}".format(fname_out))
-    
+    # logger.info("ICA OUT: {}".format(fname_out))
+
     return fname_out,raw,True,None
 
+#---------------------------------------------------
+#--- apply_report
+#---------------------------------------------------
+def apply_report(**kwargs):
+    """
+    
+    :param stage:
+    :param subject_id:
+    :param fname:
+    :param config:
+    :return:
+    """
+    jReport = JuMEG_REPORT()
+    jReport.run(**kwargs)
+ 
 #---------------------------------------------------
 #--- apply_filter
 #---------------------------------------------------

@@ -1,0 +1,8 @@
+noise_reducer:
+  files:
+     - 210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr.png
+test:
+  a:
+     - 1
+     - 2
+     - 3
