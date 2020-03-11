@@ -42,6 +42,13 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
        
        self.root_name       = "jumeg"
        self.verbose         = False
+      
+      #--- float settings
+       self.float_digits = 3
+       self.float_min    = -1000.0
+       self.float_max    = 1000.0
+       self.float_inc    = 0.1
+
       #---
        self._root_key       = "_root_keys"
        self._sorted_key     = "_sorted_keys"
@@ -196,9 +203,21 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                self.SetItemBold(child,True)
         
            elif isinstance(v,(float)):
-               value2=str(v)
-               ctrl=wx.SpinCtrlDouble(self,min=0.,max=10000.,value=value2,inc=0.1,name="float")
-               child=self.AppendItem(root,"{}".format(k),wnd=ctrl)
+               
+               ctrl  = wx.SpinCtrlDouble(self,inc=self.float_inc,name="float",style=wx.SP_ARROW_KEYS)
+               
+               ctrl.Digits = self.float_digits
+               ctrl.Min    = self.float_min
+               ctrl.Max    = self.float_max
+               
+               if v < ctrl.Min:
+                   ctrl.Min = abs(v) * -2.0
+               if v > ctrl.Max:
+                   ctrl.Max = abs(v) * 2.0
+ToDo ck reject 'mag': 5.0e-11
+
+               ctrl.Value = v
+               child = self.AppendItem(root,"{}".format(k),wnd=ctrl)
                
            item_data[k]=ctrl
            self.SetPyData(child,data[k])
@@ -252,6 +271,7 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
        self._info        = data.get("info")
       
        for k in keys:
+           if k.startswith("_"): continue
            d = data.get(k,None)
            if isinstance(d,(dict)):
                item_data[k]=dict()
@@ -260,7 +280,7 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                self.AppendSeparator(self.root)
                
        self._item_data = item_data
-        
+       
        self.Expand(self.root)
 
 
