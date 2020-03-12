@@ -17,11 +17,13 @@
 
 import getpass,datetime,platform
 import os,sys,argparse,logging
+from   copy import  deepcopy
+
 import wx
 import wx.lib.agw.customtreectrl as CT
 from   wx.lib.agw.customtreectrl import CustomTreeCtrl
-from   copy import  deepcopy
 
+from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import SpinCtrlScientific
 from jumeg.base.jumeg_base_config import JuMEG_CONFIG
 
 from jumeg.base import jumeg_logger
@@ -99,11 +101,18 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                self._get_item_data(data[k],item_data[k])
            else:
                try:
-                   if (v.GetName()=="list"):
-                      d=v.GetLineText(lineNo=0).split(self._list_seperator)
+                  #--- ck for list as data type and convert str in list to orig data types
+                   if (v.GetName().startswith("list")):
+                      dtype = v.GetName().split("_")[1]
+                      d = v.GetLineText(lineNo=0).split(self._list_seperator)
                       if (d):
-                         item_data[k]=d
-                      else:
+                         if dtype == "float":
+                            item_data[k] = [float(x) for x in d]
+                         elif dtype == "int":
+                            item_data[k] = [int(x) for x in d]
+                         else:
+                            item_data[k]=d
+                      else: # str
                          item_data[k]=list()
                    else:
                       item_data[k]=v.GetValue()
@@ -186,10 +195,20 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
         
            #--- ToDo type list => make TextCtrl + clickOn show List + add,delete like PropertyGrid
            elif isinstance(v,(list)):
+                dtype = str( type( v[0] ) ).lower()
+                name = "list"
+                if dtype.find("float")>-1:
+                   name+= "_float"
+                elif dtype.find("int") > -1:
+                    name += "_int"
+                else:
+                    name +="_str"
+                # logger.info("list: {} datatype: {} list type: {}".format(v,dtype,name))
+                
                 l = [str(x) for x in v]  # make list.items to str
                 #style = wx.TE_MULTILINE|wx.TE_RIGHT
                 style = wx.TE_LEFT
-                ctrl  = wx.TextCtrl(self,-1,style=style,value=self._list_seperator.join(l),name="list")
+                ctrl  = wx.TextCtrl(self,-1,style=style,value=self._list_seperator.join(l),name=name)
                 sz = ctrl.GetSizeFromTextSize(ctrl.GetTextExtent("W" * txt_size))
                 ctrl.SetInitialSize(sz)
                 ctrl.SetToolTip(wx.ToolTip(self._list_seperator.join(l)))
@@ -203,19 +222,21 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                self.SetItemBold(child,True)
         
            elif isinstance(v,(float)):
+               v = float(v)  # e.g.: 1.123456 or  5.123e-11 convert to float
                
-               ctrl  = wx.SpinCtrlDouble(self,inc=self.float_inc,name="float",style=wx.SP_ARROW_KEYS)
+               if str(v).find("e")>0:
+                  ctrl = SpinCtrlScientific(self,name="float")
+                  # ctrl = wx.SpinCtrlDouble(self,inc=self.float_inc,name="float",style=wx.SP_ARROW_KEYS)
+               else:
+                  ctrl = wx.SpinCtrlDouble(self,inc=self.float_inc,name="float",style=wx.SP_ARROW_KEYS)
+                  ctrl.Digits = self.float_digits
+                  ctrl.Min    = self.float_min
+                  ctrl.Max    = self.float_max
+                  if v < ctrl.Min:
+                     ctrl.Min = abs(v) * -2.0
+                  if v > ctrl.Max:
+                     ctrl.Max = abs(v) * 2.0
                
-               ctrl.Digits = self.float_digits
-               ctrl.Min    = self.float_min
-               ctrl.Max    = self.float_max
-               
-               if v < ctrl.Min:
-                   ctrl.Min = abs(v) * -2.0
-               if v > ctrl.Max:
-                   ctrl.Max = abs(v) * 2.0
-ToDo ck reject 'mag': 5.0e-11
-
                ctrl.Value = v
                child = self.AppendItem(root,"{}".format(k),wnd=ctrl)
                
@@ -258,12 +279,13 @@ ToDo ck reject 'mag': 5.0e-11
           self._sorted_keys = wxkeys.get(self._sorted_key,[])
         #--- get a sorted root key list avoid double items
           skeys = wxkeys.get(self._root_key,[] )
-          keys  = skeys + [ k for k in data.keys() if k not in skeys ]
+          keys  = skeys + [ k for k in list( data ) if k not in skeys ]
           item_data["_keys"]= deepcopy( wxkeys )
        else:
-          keys = data.keys()
+          keys = list( data ) #data.keys() => view of obj !!!
        
-       keys.remove("info")
+       if "info" in keys:
+          keys.remove("info")
        
       #---
        self.root_name    = kwargs.get("root_name", self.root_name)

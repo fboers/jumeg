@@ -19,9 +19,168 @@ import logging
 from jumeg.base import jumeg_logger
 logger = logging.getLogger('jumeg')
 
-__version__='2019.12.04.001'
+__version__='2020.03.12.001'
 
 LEA=wx.LEFT|wx.EXPAND|wx.ALL
+
+class SpinCtrlScientific(wx.Panel):
+    """
+    min,max,initial,inc,name
+    Digits,Increment
+    Min,Max,Range,Value
+    """
+    def __init__(self,parent,**kwargs):
+        super().__init__(parent)
+        self.SetName("SpinCtrlScientific")
+        self._SpinMantisse = None
+        self._SpinExponent = None
+        
+        self._min = [-10000,-100]
+        self._max = [ 10000, 100]
+        self._inc = 1
+        self._initial = 0
+        
+        self._wx_init(**kwargs)
+        self._ApplayLayout()
+   
+  
+    @property
+    def Mantisse(self): return self._SpinMantisse
+    @property
+    def Exponent(self): return self._SpinExponent
+
+    @property
+    def Digits(self): return self.Mantisse.Digits
+    @Digits.setter
+    def Digits(self,v):
+        if self.Mantisse:
+           self.Mantisse.Digits=v
+        
+    @property
+    def Increment(self):
+        return self._inc
+
+    @Increment.setter
+    def Increment(self,v):
+        self.SetIncrement(v)
+
+    def GetIncrement(self):
+        return self._inc
+
+    def SetIncrement(self,v):
+        self._inc = v
+        if self.Mantisse:
+           self.Mantisse.Increment = self._inc
+        
+    @property
+    def initial(self):
+        return self._initial
+
+    @initial.setter
+    def initial(self,v):
+        if isinstance(v,(list,tuple)):
+            self._initial = v
+        else:
+            self._initial = [v,v]
+    @property
+    def Value(self): return self.GetValue()
+    @Value.setter
+    def Value(self,v):
+        self.SetValue(v)
+        
+    def GetValue(self):
+       # https://stackoverflow.com/questions/29849445/convert-scientific-notation-to-decimals
+        m  = str( self.Mantisse.Value )
+        ex = str( self.Exponent.Value )
+        v  = m + "e" + ex
+        
+        '''
+        # round float
+        digs = len(m.split(".")[1])
+        fmt  = '%0.'+str(digs)+"f"
+        return float("{"+fmt +"}".format(float(v)))
+        '''
+        return float(v)
+        
+   
+    def _update_ctrl(self,ctrl,v,idx):
+        ctrl.Min = self._min[idx]
+        ctrl.Max = self._max[idx]
+    
+        if v < ctrl.Min:
+            ctrl.Min = abs(v) * -2.0
+        if v > ctrl.Max:
+            ctrl.Max = abs(v) * 2.0
+    
+        ctrl.Value = v
+
+    def SetValue(self,v):
+        if not self._SpinMantisse: return
+        
+        v = str(v)
+        if v.find("e")>0: # 5.123e-11
+           m,ex = v.split("e")
+        else:
+           m,rest= v.split(".")
+           m += rest
+           ex = -len(rest)
+        
+        digs = 1
+        if m.find(".") > -1:
+           _,rest = m.split(".")
+           if rest:
+              digs: len(rest) + 1
+              
+        self.Mantisse.Digits = digs
+        
+        self._update_ctrl(self.Mantisse,float(m),0)
+        self._update_ctrl(self.Exponent,int(ex), 1)
+
+     
+    def update(self,**kwargs):
+        
+        self._min      = kwargs.get("min",self._min)
+        self._max      = kwargs.get("max",self._max)
+        self.Digits    = kwargs.get("digits",self.Digits)
+        self.Increment = kwargs.get("inc",self._inc)
+        
+        v = kwargs.get("value",0.0)
+        self.Value = kwargs.get("Value",v)
+        
+    
+    def _wx_init(self,**kwargs):
+        """
+        < spin ctrl double> <e> < spin ctrl double >
+        :param kwargs:
+        :return:
+        """
+        self.SetName(kwargs.get("name",self.GetName()))
+        self.Increment = kwargs.get("inc",self._inc)
+        
+        style=kwargs.get("style",wx.SP_ARROW_KEYS)
+        self.SetBackgroundColour(kwargs.get("bg","GREY90"))
+       #---5.123 e-11  mantisse 5.123
+        self._SpinMantisse = wx.SpinCtrlDouble(self,inc=self._inc,name="mantisse",style=style)
+       #--- e
+        self._txt= wx.StaticText(self,label="exp") #,style=wx.ALIGN_CENTRE_HORIZONTAL)
+       #---5.123 e-11  exponent -11
+        style = wx.SP_ARROW_KEYS | wx.SP_WRAP | wx.TE_PROCESS_ENTER | wx.ALIGN_RIGHT
+        self._SpinExponent = wx.SpinCtrl(self,wx.ID_ANY,name="exponent",style=style)
+       #---
+        self.update(**kwargs)
+        
+        
+    def _ApplayLayout(self):
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(self._SpinMantisse,1,LEA,2)
+        hbox.Add(self._txt,0,wx.LEFT|wx.RIGHT,5)
+        hbox.Add(self._SpinExponent,0,wx.LEFT|wx.ALL,2)
+    
+        self.SetAutoLayout(True)
+        self.SetSizer(hbox)
+        self.Fit()
+        self.Layout()
+        
 
 class CheckBoxPopup(wx.PopupTransientWindow):
     """
