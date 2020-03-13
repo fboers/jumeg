@@ -1,75 +1,55 @@
-info:
-  user: fboers
-  time: 2020-03-13 12:01
-  gui-version: 2020.03.11.001
-  python-version: 3.7.6
 _keys:
-  _root_keys: [info, global, noise_reducer, suggest_bads, interpolate_bads, ica, report]
-  _sorted_keys: [run, overwrite, save, plot, plot_show, plot_dir]
+  _root_keys:
+  - info
+  - global
+  - noise_reducer
+  - suggest_bads
+  - interpolate_bads
+  - ica
+  - report
+  _sorted_keys:
+  - run
+  - overwrite
+  - save
+  - plot
+  - plot_show
+  - plot_dir
+epocher:
+  _sorted_keys:
+  - do_events
+  - do_epochs
+  conditions: None
+  do_epochs: true
+  do_events: true
+  overwrite: true
+  run: false
+  save: true
+  template: INTEXT
+filter_1:
+  fhigh: 120.0
+  file_extention:
+  - ar-raw.fif
+  - ar-empty.fif
+  flow: 0.1
+  overwrite: false
+  postfix: fi
+  run: false
+  save: true
+  type: mne
 global:
-  _sorted_keys: [experiment, subjects, stage, file_extention, recursive]
+  _sorted_keys:
+  - experiment
+  - subjects
+  - stage
+  - file_extention
+  - recursive
   experiment: INTEXT
   file_extention:
-     - meeg-raw.fif
-     - rfDC-empty.fif
+  - meeg-raw.fif
+  - rfDC-empty.fif
   recursive: true
   stage: ~/MEGBoers/data/exp/QUATERS/mne
   subjects: None
-noise_reducer:
-  file_extention:
-     - meeg-raw.fif
-     - rfDC-empty.fif
-  fmax: 300
-  noiseref_hp:
-     - RFG ...
-  overwrite: false
-  plot: true
-  plot_dir: report
-  plot_show: false
-  postfix: nr
-  refhp: 0.1
-  reflp: 5.0
-  refnotch:
-     - 50.0
-     - 100.0
-     - 150.0
-     - 200.0
-     - 250.0
-     - 300.0
-     - 350.0
-     - 400.0
-  run: false
-  save: true
-suggest_bads:
-  file_extention:
-     - ',nr-raw.fif'
-     - rfDC,nr-empty.fif
-  fmax: 100
-  hdfname: jumeg_badchannel_info.hdf
-  overwrite: false
-  parameter:
-    epoch_length: None
-    fraction: 0.001
-    sensitivity_psd: 95
-    sensitivity_steps: 97
-    show_raw: false
-    summary_plot: false
-    validation: true
-  plot: false
-  plot_show: false
-  postfix: bcc
-  run: false
-  save: true
-interpolate_bads:
-  _sorted_keys: [plot_block]
-  file_extention:
-     - ',nr,bcc-raw.fif'
-     - rfDC,nr,bcc-empty.fif
-  overwrite: false
-  plot_block: false
-  postfix: int
-  run: false
-  save: true
 ica:
   chops:
     epocher:
@@ -80,19 +60,19 @@ ica:
   ecg:
     ch_name: ECG
     event_id: 999
-    fhigh: 20
-    flow: 8
+    fhigh: 20.0
+    flow: 8.0
     thresh: 0.3
     tmax: 0.4
     tmin: -0.4
     use_jumeg: true
   eog:
     ch_name:
-       - EOG ver
+    - EOG ver
     event_id:
-       - 997
-    fhigh: 20
-    flow: 1
+    - 997
+    fhigh: 20.0
+    flow: 1.0
     hor_ch: EOG hor
     thresh: 0.3
     tmax: 0.4
@@ -101,10 +81,11 @@ ica:
     ver_ch: EOG ver
   exclude: bads
   file_extention:
-     - ',nr,bcc,int-raw.fif'
-     - rfDC,nr,bcc,int-empty.fif
+  - ',nr,bcc,int-raw.fif'
+  - rfDC,nr,bcc,int-empty.fif
   fit:
-    _sorted_keys: [plot_sources]
+    _sorted_keys:
+    - plot_sources
     overwrite: true
     plot_sources: true
     save: true
@@ -123,10 +104,12 @@ ica:
     save: true
   random_state: 42
   reject:
-    mag: 1e-11
+    mag: 4.9999999999999995e-11
   run: true
   transform:
-    _sorted_keys: [filtered, unfiltered]
+    _sorted_keys:
+    - filtered
+    - unfiltered
     filtered:
       run: true
       save: true
@@ -138,6 +121,46 @@ ica:
       save: true
       save_chop: true
       save_chop_clean: true
+info:
+  gui-version: 2020.03.11.001
+  python-version: 3.7.6
+  time: 2020-03-13 16:55
+  user: fboers
+interpolate_bads:
+  _sorted_keys:
+  - plot_block
+  file_extention:
+  - ',nr,bcc-raw.fif'
+  - rfDC,nr,bcc-empty.fif
+  overwrite: true
+  plot_block: false
+  postfix: int
+  run: false
+  save: true
+noise_reducer:
+  file_extention:
+  - meeg-raw.fif
+  - rfDC-empty.fif
+  fmax: 300
+  noiseref_hp: RFG ...
+  overwrite: true
+  plot: true
+  plot_dir: report
+  plot_show: false
+  postfix: nr
+  refhp: 0.1
+  reflp: 5.0
+  refnotch:
+  - 50.0
+  - 100.0
+  - 150.0
+  - 200.0
+  - 250.0
+  - 300.0
+  - 350.0
+  - 400.0
+  run: false
+  save: true
 report:
   ica:
     extention: ar.png
@@ -149,23 +172,23 @@ report:
   path: report
   run: false
   save: true
-filter_1:
-  fhigh: 120.0
+suggest_bads:
   file_extention:
-     - ar-raw.fif
-     - ar-empty.fif
-  flow: 0.1
-  overwrite: false
-  postfix: fi
-  run: false
-  save: true
-  type: mne
-epocher:
-  _sorted_keys: [do_events, do_epochs]
-  conditions: None
-  do_epochs: true
-  do_events: true
+  - ',nr-raw.fif'
+  - rfDC,nr-empty.fif
+  fmax: 100
+  hdfname: jumeg_badchannel_info.hdf
   overwrite: true
+  parameter:
+    epoch_length: None
+    fraction: 0.001
+    sensitivity_psd: 95
+    sensitivity_steps: 97
+    show_raw: false
+    summary_plot: false
+    validation: true
+  plot: false
+  plot_show: false
+  postfix: bcc
   run: false
   save: true
-  template: INTEXT
