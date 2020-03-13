@@ -266,12 +266,13 @@ class JuMEG_CONFIG(object):
         '''
         cfg = kwargs.get("config",None)
         key = kwargs.get("key",None)
-        
         self.useStruct = kwargs.get("useStruct",self.useStruct)
         
         if isinstance(cfg,(dict)):
            if key:
               self._cfg = cfg.get(key)
+           else:
+              self._cfg = cfg
            self._fname = None
            return self._update_struct()
         

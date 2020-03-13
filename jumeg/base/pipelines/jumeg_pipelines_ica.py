@@ -687,11 +687,12 @@ class JuMEG_PIPELINES_ICA(object):
         self._update_from_kwargs(**kwargs)
         
       #--- load config
-        kwargs["useStruct"]=True
-        self._CFG.update(**kwargs)
+        
+        kwargs["useStruct"] = True
+        self._CFG.update(**kwargs )
         self.useSVM               = self.cfg.fit.use_svm
         self.useArtifactRejection = self.cfg.fit.use_artifact_rejection
-
+        
         #--- init or load raw
         self._initRawObj()
         

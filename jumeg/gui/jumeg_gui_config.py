@@ -16,14 +16,14 @@
 #--------------------------------------------
 
 import getpass,datetime,platform
-import os,sys,argparse,logging
+import os,sys,argparse,logging,pprint
 from   copy import  deepcopy
 
 import wx
 import wx.lib.agw.customtreectrl as CT
 from   wx.lib.agw.customtreectrl import CustomTreeCtrl
 
-from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import SpinCtrlScientific
+from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import SpinCtrlScientific,EditableListBoxPanel
 from jumeg.base.jumeg_base_config import JuMEG_CONFIG
 
 from jumeg.base import jumeg_logger
@@ -104,7 +104,8 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                   #--- ck for list as data type and convert str in list to orig data types
                    if (v.GetName().startswith("list")):
                       dtype = v.GetName().split("_")[1]
-                      d = v.GetLineText(lineNo=0).split(self._list_seperator)
+                      # d = v.GetLineText(lineNo=0).split(self._list_seperator)
+                      d = v.GetValue()
                       if (d):
                          if dtype == "float":
                             item_data[k] = [float(x) for x in d]
@@ -193,8 +194,9 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
             
                child = self.AppendItem(root,"{}".format(k),wnd=ctrl,ct_type=0)
         
-           #--- ToDo type list => make TextCtrl + clickOn show List + add,delete like PropertyGrid
            elif isinstance(v,(list)):
+                ctrl = EditableListBoxPanel(self,label=k.upper())
+              #--- ck data type for later reconstruction from listbox (string)
                 dtype = str( type( v[0] ) ).lower()
                 name = "list"
                 if dtype.find("float")>-1:
@@ -203,15 +205,9 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                     name += "_int"
                 else:
                     name +="_str"
-                # logger.info("list: {} datatype: {} list type: {}".format(v,dtype,name))
                 
-                l = [str(x) for x in v]  # make list.items to str
-                #style = wx.TE_MULTILINE|wx.TE_RIGHT
-                style = wx.TE_LEFT
-                ctrl  = wx.TextCtrl(self,-1,style=style,value=self._list_seperator.join(l),name=name)
-                sz = ctrl.GetSizeFromTextSize(ctrl.GetTextExtent("W" * txt_size))
-                ctrl.SetInitialSize(sz)
-                ctrl.SetToolTip(wx.ToolTip(self._list_seperator.join(l)))
+                ctrl.SetName(name)
+                ctrl.Value = v
                 child = self.AppendItem(root,"{}".format(k),wnd=ctrl)
         
            elif isinstance(v,(int)):
@@ -260,7 +256,10 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
       updates the used_dict i.e. the dict used for process
       '''
       self._used_dict=self.GetData()
-      
+   
+   def info(self):
+       logger.info("---> config info:\n {}\n".format(pprint.pformat(self.GetData(),indent=4)))
+       
    def _wx_init(self,**kwargs):
     
        data = kwargs.get("data",{ })
@@ -435,7 +434,7 @@ class CtrlPanel(wx.Panel):
         '''
         obj = evt.GetEventObject()
         if obj.GetName().endswith(".BT.SHOW"):
-           self.cfg.info()
+           self.CfgTreeCtrl.info()
         elif obj.GetName().endswith(".BT.SAVE"):
            self.ClickOnSaveConfigFile()
            evt.Skip()

@@ -109,20 +109,17 @@ class ARTEFACT_EVENTS(JUMEG_SLOTS):
          :return:
          if set annotations
             raw.annotations
-         
-                             
-                             
+            
         """
         self.update(**kwargs)
         self.events = dict()
-        channels    = []
-        evt_id      = []
-        if not isinstance(self.ch_name,(list)):
-           channels.append(self.ch_name)
-           evt_id.append(self.event_id)
+           
+        if isinstance(self.ch_name,(list)):
+           channels = [ *self.ch_name ]
+           evt_id   = [ *self.event_id ]
         else:
-           channels.extend(self.ch_name)
-           evt_id.extend(self.event_id)
+           channels = [ self.ch_name ]
+           evt_id   = [ self.event_id ]
            
         while len(channels):
             ch_name  = channels.pop()

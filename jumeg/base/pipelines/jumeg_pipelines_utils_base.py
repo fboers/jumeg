@@ -16,6 +16,8 @@
 #--------------------------------------------
 
 import sys,os,logging,yaml,argparse,glob
+import colorama
+from colorama import Fore, Style
 
 from contextlib import contextmanager,ContextDecorator
 #from contextlib import redirect_stdout
@@ -309,8 +311,11 @@ class JuMEG_PipelineFrame(object):
          raw_fname, raw obj
         """
         self._update_from_kwargs(**kwargs)
-        logger.info("  -> < {} > file name: {}".format(self.label,self._raw_fname))
-       
+        
+        print(Fore.GREEN)
+        logger.info("\n---> Start: < {} > file name: {}".format(self.label,self._raw_fname))
+        print(Style.RESET_ALL)
+        
         if self._debug:
            logger.debug(" -> config parameter:\n{}".format(self._cfg))
 

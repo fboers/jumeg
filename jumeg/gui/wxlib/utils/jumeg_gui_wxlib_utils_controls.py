@@ -14,6 +14,7 @@ from pubsub import pub
 #except ImportError: # if it's not there locally, try the wxPython lib.
 
 import wx.lib.agw.floatspin as FS
+from   wx.adv import EditableListBox
 
 import logging
 from jumeg.base import jumeg_logger
@@ -22,6 +23,72 @@ logger = logging.getLogger('jumeg')
 __version__='2020.03.12.001'
 
 LEA=wx.LEFT|wx.EXPAND|wx.ALL
+
+class EditableListBoxPanel(wx.Panel):
+    """
+     wx.adv.EditableListBox within a in Panel in order to use
+     with wx.lib.agw.customtreectrl
+     
+    """
+    def __init__(self,parent,**kwargs):
+        """
+        
+        :param parent:
+        :param label: label
+        :param name : name of ctrl
+        :param bg   : background colour
+       
+       
+        Example
+        -------
+        from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import EditableListBoxPanel
+       
+        items = [ 1,2,"A","b","C","HELLO World"]
+        ctrl = EditableListBoxPanel(self,label="TEST",name="WxTEST",size=(-1,150) )
+        ctrl.Value = items
+   
+        items = ctrl.Value
+   
+        """
+        super().__init__(parent)
+        self._etb  = None
+        self._lbox = None
+        
+        self._wx_init(**kwargs)
+        self._ApplayLayout()
+        
+    @property
+    def EditableListBox(self): return self._etb
+    @property
+    def ListBox(self): return self._lbox
+
+    @property
+    def Value(self): return self._etb.Strings
+    @Value.setter
+    def Value(self,v):
+        self.SetValue(v)
+        
+    def GetValue(self): return self._etb.Strings
+
+    def SetValue(self,v):
+        if isinstance( v,(list) ):
+           self._etb.Strings=[str(x) for x in v]
+        else:
+           self._etb.Strings = [v]
+
+    def _wx_init(self,**kwargs):
+        self.SetBackgroundColour(kwargs.get("bg","GREY95"))
+        style = wx.adv.EL_ALLOW_NEW | wx.adv.EL_ALLOW_EDIT | wx.adv.EL_ALLOW_DELETE | wx.adv.EL_NO_REORDER
+        self._etb  = EditableListBox(self,id=wx.ID_ANY,label=kwargs.get("label",""),style=style,size=kwargs.get("size",(-1,100 )) )
+        self._lbox = self._etb.GetListCtrl()
+    
+    def _ApplayLayout(self):
+        hbox = wx.BoxSizer(wx.HORIZONTAL)
+        hbox.Add(self._etb,1,LEA,5)
+        self.SetAutoLayout(True)
+        self.SetSizer(hbox)
+        self.Fit()
+        self.Layout()
 
 class SpinCtrlScientific(wx.Panel):
     """
