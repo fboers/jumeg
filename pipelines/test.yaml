@@ -1,6 +1,6 @@
 info:
   user: fboers
-  time: 2020-03-13 12:01
+  time: 2020-03-11 15:54
   gui-version: 2020.03.11.001
   python-version: 3.7.6
 _keys:
@@ -8,7 +8,7 @@ _keys:
   _sorted_keys: [run, overwrite, save, plot, plot_show, plot_dir]
 global:
   _sorted_keys: [experiment, subjects, stage, file_extention, recursive]
-  experiment: INTEXT
+  experiment: MEG94T
   file_extention:
      - meeg-raw.fif
      - rfDC-empty.fif
@@ -21,23 +21,24 @@ noise_reducer:
      - rfDC-empty.fif
   fmax: 300
   noiseref_hp:
-     - RFG ...
-  overwrite: false
+     - RFG
+     - '...'
+  overwrite: true
   plot: true
   plot_dir: report
   plot_show: false
   postfix: nr
-  refhp: 0.1
+  refhp: 0.0
   reflp: 5.0
   refnotch:
-     - 50.0
-     - 100.0
-     - 150.0
-     - 200.0
-     - 250.0
-     - 300.0
-     - 350.0
-     - 400.0
+     - '50.0'
+     - '100.0'
+     - '150.0'
+     - '200.0'
+     - '250.0'
+     - '300.0'
+     - '350.0'
+     - '400.0'
   run: false
   save: true
 suggest_bads:
@@ -46,10 +47,10 @@ suggest_bads:
      - rfDC,nr-empty.fif
   fmax: 100
   hdfname: jumeg_badchannel_info.hdf
-  overwrite: false
+  overwrite: true
   parameter:
     epoch_length: None
-    fraction: 0.001
+    fraction: 0.0
     sensitivity_psd: 95
     sensitivity_steps: 97
     show_raw: false
@@ -58,14 +59,14 @@ suggest_bads:
   plot: false
   plot_show: false
   postfix: bcc
-  run: false
+  run: true
   save: true
 interpolate_bads:
   _sorted_keys: [plot_block]
   file_extention:
      - ',nr,bcc-raw.fif'
      - rfDC,nr,bcc-empty.fif
-  overwrite: false
+  overwrite: true
   plot_block: false
   postfix: int
   run: false
@@ -82,21 +83,22 @@ ica:
     event_id: 999
     fhigh: 20
     flow: 8
-    thresh: 0.3
-    tmax: 0.4
-    tmin: -0.4
+    thresh: 0.0
+    tmax: 0.0
+    tmin: 0.0
     use_jumeg: true
   eog:
     ch_name:
-       - EOG ver
+       - EOG
+       - ver
     event_id:
-       - 997
+       - '997'
     fhigh: 20
     flow: 1
     hor_ch: EOG hor
-    thresh: 0.3
-    tmax: 0.4
-    tmin: -0.4
+    thresh: 0.0
+    tmax: 0.0
+    tmin: 0.0
     use_jumeg: true
     ver_ch: EOG ver
   exclude: bads
@@ -105,26 +107,26 @@ ica:
      - rfDC,nr,bcc,int-empty.fif
   fit:
     _sorted_keys: [plot_sources]
-    overwrite: true
+    overwrite: false
     plot_sources: true
     save: true
-    use_artifact_rejection: true
+    use_artifact_rejection: false
     use_svm: true
   overwrite: true
   plot: true
   plot_dir: report
-  plot_show: false
+  plot_show: true
   postfix: ar
   pre_filter:
     fhigh: 45.0
-    flow: 0.1
-    overwrite: true
+    flow: 0.0
+    overwrite: false
     run: true
     save: true
   random_state: 42
   reject:
-    mag: 1e-11
-  run: true
+    mag: 0.0
+  run: false
   transform:
     _sorted_keys: [filtered, unfiltered]
     filtered:
@@ -147,14 +149,14 @@ report:
     run: true
   overwrite: false
   path: report
-  run: false
+  run: true
   save: true
 filter_1:
   fhigh: 120.0
   file_extention:
      - ar-raw.fif
      - ar-empty.fif
-  flow: 0.1
+  flow: 0.0
   overwrite: false
   postfix: fi
   run: false
@@ -163,9 +165,9 @@ filter_1:
 epocher:
   _sorted_keys: [do_events, do_epochs]
   conditions: None
-  do_epochs: true
-  do_events: true
-  overwrite: true
+  do_epochs: false
+  do_events: false
+  overwrite: false
   run: false
   save: true
-  template: INTEXT
+  template: None

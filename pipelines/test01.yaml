@@ -1,6 +1,6 @@
 info:
   user: fboers
-  time: 2020-03-13 12:01
+  time: 2020-03-12 16:37
   gui-version: 2020.03.11.001
   python-version: 3.7.6
 _keys:
@@ -21,14 +21,15 @@ noise_reducer:
      - rfDC-empty.fif
   fmax: 300
   noiseref_hp:
-     - RFG ...
-  overwrite: false
+     - RFG
+     - '...'
+  overwrite: true
   plot: true
   plot_dir: report
   plot_show: false
   postfix: nr
-  refhp: 0.1
-  reflp: 5.0
+  refhp: -0.1
+  reflp: 4.9
   refnotch:
      - 50.0
      - 100.0
@@ -38,15 +39,21 @@ noise_reducer:
      - 300.0
      - 350.0
      - 400.0
-  run: false
+  run: true
   save: true
+  test:
+     - 1
+     - 2
+     - 3
+     - 4
+     - 222
 suggest_bads:
   file_extention:
      - ',nr-raw.fif'
      - rfDC,nr-empty.fif
   fmax: 100
   hdfname: jumeg_badchannel_info.hdf
-  overwrite: false
+  overwrite: true
   parameter:
     epoch_length: None
     fraction: 0.001
@@ -58,17 +65,17 @@ suggest_bads:
   plot: false
   plot_show: false
   postfix: bcc
-  run: false
+  run: true
   save: true
 interpolate_bads:
   _sorted_keys: [plot_block]
   file_extention:
      - ',nr,bcc-raw.fif'
      - rfDC,nr,bcc-empty.fif
-  overwrite: false
+  overwrite: true
   plot_block: false
   postfix: int
-  run: false
+  run: true
   save: true
 ica:
   chops:
@@ -88,7 +95,8 @@ ica:
     use_jumeg: true
   eog:
     ch_name:
-       - EOG ver
+       - EOG
+       - ver
     event_id:
        - 997
     fhigh: 20
