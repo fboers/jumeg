@@ -29,13 +29,27 @@ from jumeg.base            import jumeg_logger
 import datetime
 import getpass
 from copy import copy
+
+loader=None
 try:
-   from ruamel.yaml import YAML
-   yaml = YAML()
+   import ruamel.yaml as yaml
    yaml.indent(mapping=2, sequence=3, offset=3)
 except:
-   import yaml
-   
+   # https://stackoverflow.com/questions/30458977/yaml-loads-5e-6-as-string-and-not-a-number
+   import yaml,re
+   loader = yaml.SafeLoader
+   loader.add_implicit_resolver(
+        u'tag:yaml.org,2002:float',
+        re.compile(u'''^(?:
+        [-+]?(?:[0-9][0-9_]*)\\.[0-9_]*(?:[eE][-+]?[0-9]+)?
+        |[-+]?(?:[0-9][0-9_]*)(?:[eE][-+]?[0-9]+)
+        |\\.[0-9_]+(?:[eE][-+][0-9]+)?
+        |[-+]?[0-9][0-9_]*(?::[0-5]?[0-9])+\\.[0-9_]*
+        |[-+]?\\.(?:inf|Inf|INF)
+        |\\.(?:nan|NaN|NAN))$''', re.X),
+        list(u'-+0123456789.'))
+    
+
 import json
 
 try:
@@ -180,10 +194,9 @@ class JuMEG_CONFIG(object):
         self._cfg      = {}
         self.useStruct = False
         self.verbose   = kwargs.get("verbose",False)
-        
+      
         self._init(**kwargs)
-        self._yaml=YAML()
-    
+        
     @property
     def config(self): return self._cfg
   
@@ -245,7 +258,10 @@ class JuMEG_CONFIG(object):
         with open(self.fname) as FH:
 
             if self.fname.endswith(".yaml"):
-               self._cfg = yaml.load( FH )
+               if loader:
+                  self._cfg = yaml.load( FH ,Loader=loader)
+               else:
+                  self._cfg = yaml.load(FH)
             elif fname.endswith(".json"):
                self._cfg = json.load( FH )
 

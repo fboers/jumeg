@@ -157,17 +157,7 @@ class SpinCtrlScientific(wx.Panel):
         
     def GetValue(self):
        # https://stackoverflow.com/questions/29849445/convert-scientific-notation-to-decimals
-        m  = str( self.Mantisse.Value )
-        ex = str( self.Exponent.Value )
-        v  = m + "e" + ex
-        
-        '''
-        # round float
-        digs = len(m.split(".")[1])
-        fmt  = '%0.'+str(digs)+"f"
-        return float("{"+fmt +"}".format(float(v)))
-        '''
-        return float(v)
+        return float( self.Mantisse.Value * 10.0 **  self.Exponent.Value )
         
    
     def _update_ctrl(self,ctrl,v,idx):

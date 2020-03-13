@@ -113,7 +113,7 @@ class ARTEFACT_EVENTS(JUMEG_SLOTS):
         """
         self.update(**kwargs)
         self.events = dict()
-           
+        
         if isinstance(self.ch_name,(list)):
            channels = [ *self.ch_name ]
            evt_id   = [ *self.event_id ]

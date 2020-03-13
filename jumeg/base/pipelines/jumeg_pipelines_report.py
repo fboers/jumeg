@@ -37,8 +37,6 @@ from jumeg.base                    import jumeg_logger
 __version__= "2019.12.16.001"
 
 logger = logging.getLogger("jumeg")
-jumeg_logger.setup_script_logging(logger=logger)
-
 
 class MNE_REPORT(JUMEG_SLOTS):
     """
@@ -356,4 +354,5 @@ def test2():
     
 if __name__ == "__main__":
   # test1()
+   jumeg_logger.setup_script_logging(logger=logger)
    test2()

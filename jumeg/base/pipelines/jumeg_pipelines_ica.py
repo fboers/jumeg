@@ -123,7 +123,7 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
     ica = ICA(method='fastica', n_components=40, random_state=random_state,
               max_pca_components=None, max_iter=5000, verbose=False)
     
-    logger.info(' --> ICA FIT: apply ICA.fit')
+    logger.info(' --> ICA FIT: apply ICA.fit\n reject: {} \n picks: {}'.format(reject,picks))
     ica.fit(raw, picks=picks, decim=None, reject=reject, verbose=True)
 
     #######################################################################
@@ -786,8 +786,6 @@ class JuMEG_PIPELINES_ICA(object):
         self.clear(objects=ICA_objs)
         
         return raw_unfiltered_clean,raw_filtered_clean
-  
-#   1_preprocessing.py -c jumeg_config.yaml -lname quaters_meeg.txt -lpath ~/MEGBoers/data/exp/QUATERS/mne -s ~/MEGBoers/data/exp/QUATERS/mne -r -v
 
 def test1():
    #--- init/update logger
@@ -826,98 +824,3 @@ def test1():
 if __name__ == "__main__":
   test1()
   
-
-'''
-
-
-
-
-        #--- reset output
-        raw_filtered_clean = None
-        raw_filtered_chops_clean_list = []
-       #---
-        raw_unfiltered_clean = None
-        raw_unfiltered_chops_clean_list = []
-       
-       # debug
-       # self.PreFilter.raw.plot(block=True)
-       
-       #--- loop for chpos
-       
-        
-        if self.PreFilter.isFiltered:
-           raw = self.PreFilter.raw
-           #--- ICA fit
-           ICA,fname_ica = self._apply_fit(raw_chop=raw_chop,chop=chop,idx=idx)
-
-        for idx in range(self._chop_times.shape[0]):
-            chop = self._chop_times[idx]
-            logger.info("---> Start ICA FIT & Transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
-            
-            raw_chop = self._copy_crop_and_chop(raw,chop)
-          #---  ICA FIT filtered or unfilterd obj
-            fname_chop,fname_raw = self._get_chop_name(raw_chop,chop=chop,extention="-raw.fif")
-            jb.set_raw_filename(raw_chop,fname_chop)
-          #--- ICA fit
-            ICA,fname_ica = self._apply_fit(raw_chop=raw_chop,chop=chop,idx=idx)
-            ICAS.append(ICA)
-
-            
-            
-            
-            if self.PreFilter.isFiltered:
-               raw_chop = self._copy_crop_and_chop(self.PreFilter.raw,chop)
-            else:
-               raw_chop = self._copy_crop_and_chop(self.raw,chop)
- 
-           #---  ICA FIT filtered or unfilterd obj
-            fname_chop,fname_raw = self._get_chop_name(raw_chop,chop=chop,extention="-raw.fif")
-            jb.set_raw_filename(raw_chop,fname_chop)
-           
-           #--- ICA fit
-            ICA,fname_ica = self._apply_fit(raw_chop=raw_chop,chop=chop,idx=idx)
-       
-           #--- ICA Transform
-            if self.cfg.transform.run:
-              #--- filtered
-               if self.cfg.transform.filtered.run:
-                  if self.PreFilter.isFiltered:
-                  #--- filtered
-                     fname_chop,_  = self._get_chop_name(raw_chop,extention="-raw.fif")
-                     fname_chop = os.path.join(self.path_ica_chops,fname_chop)
-                     fname_filtered_clean,_ = self._get_chop_name(raw_chop,extention="-raw.fif",postfix="ar")
-                     fname_filtered_clean = os.path.join(self.path_ica_chops,fname_filtered_clean)
-                  
-                     raw_filtered_chops_clean_list.append( self.apply_ica_artefact_rejection(raw_chop,ICA,
-                                                                fname_raw   = fname_chop,
-                                                                fname_clean = fname_filtered_clean,
-                                                                save_chop  = self.cfg.transform.filtered.save_chop))
-                                         
-             #--- unliterd
-               if self.cfg.transform.unfiltered.run:
-                  raw_chop      = self._copy_crop_and_chop(self.raw,chop)
-                  fname_chop,_  = self._get_chop_name(raw_chop,extention="-raw.fif")
-                  fname_unfiltered_clean,_ = self._get_chop_name(raw_chop,extention="-raw.fif",postfix="ar")
-                  raw_unfiltered_chops_clean_list.append( self.apply_ica_artefact_rejection(raw_chop,ICA,
-                                                               fname_raw   = fname_chop,
-                                                               fname_clean = fname_unfiltered_clean,
-                                                               save_chop  = self.cfg.transform.unfiltered.save_chop) )
-                  
-            logger.info(" --> done ICA FIT & transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
-            
-       #--- concat filtered raws
-        if raw_filtered_chops_clean_list:
-           raw_filtered_clean = self.concat_and_save(raw_filtered_chops_clean_list,
-                                                       fname       = self.PreFilter.fname.replace("-raw.fif",",ar-raw.fif"),
-                                                       annotations = self.raw.annotations,
-                                                       save        = self.cfg.transform.filtered.save)
-       #--- concat unfiltered raws
-        if raw_unfiltered_chops_clean_list:
-           raw_unfiltered_clean = self.concat_and_save(raw_unfiltered_chops_clean_list,
-                                                         fname       = self._raw_fname.replace("-raw.fif",",ar-raw.fif"),
-                                                         annotations = self.raw.annotations,
-                                                         save        = self.cfg.transform.unfiltered.save
-                                                       )
-
-
-'''

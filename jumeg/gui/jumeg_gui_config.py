@@ -218,7 +218,7 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                self.SetItemBold(child,True)
         
            elif isinstance(v,(float)):
-               v = float(v)  # e.g.: 1.123456 or  5.123e-11 convert to float
+              # v = float(v)  # e.g.: 1.123456 or  5.123e-11 convert to float
                
                if str(v).find("e")>0:
                   ctrl = SpinCtrlScientific(self,name="float")
@@ -235,7 +235,7 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                
                ctrl.Value = v
                child = self.AppendItem(root,"{}".format(k),wnd=ctrl)
-               
+           logger.info("---> {} => {} type: {}".format( k, v,type(v)) )
            item_data[k]=ctrl
            self.SetPyData(child,data[k])
            
