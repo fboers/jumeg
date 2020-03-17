@@ -3,7 +3,6 @@
 
 """
 """
-
 #--------------------------------------------
 # Authors: Frank Boers <f.boers@fz-juelich.de> 
 #
@@ -15,14 +14,13 @@
 # Updates
 #--------------------------------------------
 
-
 import os,sys,logging,yaml,argparse,glob
 from jumeg.base            import jumeg_logger
 from jumeg.base.jumeg_base import jumeg_base as jb
 
 logger = logging.getLogger('jumeg')
 
-__version__="2019.08.07.001"
+__version__="2020.03.16.001"
 
 class JuMEG_PDF_BASE(object):
    def __init__(self,**kwargs):
@@ -673,6 +671,8 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
         self.subjects       = get_value("subjects",      vlist)
         self.stage          = get_value("stage",         vlist)
         self.file_extention = get_value("file_extention",vlist)
+        self.experiment     = get_value("experiment",    vlist)
+        
         #self.overwrite      = get_value("overwrite"    ,vlist)
         
         self._PDFList.list_file_path = get_value("list_path",vlist)
@@ -797,74 +797,9 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
 #=========================================================================================
 #==== MAIN
 #=========================================================================================
-def test1():
-    logger.info("Start test1 find files fom subject_ids list")
-   
-    stage = "$JUMEG_PATH_LOCAL_DATA/exp/JUMEGTest/mne"
-    subject_ids = "211890","211747"
-
-    PDF = JuMEG_PDF_IDS()
-    PDF.update(stage=stage,subject_ids=subject_ids,separator= ",",recursive=True,verbose=True,debug=True)
-    
-def test2():
-    logger.info("Start test2 get full file")
-    PDF = JuMEG_PDF_FILE()
-    stage="$JUMEG_PATH_MNE_IMPORT2/MEG94T/mne"
-    name = "test01.txt"
-    path= stage+"/../doc"
-    PDF.update(name=name,path=path,verbose=True,debug=True)
-    logger.info("TEST 2: {}".format( PDF.pdfs ) )
- 
-    
-def test3():
-    logger.info("Start test3 get files fom list")
-    PDF = JuMEG_PDF_FILES_FROM_LIST()
-    stage="$JUMEG_PATH_MNE_IMPORT2/MEG94T/mne"
-    list_name = "test01.txt"
-    list_path= stage+"/../doc"
-    
-    PDF.update(stage=stage,list_name=list_name,list_path=list_path,verbose=True,debug=True)
-   
-def test4():
-    logger.info("Start test4 PipelineLooper")
-    defaults={
-          "stage"          : "$JUMEG_PATH_LOCAL_DATA/exp/JUMEGTest/mne",
-          "fif_extention"  : ["meeg-raw.fif","rfDC-empty.fif"],
-          "list_name"      : None,
-          "list_path"      : None,
-          "fname"          : None,
-          "fpath"          : None,
-          "config"         : "$JUMEG_PATH_JUMEG/../pipelines/config_file.yaml",
-          "subjects"       : "211890,211747",
-          "log2file"       : True,
-          "logprefix"      : "preproc0",
-          "overwrite"      : False,
-          "verbose"        : False,
-          "debug"          : False,
-          "recursive"      : True
-         }
-
-    opt = None
-    jpl = JuMEG_PipelineLooper(defaults=defaults)
-    
-    print("---> TEST4: config file")
-    print(jpl.config_file)
-   
-    print("---> TEST4: config")
-    print(jpl.config)
-    print("\n\n")
-    for raw_fname,subject_id,dir in jpl.file_list():
-        print("  -> Test4 in loop PDF: {}".format(raw_fname))
-    
-   
 if __name__ == "__main__":
   #--- init/update logger
    from jumeg.base import jumeg_logger
    logger=jumeg_logger.setup_script_logging(logger=logger)
    logger.setLevel(logging.DEBUG)
   
-   
-   #test1()
-   #test2()
-   #test3()
-   test4()

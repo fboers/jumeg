@@ -15,7 +15,6 @@
 # Updates
 #--------------------------------------------
 
-
 import os,logging
 from distutils.dir_util import mkpath
 
@@ -25,7 +24,6 @@ from distutils.dir_util import mkpath
 import warnings
 import mne
 from mne.report import Report
-
 
 from jumeg.base.jumeg_base         import JUMEG_SLOTS
 from jumeg.base.jumeg_base         import jumeg_base as jb
@@ -47,9 +45,9 @@ class MNE_REPORT(JUMEG_SLOTS):
 
     and show in MNE Reports
     """
-    __slots__ = { "postfix","extention","info_name",
+    __slots__ = { "postfix","html_extention","h5_extention","info_name","experiment","subject_id",
                   "title","open_browser","write_hdf5","raw_psd","image_format","overwrite","verbose",
-                  "_fname","_isOpen","_path","_fhdf","_MNE_REPORT"}
+                  "_isOpen","_path","_fhdf","_MNE_REPORT"}
     
     def __init__(self,**kwargs):
         super().__init__()
@@ -57,10 +55,13 @@ class MNE_REPORT(JUMEG_SLOTS):
         
         self._path        = "."
        #---
-        self.image_format = "png"
-        self.postfix      = "report"
-        self.extention    = ".html"
-        self.raw_psd      = False
+        self.image_format   = "png"
+        self.postfix        = "report"
+        self.html_extention = ".html"
+        self.h5_extention   = ".h5"
+        self.raw_psd        = False
+        self.title          = "JuMEG Preprocessing"
+        self.subject_id     = "0815"
         
         self._update_from_kwargs(**kwargs)
         
@@ -77,17 +78,8 @@ class MNE_REPORT(JUMEG_SLOTS):
             self._path=v
     
     @property
-    def fname(self):
-        if not self._fname.endswith(self.postfix + self.extention):
-           return self._fname + "-" + self.postfix + self.extention
-        return self._fname
+    def fname(self): return self.experiment+"_"+self.subject_id+"-"+self.postfix
     
-    @fname.setter
-    def fname(self,v):
-        self._fname=v
-        #if not self._fname.endswith( self.postfix+self.extention )
-        #   self._fname += self.postfix+self.extention
-        
     @property
     def fullname(self):
         return os.path.join(self.path,self.fname)
@@ -106,7 +98,12 @@ class MNE_REPORT(JUMEG_SLOTS):
     def fhdf(self,v):
         self._fhdf = jb.expandvars(v)
         mkpath(os.path.dirname(self._fhdf),mode=0o770)
-
+    
+    def _update_from_kwargs(self,**kwargs):
+        super()._update_from_kwargs(**kwargs)
+        if "path" in kwargs:
+           self.path = kwargs.get("path",self._path)
+        
     def open(self,**kwargs):
         """
 
@@ -117,8 +114,10 @@ class MNE_REPORT(JUMEG_SLOTS):
         self._isOpen = False
         try:
             if self.overwrite:
-                if os.path.isfile(self.fullname):
-                   os.remove(self.fullname)
+               for fext in [ self.h5_extention,self.html_extention ]:
+                   fname = self.fullname+fext
+                   if os.path.isfile(fname):
+                      os.remove(self.fname)
         except:
             logger.exception("---> ERROR: can not overwrite report ile: {}".format(self.fullname))
             return false
@@ -128,53 +127,70 @@ class MNE_REPORT(JUMEG_SLOTS):
         self._isOpen = True
         return self._isOpen
 
-    def save(self,fname=None,overwrite=False):
+    def save(self,overwrite=False):
         if not self.isOpen:
             logger.exception("---> ERROR in saving JuMEG MNE report: {}\n ---> Report not open\n".format(self.fullname))
             return self.isOpen
         
-        if fname:
-           self.fname = os.path.basename(fname)
-           p = os.path.dirame(fname)
-           if p:
-              self.path=p
+        # mkpath( self.path,mode=0o770)
        #--- html
-        self.MNEreport.save(self.fullname,overwrite=overwrite,open_browser=self.open_browser)
+        fname = self.fullname + self.html_extention
+        self.MNEreport.save(fname,overwrite=overwrite,open_browser=self.open_browser)
+        logger.info("---> DONE saving JuMEG MNE report: HTML: {}\n".format(fname))
        #--- h5
         if self.write_hdf5:
-           self.MNEreport.save(self.fullname.replace(self.extention,".h5"),overwrite=overwrite,open_browser=False)
-           logger.info("---> DONE saving JuMEG MNE report: HDF5: {}\n".format(self.fullname))
+           fname = self.fullname + self.h5_extention
+           self.MNEreport.save( fname, overwrite=overwrite,open_browser=False)
+           logger.info("---> DONE saving JuMEG MNE report: HDF5: {}\n".format(fname))
      
         return self.isOpen
     
-    def update_report(self,path=None,flist=None,section=None,prefix=None,replace=True):
+    def update_report(self,path=None,data=None,section=None,prefix=None,replace=True):
         """
         load img from list
         add to report
         :param path   : report image path
-        :param flist  : list of pngs
+        :param data  : dict or list of pngs
         :param section: section in report e.g.: Noise reducer, ICA
         :param prefix : prefix for caption e.g.: ICA-0815_
         :return:
         """
+        if not data: return False
+ 
         fimgs    = []
         captions = []
+        section  = section
+
+        if isinstance(data,(dict)):
+           for k in data.keys():
+               files = []
+               fimgs = []
+               captions = []
+               files.extend( data.get(k) )
+               section = k
+               for f in files:
+                   fimgs.append( os.path.join(path,f.rstrip()) )
+                   captions.append( prefix+"-" + os.path.basename(f.rstrip().rsplit(self.image_extention,1)[0]) )
+                   logger.debug("---> update MNE report: {}\n counts: {} ->\n {}".format(section,len(fimgs),fimgs) )
+                   self.MNEreport.add_images_to_section(fimgs,captions=captions,section=section,replace=replace)
+                   
+           return True
         
-        if not flist: return False
-        if not isinstance(flist,(list)):
-           flist = list( set( flist ) )
-           
-        for f in flist:
-            fimgs.append( os.path.join(path,f.rstrip()) )
-            captions.append( prefix+"-" + os.path.basename(f.rstrip().rsplit(self.image_extention,1)[0]) )
-           
+        if isinstance(data,(list)):#
+           for f in data:
+               fimgs.append( os.path.join(path,f.rstrip()) )
+               captions.append( prefix+"-" + os.path.basename(f.rstrip().rsplit(self.image_extention,1)[0]) )
+        else:
+           fimgs.append(os.path.join(path,data.rstrip()))
+           captions.append(prefix + "-" + os.path.basename(data.rstrip().rsplit(self.image_extention,1)[0]))
+
+        logger.info("---> update MNE report: {}\n counts: {} ->\n {}".format(section,len(fimgs),fimgs))
         self.MNEreport.add_images_to_section(fimgs,captions=captions,section=section,replace=replace)
-        
+
         if self.verbose:
            logger.info("---> update MNE report: {}\n counts: {} ->\n {}".format(section,len(fimgs),fimgs) )
 
         return True
-
 
 class JuMEG_REPORT(JUMEG_SLOTS):
     """
@@ -185,17 +201,21 @@ class JuMEG_REPORT(JUMEG_SLOTS):
     
     and show in MNE Reports
     """
-    __slots__= {"path","fname","experiment","subject_id","image_config","image_path","_config","_REPORT","_CFG"}
+    __slots__= {"stage","_path","fname","report_cfg_extention","_REPORT_CFG","_REPORT","_cfg"}
     
     def __init__(self,**kwargs):
         super().__init__()
         self.init()
-      
-        self._CFG    = jCFG()
+        self._cfg = {"run":True,"save":True,"overwrite":False,"path":"report",
+                     "noise_reducer":{"run":True,"extention":"nr-raw.png"},
+                     "ica":{"run":True,"extention":"ar.png"}}
+        self._path = "."
+        self.report_cfg_extention = "report.yaml"
         self._REPORT = MNE_REPORT(**kwargs)
+        self._REPORT_CFG = jCFG()
         
     @property
-    def CFG(self): return self._CFG
+    def cfg(self): return self._cfg
     
     @property
     def Report(self): return self._REPORT
@@ -205,154 +225,89 @@ class JuMEG_REPORT(JUMEG_SLOTS):
     @verbose.setter
     def verbose(self,v):
         self._REPORT.verbose=v
-
-  
-
-def run(self,**kwargs):
     
-        """
-        jReport.run(path=report_path,
-                report_config_file=report_config_file,
-                experiment="QUARTERS",subject_id=210857,
-                config=config)
+    @property
+    def path(self): return self._path
+    @path.setter
+    def path(self,v):
+        pext = self.cfg.get("path","report")
+        if not v.endswith(pext):
+           self._path = jb.expandvars( os.path.join(v,pext) )
+        else:
+           self._path = jb.expandvars(v)
+    
+    @property
+    def report_cfg(self): return self._REPORT_CFG
+    
+    def update_report_cfg(self):
+       #--- ['0815_TEST_20200412_1001_3', 'c']
+        f = self.fname.split(",",1)[0].rsplit("_",1)[0] + "-" + self.report_cfg_extention
+        fcfg = os.path.join(self.path,f)
+        self._REPORT_CFG.update(config=fcfg)
         
-         open/read cfg /reprt/fname-report.yaml
-         MNEreport.open
-         
+    def run(self,**kwargs):
+        """
+        :param kwargs:
+        :return:
+        stage=jpl.stage,subject_id=subject_id,fname=raw_fname,config=jpl.config.get("report")
+        jReport.run(path=report_path,report_config_file=report_config_file,
+                    experiment="QUARTERS",subject_id=210857,config=config)
+            
+        open/read cfg /reprt/fname-report.yaml
+        MNEreport.open
          update NR
          update ICa
-         
          save HDf5
          save htlm
-        
-         report config as dict
-         report_path=report_path,path=path,fname=raw_fname,subject_id=210857,config=config
-   
-         report:
-           run: True
-           save: True
-           overwrite: False
-
-           noise_reducer:
-             run: True
-           ica:
-             run: True
-
-         :param kwargs:
-         :return:
-        """
-
-        self._update_from_kwargs(**kwargs)
+         
+        report config as dict
+        report_path=report_path,path=path,fname=raw_fname,subject_id=210857,config=config
        
-       #--- get read report config
-        self.CFG.update(config=kwargs.get("image_config") )
-        self.CFG.info()
+        report:
+         run: True
+         save: True
+         overwrite: False
+         noise_reducer:
+          run: True
+         ica:
+          run: True
+        """
+        # logger.info(kwargs)
+        self._update_from_kwargs(**kwargs)
+        self.Report._update_from_kwargs(**kwargs)
         
-        cfg_image = self.CFG.GetDataDict(copy=True)
+       #--- try from jumeg config <report>  config=config.get("report")
+        if "config" in kwargs:
+           self._cfg = kwargs.get("config")
+       
+       #--- update from kwargs
+        self.stage = jb.expandvars(self.stage)
+        self.path  = kwargs.get("path",self.path) #--- report image path / image yaml file
         
-        self.CFG.update(config=kwargs.get("config") )  #config=/report/config file
-        cfg = self.CFG.GetDataDict()
+        if self.stage.endswith("mne"):
+           rp = self.stage.replace("mne","report")
+        else:
+           rp = self.stage
+       #--- setup & open MNE report
+        if not self.Report.open(path=rp):  return False
       
-        self.Report.path      = self.path
-        self.Report.fname     = self.experiment + "_" + str( self.subject_id )
-        
-        self.Report.title     = self.experiment
-        self.Report.info_name = "JuMEG Preporcessing"
-        if not self.Report.isOpen:
-           if not self.Report.open():  return False
-
-        path = jb.expandvars( os.path.dirname(self.image_config) )
+       #--- report image config
+        self.update_report_cfg()
         
        #--- noise reducer
-        if cfg.get("noise_reducer",False):
-           _cfg = cfg_image.get("noise_reducer")
-           if _cfg:
-              self.Report.update_report(flist=_cfg.get("files"), path=path,section="Noise Reducer",prefix="NR")
-       
+        if self.cfg.get("noise_reducer",False):
+           cfg = self.report_cfg.GetDataDict("noise_reducer")
+           if cfg:
+              self.Report.update_report(data=cfg.get("files"), path=self.path,section="Noise Reducer",prefix="NR")
        #--- ica
-        if cfg.get("ica",False):
-           _cfg = cfg_image.get("ica")
-           if _cfg:
-              self.Report.update_report(flist=_cfg.get("files"),path=path,section="ICA",prefix="ICA")
-           
-        if cfg.get("save",False):
+        if self.cfg.get("ica",False):
+           cfg = self.report_cfg.GetDataDict("ica")
+           if cfg:
+              self.Report.update_report(data=cfg.get("files"),path=self.path,section="ICA",prefix="ICA")
+       #--- save
+        if self.cfg.get("save",False):
            self.Report.save(overwrite=True)
-    
-    
-def test1():
-    #--- init/update logger
-    jumeg_logger.setup_script_logging(logger=logger)
-
-    stage = "$JUMEG_PATH_LOCAL_DATA/exp/QUATERS/mne"
-    fcfg  = os.path.join("/home/fboers/MEGBoers/programs/JuMEG/jumeg-py/jumeg-py-git-fboers/jumeg/pipelines","jumeg_config.yaml")
-    
-    raw_path  = "210857/QUATERS01/191210_1325/1"
-    raw_fname = "210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr,bcc,int-raw.fif"
-  
-    report_path  = os.path.join(stage,"report")
-    image_path   = os.path.join(stage,raw_path,"report")
-    image_config = os.path.join(image_path,raw_fname.rsplit("meeg",1)[0]+"meeg-report.yaml")
-    
-   #--- read pipeline config
-    from jumeg.base.jumeg_base_config import JuMEG_CONFIG_YAML_BASE as jCFG
-    CFG = jCFG()
-    CFG.update(config=fcfg)
-    config = CFG.GetDataDict("report")
-   
-   #---
-    jReport = JuMEG_REPORT()
-    jReport.run(path          = report_path,
-                experiment    = "QUARTERS",
-                subject_id    = 210857,
-                image_config  = image_config,
-                config        = config)
-
-    raw_path = "210857/QUATERS01/191210_1325/2"
-    raw_fname = "210857_QUATERS01_191210_1325_2_c,rfDC,meeg,nr,bcc,int-raw.fif"
-
-    report_path = os.path.join(stage,"report")
-    image_path = os.path.join(stage,raw_path,"report")
-    image_config = os.path.join(image_path,raw_fname.rsplit("meeg",1)[0] + "meeg-report.yaml")
-
-    jReport.run(path          = report_path,
-                experiment    = "QUARTERS",
-                subject_id    = 210857,
-                image_config  = image_config,
-                config        = config)
-
-
-def test2():
-    
-   #---
-    stage         = "$JUMEG_PATH_LOCAL_DATA/exp/QUATERS/mne"
-    raw_path      = "210857/QUATERS01/191210_1325/1"
-    raw_fname     = "210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr,bcc,int-raw.fif"
-    report_path   = os.path.join(stage,raw_path,"report")
-    report_config = os.path.join(report_path,raw_fname.rsplit("meeg",1)[0]+"meeg-report.yaml")
-    
-    RP = JuMEG_REPORT()
-    
-    stage = "$JUMEG_PATH_LOCAL_DATA/exp/QUATERS/mne"
-    
-    freport = raw_fname.rsplit("_",1)[0] +"-report.yaml"
-    
-    fpng = "210857_QUATERS01_191210_1325_1_c,rfDC,meeg,nr.png"
-    cfg  = { "noise_reducer": {"files":[fpng] } }
-      
-    
-   #--- get read report config
-    if not RP.CFG.load_cfg(fname=freport):
-       RP.CFG.save_cfg(fname=freport,cfg=cfg)
-      
-    RP.CFG.info()
-    RP.CFG.config["test"]={"a":[1,2,3]}
-   
-  # update(config=cfg )
-    RP.CFG.save_cfg(fname=freport)
-
-    RP.CFG.info()
-    
+     
 if __name__ == "__main__":
-  # test1()
-   jumeg_logger.setup_script_logging(logger=logger)
-   test2()
+  # jumeg_logger.setup_script_logging(logger=logger)
+   pass

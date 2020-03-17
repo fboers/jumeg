@@ -28,15 +28,20 @@ from jumeg.base            import jumeg_logger
 
 import datetime
 import getpass
-from copy import copy
+from copy import deepcopy
+# from collections import OrderedDict
 
 loader=None
 try:
+   # https://stackoverflow.com/questions/31605131/dumping-a-dictionary-to-a-yaml-file-while-preserving-order
    import ruamel.yaml as yaml
    yaml.indent(mapping=2, sequence=3, offset=3)
+   loader = yaml.RoundTripLoader
+   yaml_type = "ruamel"
 except:
    # https://stackoverflow.com/questions/30458977/yaml-loads-5e-6-as-string-and-not-a-number
    import yaml,re
+   yaml_type = "yaml"
    loader = yaml.SafeLoader
    loader.add_implicit_resolver(
         u'tag:yaml.org,2002:float',
@@ -160,8 +165,7 @@ class JuMEG_CONFIG_Info():
     
     @comments.setter
     def comments(self,v): self._set_param("comments",v)
-        
-        
+    
 class JuMEG_CONFIG(object):
     '''
     load or get yaml config as dict
@@ -219,15 +223,20 @@ class JuMEG_CONFIG(object):
     def info(self):
         logger.info("---> config info:\n  -> file: {}\n{}\n".format(self.filename,pprint.pformat(self._cfg,indent=4)))
         
-    def GetDataDict(self,key=None):
+    def GetDataDict(self,key=None,copy=True):
         '''
         returns the dict or one element of the dict
         :param key: key of the returned part
+        :param copy: False
         :type key: str
         '''
         if key:
-           return self._cfg.get(key)
-        return self._cfg
+           cfg = self._cfg.get(key)
+        else:
+           cfg = self._cfg
+        if copy:
+           return deepcopy( cfg )
+        return cfg
     
     def _update_struct(self):
         self._data = None
@@ -258,7 +267,7 @@ class JuMEG_CONFIG(object):
         with open(self.fname) as FH:
 
             if self.fname.endswith(".yaml"):
-               if loader:
+               if yaml_type == "ruamel":
                   self._cfg = yaml.load( FH ,Loader=loader)
                else:
                   self._cfg = yaml.load(FH)
@@ -313,7 +322,10 @@ class JuMEG_CONFIG(object):
             self.fname = fname
          with open(self.fname, "w") as FH:
              if fname.endswith(".yaml"):
-                yaml.dump(self._cfg,FH)
+                if yaml_type == "ruamel":
+                   yaml.dump(self._cfg,FH,Dumper=yaml.RoundTripDumper)
+                else:
+                   yaml.dump(self._cfg,FH)
              elif fname.endswith(".json"):
                 json.dump(self._cfg,FH)
              else:

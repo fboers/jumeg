@@ -370,7 +370,7 @@ class JuMEG_PipelineFrame(object):
             raise Exception("---> ERROR file name not defined !!!")
     
     
-    #--- use in with statement
+    #--- FYI use in with statement
     #def __enter__(self):
     #    return self
     

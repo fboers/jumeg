@@ -164,20 +164,6 @@ def apply_suggest_bads(raw_fname=None,raw=None,config=None,label="suggest_bads",
     fhdf = os.path.join( config.get("stage"),config.get("hdfname","badchannels.hdf5"))
     update_bads_in_hdf(fhdf=fhdf,bads=marked,fname=raw_fname,verbose=config.get("verbose"))
     
-   #---
-    # ToDo subplot n_plots BADs PSD if not MIN==MAX else zero line
-    #if config.get("plot"):
-    #   picks = jb.picks.bads2picks(raw)
-    #   if isinstance(picks,(list)):
-    #
-    #       logger.info(" --> BADS: {} picks: {}".format( raw.info["bads"],picks))
-    #       jplt = JuMEG_PLOT_BADS(n_plots=len( picks ),name="BADs",verbose=True)
-    #       jplt.plot(raw,colour="red",title="BADs: "+os.path.basename(raw_fname),check_dead_channels=False,picks=picks)
-    #
-    #       if config.get("plot_show"):
-    #          jplt.show()
-    #       jplt.save(fname=jb.get_raw_filename(raw),plot_dir=config.get("plor_dir","plots"))
-    
     return fname_out,raw,True,None
 
 #---------------------------------------------------
@@ -201,7 +187,6 @@ def apply_interpolate_bads(raw_fname=None,raw=None,config=None,label="interpolat
             raw.plot(block=config.get("plot_block"))
 
     return fname_out,raw,True,None
-
 
 #---------------------------------------------------
 #--- apply_ica
@@ -228,8 +213,7 @@ def apply_ica(raw_fname=None,raw=None,path=None,config=None,label="ica",fname_ou
     raw_filtered_clean.close()
     
     fname_out = jb.get_raw_filename(raw)
-    # logger.info("ICA OUT: {}".format(fname_out))
-
+  
     return fname_out,raw,True,None
 
 #---------------------------------------------------
@@ -237,10 +221,14 @@ def apply_ica(raw_fname=None,raw=None,path=None,config=None,label="ica",fname_ou
 #---------------------------------------------------
 def apply_report(**kwargs):
     """
-    
+    stage=jpl.stage,subject_id=subject_id,experiment=jpl.experiment,
+                           path=raw_dir,fname=raw_fname,
+                           config=jpl.config.get("report")
+        
     :param stage:
     :param subject_id:
     :param fname:
+    :param path
     :param config:
     :return:
     """

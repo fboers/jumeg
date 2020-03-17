@@ -344,17 +344,18 @@ class JuMEG_wxSTXTBTCtrl(wx.Panel):
     def Text(self): return  self._TXT
     
     def _wx_init(self,**kwargs):
+        style     = kwargs.get("style",wx.TE_RIGHT|wx.TE_READONLY)
         self._CMD = kwargs.get("cmd",None)
         self.SetName( kwargs.get("name","JuMEG_WX_STXT_BT"))
         
-        txt = wx.TextCtrl(self,-1,style=wx.TE_RIGHT|wx.TE_READONLY)
+        txt = wx.TextCtrl(self,-1,style=style)
         txt.AppendText( str( kwargs.get("label","") ) )
         txt.SetBackgroundColour(wx.WHITE)
         txt.SetName( "TXT."+self.GetName() )
         txtlen = kwargs.get("textlength",10)
         
         sz = txt.GetSizeFromTextSize( txt.GetTextExtent("W" * txtlen ))
-        txt.SetSize(sz)
+        txt.SetInitialSize(sz)
         self._TXT= txt
         
         bmp = wx.ArtProvider.GetBitmap(wx.ART_GO_DOWN,wx.ART_BUTTON)

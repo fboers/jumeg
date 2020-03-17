@@ -571,7 +571,7 @@ class JuMEG_PIPELINES_ICA(object):
               
         return raw_concat
 
-    def _update_report(self,fimages):
+    def _update_report(self,data):
         """
         
         :param fimages:
@@ -580,12 +580,12 @@ class JuMEG_PIPELINES_ICA(object):
       #--- update report config
         CFG = jCFG()
         report_config = os.path.join(self.plot_dir,os.path.basename(self.raw_fname).rsplit("_",1)[0] + "-report.yaml")
-        data = None
+        d= None
         if not CFG.load_cfg(fname=report_config):
-            data = { "ica":{ "files":fimages } }
+            d = { "ica":{ data } }
         else:
-            CFG.config["ica"] = { "files":fimages }
-        CFG.save_cfg(fname=report_config,data=data)
+            CFG.config["ica"] = { data }
+        CFG.save_cfg(fname=report_config,data=d)
 
 
     def _apply(self,raw=None,ICAs=None,run_transform=False,save_ica=False,save_chops=False,save_chops_clean=False,save_clean=True):
@@ -771,17 +771,20 @@ class JuMEG_PIPELINES_ICA(object):
                     "  -> time to process :{}".format( datetime.timedelta(seconds= time.time() - self._start_time ) ))
             
        #--- plot
+        data=dict()
         if self.PreFilter.isFiltered:
            self.ICAPerformance.plot(raw=self.PreFilter.raw,raw_clean=raw_filtered_clean,plot_path = self.plot_dir,
                                     text=None,fout = self.PreFilter.fname.rsplit("-",1)[0] + "-ar")
            fimages = [self.ICAPerformance.Plot.fout,*fimages ]
+           data["ICA-FI-AR"] = fimages
            
         if raw_unfiltered_clean:
            self.ICAPerformance.plot(raw=self.raw,raw_clean=raw_unfiltered_clean,verbose=True,text=None,
                                     plot_path=self.plot_dir,fout=self.raw_fname.rsplit("-",1)[0] + "-ar")
            fimages = [self.ICAPerformance.Plot.fout,*fimages_unfiltered,*fimages]
-       
-        self._update_report(fimages)
+           data["ICA-AR"] = fimages
+        
+        self._update_report(data)
         
         self.clear(objects=ICA_objs)
         

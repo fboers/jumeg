@@ -17,13 +17,16 @@
 
 import getpass,datetime,platform
 import os,sys,argparse,logging,pprint
-from   copy import  deepcopy
+# from ruamel.ordereddict import ordereddict
+from collections import OrderedDict
+from copy import  deepcopy
 
 import wx
 import wx.lib.agw.customtreectrl as CT
 from   wx.lib.agw.customtreectrl import CustomTreeCtrl
 
-from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import SpinCtrlScientific,EditableListBoxPanel
+from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import SpinCtrlScientific,EditableListBoxPanel,JuMEG_wxSTXTBTCtrl
+from jumeg.base.jumeg_base import jumeg_base as jb
 from jumeg.base.jumeg_base_config import JuMEG_CONFIG
 
 from jumeg.base import jumeg_logger
@@ -33,10 +36,8 @@ __version__= "2020.03.11.001" # platform.python_version()
 
 class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
    def __init__(self,parent,**kwargs):
-       style = (CT.TR_DEFAULT_STYLE|CT.TR_MULTIPLE
-               |CT.TR_FULL_ROW_HIGHLIGHT|CT.TR_HAS_VARIABLE_ROW_HEIGHT
-               |CT.TR_AUTO_CHECK_CHILD
-               |CT.TR_AUTO_CHECK_PARENT|CT.TR_AUTO_TOGGLE_CHILD
+       style = (CT.TR_DEFAULT_STYLE| CT.TR_SINGLE
+               |CT.TR_HAS_VARIABLE_ROW_HEIGHT
                |CT.TR_ELLIPSIZE_LONG_ITEMS|CT.TR_TOOLTIP_ON_LONG_ITEMS
                |CT.TR_ALIGN_WINDOWS)
        
@@ -73,8 +74,7 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
       if root_name:
          self.root_name=root_name
       self._wx_init(data=data,root_name=self.root_name,item_data=item_data)
-
-            
+      
    def sort(self,keys):
        pass
     
@@ -88,7 +88,23 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
            return
         keys = list(data.keys())
         keys.sort()
-       
+        #item_data = OrderedDict.fromkeys( keys )
+        
+        '''
+        ToDo
+        from collections import OrderedDict
+        personA = OrderedDict([
+            (u'score',
+             OrderedDict([ (u'2015-09-09 03:40:33 +0100', 2646),
+                        (u'2015-09-10 03:35:34 +0100', 2646),
+                         ])),
+            (u'adjusted_score',
+             OrderedDict([ (u'2015-09-09 03:40:33 +0100', 3646),
+                           (u'2015-09-10 03:35:34 +0100', 3646),
+                         ]))
+            ])
+   
+        '''
         for k in keys:
            if k.startswith("_"):  #_keys
               item_data[k] = deepcopy( data[k] )
@@ -97,7 +113,7 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
            v = data[k]
            
            if isinstance(v,(dict)):
-               item_data[k]=dict()
+               item_data[k] = dict()
                self._get_item_data(data[k],item_data[k])
            else:
                try:
@@ -121,14 +137,14 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                    continue # info, _keys
                    
         return item_data
-   
+  
    def GetData(self):
-       data      = self._item_data
-       item_data = dict()
-       item_data["info"]=self.update_info()
+       data = self._item_data
        keys = list(data.keys())
+       item_data = dict() #OrderedDict.fromkeys( ["info",*keys] )
+       item_data["info"] = self.update_info()
        for k in keys:
-           item_data[k]=dict()
+           item_data[k] = dict()
            self._get_item_data(data[k],item_data[k])
           
        return item_data
@@ -151,17 +167,29 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
 
        if not root:
            root = self.root
-
-       keys = list(data.keys())
+       
+       klist = []
+       dlist = []
+       
+       keys  = list(data.keys())
        keys.sort()
       
+      #--- sort keys:
+       # global sortred keys, lokal sorted keys, keys,dict-keys
       #--- global sorted keys
        skeys = [ *self._sorted_keys ]
-      #--- extend with loka sorted keys
+      #--- extend with lokal sorted keys
        if self._sorted_key in keys:
           skeys.extend( data.get( self._sorted_key,[] ) )
-      #-- avoid double keys
-       keys = skeys + [ k for k in keys if k not in skeys ]
+          
+       for k in keys:
+           if k in skeys: continue
+           if isinstance( data[k],(dict) ):
+              dlist.append(k)
+           else:
+              klist.append(k)
+      
+       keys =[*skeys, *klist, *dlist]
        
        for k in keys:
            if k.startswith("_")    :
@@ -187,12 +215,16 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                self.SetItemBold(child,True)
         
            elif isinstance(v,(str)):
-               style = wx.TE_LEFT
-               ctrl = wx.TextCtrl(self,-1,style=style,value=v,name="str")
-               sz = ctrl.GetSizeFromTextSize(ctrl.GetTextExtent("W" * txt_size))
-               ctrl.SetInitialSize(sz)
+                txt_size = 30
+                style = wx.TE_RIGHT
+                if os.path.dirname(v):
+                   ctrl = JuMEG_wxSTXTBTCtrl(self,name="TEST",label=v,cmd=self.ClickOnShowDir,textlength=txt_size,style=style)
+                else:
+                   ctrl = wx.TextCtrl(self,-1,style=wx.TE_LEFT,value=v,name="str")
+                   sz = ctrl.GetSizeFromTextSize(ctrl.GetTextExtent("W" * txt_size))
+                   ctrl.SetInitialSize(sz)
             
-               child = self.AppendItem(root,"{}".format(k),wnd=ctrl,ct_type=0)
+                child = self.AppendItem(root,"{}".format(k),wnd=ctrl,ct_type=0)
         
            elif isinstance(v,(list)):
                 ctrl = EditableListBoxPanel(self,label=k.upper())
@@ -235,10 +267,39 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                
                ctrl.Value = v
                child = self.AppendItem(root,"{}".format(k),wnd=ctrl)
-           logger.info("---> {} => {} type: {}".format( k, v,type(v)) )
+           
            item_data[k]=ctrl
            self.SetPyData(child,data[k])
-           
+  
+   def ClickOnShowDLG(self,evt):
+       """
+       shows File, DirDialog depending on file extention
+       :param evt:
+       :return:
+       """
+       try:
+           obj = evt.GetEventObject()
+       except:
+           obj = evt
+     # txt ctrl
+       p = jb.expandvars( obj.GetValue() )
+       if os.path.isdir(p):
+          with wx.DirDialog(self,message=obj.GetName(),defaultPath=p,style=wx.DD_DEFAULT_STYLE,name=obj.GetName() + "_DLG") as DLG:
+               DLG.SetPath( p )
+               if DLG.ShowModal() == wx.ID_CANCEL:
+                  return     # the user changed their mind
+               obj.SetValue( DLG.GetPath() )
+       else:
+           fext = p.rsplit(".",1)[-1]
+           wc = "files (*." +fext+",*.*)|*."+fext+";*.all"
+           with wx.FileDialog(self,"{} => Select File Name".format(obj.GetName()),wildcard=wc,
+                              style=wx.DD_DEFAULT_STYLE,
+                              name=obj.GetName() + "_DLG") as DLG:
+               DLG.SetPath(p)
+               if DLG.ShowModal() == wx.ID_CANCEL:
+                   return  # the user changed their mind
+               obj.SetValue( DLG.GetPath() )
+   
    def update_info(self):
        '''
        updates the time,version and user
@@ -303,7 +364,6 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
        self._item_data = item_data
        
        self.Expand(self.root)
-
 
 class CtrlPanel(wx.Panel):
     def __init__(self,parent,**kwargs):
