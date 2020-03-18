@@ -30,13 +30,13 @@ Examples:
 call script with parameter or -h for help
 
 #--- run for id(s)
-1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747 -c config0.yaml -log -v -d -r
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 0815 -c jumeg_config0.yaml -log -v -d -r
 
 #--- run for id, recursive looking into subdirs, overwrite logfile
-1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747 -c config0.yaml -log -v -d -r -rec --logoverwrite
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 0815 -c jumeg_config0.yaml -log -v -d -r -rec --logoverwrite
 
 #--- run for ids, recursive looking into subdirs, overwrite logfile
-1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 211747,211890 -c config0.yaml -log -v -d -r -rec --logoverwrite
+1_preprocessing.py -s $JUMEG_TEST_DATA/mne -subj 0815,0816,0817 -c jumeg_config0.yaml -log -v -d -r -rec --logoverwrite
 
 List Example:
 -------------
@@ -50,13 +50,6 @@ find | grep empty.fif > empty_filelist.txt
 
 #--- call preproc 1 for empty-room data
 1_preprocessing.py -c preproc_config01.yaml -lname empty_filelist.txt -lpath ${MNE_DATA_PATH} -v -r
-
-
-#--- INTEXT
-1_preprocessing.py -c intext_config01.yaml -subj 201772,203404 -v -r
-
-#---MEG94T
-1_preprocessing.py -lpath $JUMEG_PATH_LOCAL_DATA/meg94t/mne -lname meg94t0t2.txt -c $JUMEG_PATH_LOCAL_DATA/meg94t/mne/meg94t_config01.yaml -v -r
 """
 
 import os,sys,logging
@@ -68,15 +61,14 @@ import jumeg.base.pipelines.jumeg_pipelines_utils1 as utils
 
 logger = logging.getLogger("jumeg")
 
-__version__= "2019.08.07.001"
+__version__= "2020.03.16.001"
 
 #--- parameter / argparser defaults
 defaults={
           "stage"         : None,
-          "file_extention": None, # ["meeg-raw.fif","c,rfDC-raw.fif","rfDC-empty.fif"],
-          "config"        : "1_preprocessing_config.yaml",
-          #"subjects"      : None,
-          "list_path"     : None, #"$JUMEG_PATH_MNE_IMPORT2/MEG94T/source/jumeg/pipelines",
+          "file_extention": None,
+          "config"        : None,
+          "list_path"     : None,
           "list_name"     : None,
           "fpath"         : None,
           "fname"         : None,
@@ -107,12 +99,19 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
    #---
     raw = None
     
-   #--- init/update logger
-    jumeg_logger.setup_script_logging(name=name,opt=opt,logger=logger)
  
     jpl = JuMEG_PipelineLooper(options=opt,defaults=defaults)
     jpl.ExitOnError=True
+ 
+   #--- init/update logger
+
+    #--- logfile
+    opt.log2file     = jpl.log2file
+    opt.logprefix    = jpl.logprefix
+    opt.logoverwrite = jpl.logoverwrite
     
+    jumeg_logger.setup_script_logging(name=name,opt=opt,logger=logger,version=__version__)
+
     for fname,subject_id,raw_dir in jpl.file_list():
       
         if not opt.run: continue
@@ -137,7 +136,9 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
        #--- call resample
         # raw_fname,raw = utils.apply_resample(raw_fname,raw=raw,config=jpl.config.get("resampling"))
 
-        utils.apply_report(stage=jpl.stage,subject_id=subject_id,fname=raw_fname,config=jpl.config.get("report") )
+        utils.apply_report(stage=jpl.stage,subject_id=subject_id,experiment=jpl.experiment,
+                           path=raw_dir,fname=raw_fname,
+                           config=jpl.config.get("report") )
 
         logger.info(" --> DONE preproc subject id: {}\n".format(subject_id)+
                     "  -> input  file: {}\n".format(fname)+
