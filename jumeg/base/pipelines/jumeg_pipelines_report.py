@@ -210,7 +210,7 @@ class JuMEG_REPORT(JUMEG_SLOTS):
                      "noise_reducer":{"run":True,"extention":"nr-raw.png"},
                      "ica":{"run":True,"extention":"ar.png"}}
         self._path = "."
-        self.report_cfg_extention = "report.yaml"
+        self.report_cfg_extention = "-report.yaml"
         self._REPORT = MNE_REPORT(**kwargs)
         self._REPORT_CFG = jCFG()
         
@@ -218,7 +218,8 @@ class JuMEG_REPORT(JUMEG_SLOTS):
     def cfg(self): return self._cfg
     
     @property
-    def Report(self): return self._REPORT
+    def Report(self):
+        return self._REPORT
 
     @property
     def verbose(self): return self._REPORT.verbose
@@ -241,7 +242,7 @@ class JuMEG_REPORT(JUMEG_SLOTS):
     
     def update_report_cfg(self):
        #--- ['0815_TEST_20200412_1001_3', 'c']
-        f = self.fname.split(",",1)[0].rsplit("_",1)[0] + "-" + self.report_cfg_extention
+        f = self.fname.split(",",1)[0].rsplit("_",1)[0] + self.report_cfg_extention
         fcfg = os.path.join(self.path,f)
         self._REPORT_CFG.update(config=fcfg)
         

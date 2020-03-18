@@ -122,8 +122,8 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
     logger.info('---> START ICA FIT: init ICA object')
     ica = ICA(method='fastica', n_components=40, random_state=random_state,
               max_pca_components=None, max_iter=5000, verbose=False)
-    
-    logger.info(' --> ICA FIT: apply ICA.fit\n reject: {} \n picks: {}'.format(reject,picks))
+  
+    logger.debug(' --> ICA FIT: apply ICA.fit\n reject: {} \n picks: {}'.format(reject,picks))
     ica.fit(raw, picks=picks, decim=None, reject=reject, verbose=True)
 
     #######################################################################

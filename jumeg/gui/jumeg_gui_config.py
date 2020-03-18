@@ -218,7 +218,7 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
                 txt_size = 30
                 style = wx.TE_RIGHT
                 if os.path.dirname(v):
-                   ctrl = JuMEG_wxSTXTBTCtrl(self,name="TEST",label=v,cmd=self.ClickOnShowDir,textlength=txt_size,style=style)
+                   ctrl = JuMEG_wxSTXTBTCtrl(self,name="TEST",label=v,cmd=self.ClickOnShowDLG,textlength=txt_size,style=style)
                 else:
                    ctrl = wx.TextCtrl(self,-1,style=wx.TE_LEFT,value=v,name="str")
                    sz = ctrl.GetSizeFromTextSize(ctrl.GetTextExtent("W" * txt_size))

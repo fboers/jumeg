@@ -16,8 +16,8 @@
 #--------------------------------------------
 
 import sys,os,logging,yaml,argparse,glob
-import colorama
-from colorama import Fore, Style
+#import colorama
+#from colorama import Fore, Style
 
 from contextlib import contextmanager,ContextDecorator
 #from contextlib import redirect_stdout
@@ -137,7 +137,7 @@ def print_to_logger(raw_fname,raw=None,**cfg):
    jumeg_logger.log_stdout(label=" LOGTEST")
    jumeg_logger.log_stderr()
     
-   print("  -> TEST1 print to logger: {}".format(raw_fname) )
+   #print("  -> TEST1 print to logger: {}".format(raw_fname) )
 
   #--- return back stdout/stderr from logger
    jumeg_logger.log_stdout(reset=True)
@@ -312,9 +312,9 @@ class JuMEG_PipelineFrame(object):
         """
         self._update_from_kwargs(**kwargs)
         
-        print(Fore.GREEN)
+        #print(Fore.GREEN)
         logger.info("\n---> Start: < {} > file name: {}".format(self.label,self._raw_fname))
-        print(Style.RESET_ALL)
+        #print(Style.RESET_ALL)
         
         if self._debug:
            logger.debug(" -> config parameter:\n{}".format(self._cfg))

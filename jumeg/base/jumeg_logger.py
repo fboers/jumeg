@@ -2,6 +2,10 @@
 # -+-coding: utf-8 -+-
 
 """
+usefull links
+https://github.com/borntyping/python-colorlog
+https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output
+
 """
 
 #--------------------------------------------
@@ -19,108 +23,27 @@ import inspect
 from distutils.dir_util import mkpath
 import logging
 
-'''
-Example A:
---------
-
-#--- in your main-script
-#--- first import and setup a logger at the top
-import logging
-logger = logging.getLogger('root')
-
-#---
-from jumeg.base import jumeg_logger
-
-# ...
-# put your code e.g.: class XYZ() def XYZ()
-# use logger e.g: logger.info() logger.debug() ...
-# ...
-
-__main__
-
-opt = None
-
-#--- or using argparser
-#--- examples in jumeg.tools
-# opt, parser = get_args(argv)
-
-
-#--- set <logger> to the logger-obj generated in script
-jumeg_logger.setup_script_logging(name=argv[0],opt=opt,logger=logger)
-#  do your stuff
-
-
-Example B classic from logging:
---------
-import logging
-logger = logging.getLogger('root')
-logger.setLevel('DEBUG')
-logger.addHandler(jumeg_loglog.LogFileHandler())
-
-#--- change loglevel and format for stream
-HNDLStream = jumeg_loglog.LogStreamHandler()
-HNDLStream.setLevel(logging.WARNING)
-logger.addHandler(HNDLStream)
-
-logger.debug("Start LOG")
-logger.info("Start LOG")
-logger.warning("Start LOG")
-logger.error("Start LOG")
-
-
-https://stackoverflow.com/questions/19425736/how-to-redirect-stdout-and-stderr-to-logger-in-python
-
-ToDo: check LogBook
-https://github.com/getlogbook/logbook
-'''
-
-__version__="2019.05.14.001"
-
-
-
-def configure_logging(level):
-    """
-    copy from
-    https://stackoverflow.com/questions/384076/how-can-i-color-python-logging-output
-    
-    def main():
-        configure_logging(logging.DEBUG)
-        logger.debug("debug message")
-        logger.info("info message")
-        logger.critical("something unusual happened")
-'    """
-    # add 'levelname_c' attribute to log resords
-    orig_record_factory = logging.getLogRecordFactory()
-    log_colors = {
-        logging.DEBUG:     "\033[1;34m",  # blue
-        logging.INFO:      "\033[1;32m",  # green
-        logging.WARNING:   "\033[1;35m",  # magenta
-        logging.ERROR:     "\033[1;31m",  # red
-        logging.CRITICAL:  "\033[1;41m",  # red reverted
-    }
-    def record_factory(*args, **kwargs):
-        record = orig_record_factory(*args, **kwargs)
-        record.levelname_c = "{}{}{}".format(
-            log_colors[record.levelno], record.levelname, "\033[0m")
-        return record
-
-    logging.setLogRecordFactory(record_factory)
-
-    # now each log record object would contain 'levelname_c' attribute
-    # and you can use this attribute when configuring logging using your favorite
-    # method.
-    # for demo purposes I configure stderr log right here
-
-    #formatter_c = logging.Formatter("[%(asctime)s] %(levelname_c)s:%(name)s:%(message)s")
-
-    #stderr_handler = logging.StreamHandler()
-    #stderr_handler.setLevel(level)
-    #stderr_handler.setFormatter(formatter_c)
-
-    #root_logger = logging.getLogger('')
-    #root_logger.setLevel(logging.DEBUG)
-    #root_logger.addHandler(stderr_handler)
-
+try:
+    # https://github.com/borntyping/python-colorlog
+    import colorlog
+    ClFormatter = colorlog.ColoredFormatter(
+        "%(log_color)s%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n---> %(message)s\n",
+        datefmt="%Y-%m-%d %H:%M:%S",
+        reset=True,
+        log_colors={
+            'DEBUG'   :'blue',
+            'INFO'    :'black',
+            'WARNING' :'purple',
+            'ERROR'   :'red',
+            'CRITICAL':'red'
+            },
+        style='%'
+        )
+    _has_colorlogs = True
+except:
+    _has_colorlogs = False
+ 
+__version__="2029.03.18.001"
 
 #===========================================================
 #=== test logging stdout, stderr
@@ -167,12 +90,11 @@ class StreamLogger(object):
        :param label:
        """
        
-       
        if not logger:
           self.logger=logging.getLogger(logname)
        else:
           self.logger = logger
-       
+    
        self.loglevel = level
        self._label   = label
        
@@ -333,7 +255,6 @@ def log_stderr(reset=False,**kwargs):
        sys.stderr = StreamLogger(**kwargs)
     return sys.stderr
 
-
 class JuMEGLogFormatter(logging.Formatter):
     """
     Logging Formatter to add colors and count warning / errors
@@ -351,24 +272,33 @@ class JuMEGLogFormatter(logging.Formatter):
     """
 
     FORMATS = {
-        logging.INFO:   "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
-        #logging.INFO:   "\n%(levelname)s - %(asctime)s — %(module)s - %(funcName)s:%(lineno)d :\n%(message)s",
-        logging.ERROR:  "\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n\n",
-        logging.WARNING:"\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
-        logging.DEBUG:  "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n"
-    }
-
+               logging.INFO:   "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
+              #logging.INFO:   "\n%(levelname)s - %(asctime)s — %(module)s - %(funcName)s:%(lineno)d :\n%(message)s",
+               logging.ERROR:  "\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n\n",
+               logging.WARNING:"\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
+               logging.DEBUG:  "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n"
+              }
+    
     def format(self, record):
-        log_fmt = self.FORMATS.get(record.levelno, self.FORMATS[logging.DEBUG])
-        fmt_date = "%Y-%m-%d %H:%M:%S"  #'%Y-%m-%dT%T%Z'
-        formatter = logging.Formatter(log_fmt,fmt_date)
-        return formatter.format(record)
-
+        if _has_colorlogs:
+           return ClFormatter
+        else:
+           fmt_date = "%Y-%m-%d %H:%M:%S"  #'%Y-%m-%dT%T%Z'
+           log_fmt = self.FORMATS.get(record.levelno,self.FORMATS[logging.DEBUG])
+           formatter = logging.Formatter(log_fmt,fmt_date)
+           return formatter.format(record)
+    
 class LogStreamHandler(logging.StreamHandler):
     def __init__(self,level=None):
         super().__init__()
         self._level = level if level else logging.NOTSET
-        self.setFormatter(JuMEGLogFormatter())
+        self._set_formatter()
+        
+    def _set_formatter(self):
+        if _has_colorlogs:
+           self.setFormatter( ClFormatter )
+        else:
+           self.setFormatter( JuMEGLogFormatter() )
     
     def setLevel(self, level):
         """
@@ -378,7 +308,7 @@ class LogStreamHandler(logging.StreamHandler):
         """
         super().setLevel(level)
         self._level=level
-        self.setFormatter(JuMEGLogFormatter())
+        self._set_formatter()
         
     def getLevel(self):
         return self._level
@@ -427,7 +357,10 @@ class LogFileHandler(logging.FileHandler):
         
         super().__init__(self.filename,mode=mode)
         self._level = level if level else logging.NOTSET
-        self.setFormatter(JuMEGLogFormatter())
+        if _has_colorlogs:
+            self.setFormatter(ClFormatter)
+        else:
+            self.setFormatter(JuMEGLogFormatter())
     
     def setLevel(self, level):
         """
@@ -521,7 +454,8 @@ class LoggingContext(object):
         if self.handler and self.close:
             self.handler.close()
         # implicit return of None => don't swallow exceptions
-        
+
+
 def setup_script_logging(fname=None,name=None,opt=None,level="DEBUG",logger=None,path=None,version=None,logfile=False,
                          mode="a",captureWarnings=True,logname="jumeg"):
     """
@@ -546,10 +480,11 @@ def setup_script_logging(fname=None,name=None,opt=None,level="DEBUG",logger=None
     
     :return:
     logger
-    
     """
+    
     if not logger:
        logger=logging.getLogger(logname)
+        
    #----
     name = name if name else "jumeg_logfile"
     
@@ -557,7 +492,6 @@ def setup_script_logging(fname=None,name=None,opt=None,level="DEBUG",logger=None
     logging.captureWarnings(captureWarnings)
     
     HStream = LogStreamHandler()
-    # HStream.setLevel(logging.INFO)
     HStream.setLevel( logger.getEffectiveLevel() )
     logger.addHandler(HStream)
     
@@ -580,12 +514,6 @@ def setup_script_logging(fname=None,name=None,opt=None,level="DEBUG",logger=None
     log2file = logfile
     
     if opt:
-      # use logfile parameter; avoid logfile at start, write logfile for each file to process
-      # try:
-      #    log2file = opt.logfile
-      # except:
-      #   # logger.error("logfile option is not defined: no logfile will be generated")
-      #    pass
        
        try:
           if opt.verbose:
@@ -604,7 +532,6 @@ def setup_script_logging(fname=None,name=None,opt=None,level="DEBUG",logger=None
        HFile = LogFileHandler(fname=fname,name=script_name,mode=mode,path=path)
        HFile.setLevel(logging.DEBUG)
        logger.addHandler(HFile)
-    
     if msg:
        logger.info("\n".join(msg) +"\n")
 
@@ -647,52 +574,22 @@ def update_filehandler(logger=None,logname="jumeg",**kwargs):
     hdlr = LogFileHandler(**kwargs)
     logger.addHandler( hdlr ) # set the new handler
     return hdlr
+  
+
+def test1():
+   #--- init/update logger
+    print("="*40)
+    print("TEST Logger ( using print)")
    
-#=========================================================================================
-#==== MAIN
-#=========================================================================================
-def getLogger(logname="jumeg",captureWarnings=True,level="INFO"):
-    """
-    get a logger, calls logging.getLogger(), add a Stream- and a FileHandler to the logger
-    
-    :param logname:  logger obj name <jumeg>
-    :param level  :  log level <INFO>
-                     [NOTSET,INFO,DEBUG,WARNINGS/WARN,ERROR,CRITICAL] or logging.XYZ or [0,10,20,30,40,50]
-    :param captureWarnings: capture and log printed warning messages <True>
-    :return:
-    logger obj
-    
-    Example:
-    --------
-    import logging
-    from jumeg import jumeg_logger
-    logger = jumeg_logger.getLogger(name='root')
-    logger.setLevel(logging.INFO)
-    
-    HFile=jumeg_logger.LogFileHandler(fname="logfile_test01.log")
-    HFile.setLevel(logging.DEBUG)
-    logger.addHandler(HFile)
-
-    HStream = jumeg_logger.LogStreamHandler()
-    HStream.setLevel(logging.INFO)
-    logger.addHandler(HStream)
-
-    logger.debug('debug message')
-    logger.info('info message')
-    logger.warning('warning message')
-    logger.error('error message')
-    
-    # in sub module:
-      import logging
-      logger = logging.getLogger('root')
-      
-    """
-    
-    logger = logging.getLogger(loger_name)
-    logger.setLevel(level)
-    logger.addHandler(LogStreamHandler())
-    logger.addHandler(LogFileHandler())
-    logging.captureWarnings(captureWarnings)
-    
-    return logger
-
+    logger = setup_script_logging()
+    logger.info(    "LOGGER INFO    : {}".format(__version__))
+    logger.debug(   "LOGGER DEBUG   : {}".format("this is debug"))
+    logger.warning( "LOGGER WARNING : {}".format("this is a warning"))
+    logger.error(   "LOGGER ERROR   : {}".format("this is error"))
+    logger.critical("LOGGER CRITICAL: {}".format("this is critical"))
+   
+    logger.info("DONE TEST LOGGER\n{}".format("="*40))
+   
+if __name__ == "__main__":
+  test1()
+  

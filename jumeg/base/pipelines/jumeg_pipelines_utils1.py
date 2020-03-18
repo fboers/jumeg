@@ -28,10 +28,11 @@ import mne
 from jumeg.base                                      import jumeg_logger
 from jumeg.base.jumeg_base                           import jumeg_base as jb
 from jumeg.base.jumeg_badchannel_table               import update_bads_in_hdf
+from jumeg.base.jumeg_base_config                    import JuMEG_CONFIG as jCFG
 #---
 from jumeg.base.pipelines.jumeg_pipelines_utils_base import get_args,JuMEG_PipelineFrame
 from jumeg.base.pipelines.jumeg_pipelines_ica        import JuMEG_PIPELINES_ICA
-from jumeg.base.pipelines.jumeg_pipelines_report     import JuMEG_REPORT
+#from jumeg.base.pipelines.jumeg_pipelines_report     import JuMEG_REPORT
 #---
 from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD
 from jumeg.filter.jumeg_mne_filter                   import JuMEG_MNE_FILTER
@@ -129,18 +130,19 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
           jplt.show()
        fout = jplt.save(fname=fname_out,plot_dir=config.get("plot_dir","report"))
    
-     #--- update report config
-       RP  = JuMEG_REPORT()
+     #--- update image list in report-config for later update MNE Report
+       CFG  = jCFG()
        data = None
        report_path   = os.path.dirname(fout)
        report_config = os.path.join(report_path,raw_fname.rsplit("_",1)[0]+"-report.yaml")
-       
-       if not RP.CFG.load_cfg( fname=report_config ):
+
+       if not CFG.load_cfg( fname=report_config ):
           data = {"noise_reducer":{ "files": os.path.basename(fout) } }
        else:
-          RP.CFG.config["noise_reducer"] = { "files": os.path.basename(fout) }
-       RP.CFG.save_cfg(fname=report_config,data=data)
-       
+          CFG.config["noise_reducer"] = { "files": os.path.basename(fout) }
+       CFG.save_cfg(fname=report_config,data=data)
+       delete(CFG)
+
     return fname_out,raw,RawIsChanged,None
 
 #---------------------------------------------------
