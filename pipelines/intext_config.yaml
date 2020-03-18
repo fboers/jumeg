@@ -19,12 +19,12 @@ epocher:
   - do_events
   - do_epochs
   conditions: None
-  do_epochs: true
-  do_events: true
-  overwrite: true
+  do_epochs: false
+  do_events: false
+  overwrite: false
   run: false
   save: true
-  template: INTEXT
+  template: None
 filter_1:
   fhigh: 120.0
   file_extention:
@@ -43,7 +43,7 @@ global:
   - stage
   - file_extention
   - recursive
-  experiment: INTEXT
+  experiment: MEG94T
   file_extention:
   - meeg-raw.fif
   - rfDC-empty.fif
@@ -60,8 +60,8 @@ ica:
   ecg:
     ch_name: ECG
     event_id: 999
-    fhigh: 20.0
-    flow: 8.0
+    fhigh: 20
+    flow: 8
     thresh: 0.3
     tmax: 0.4
     tmin: -0.4
@@ -71,8 +71,8 @@ ica:
     - EOG ver
     event_id:
     - 997
-    fhigh: 20.0
-    flow: 1.0
+    fhigh: 20
+    flow: 1
     hor_ch: EOG hor
     thresh: 0.3
     tmax: 0.4
@@ -86,20 +86,20 @@ ica:
   fit:
     _sorted_keys:
     - plot_sources
-    overwrite: true
+    overwrite: false
     plot_sources: true
     save: true
-    use_artifact_rejection: true
+    use_artifact_rejection: false
     use_svm: true
   overwrite: true
   plot: true
   plot_dir: report
-  plot_show: false
+  plot_show: true
   postfix: ar
   pre_filter:
     fhigh: 45.0
     flow: 0.1
-    overwrite: true
+    overwrite: false
     run: true
     save: true
   random_state: 42
@@ -123,8 +123,8 @@ ica:
       save_chop_clean: true
 info:
   gui-version: 2020.03.11.001
-  python-version: 3.7.6
-  time: 2020-03-13 16:55
+  python-version: 3.7.7
+  time: 2020-03-17 11:48
   user: fboers
 interpolate_bads:
   _sorted_keys:
@@ -142,7 +142,8 @@ noise_reducer:
   - meeg-raw.fif
   - rfDC-empty.fif
   fmax: 300
-  noiseref_hp: RFG ...
+  noiseref_hp:
+  - RFG ...
   overwrite: true
   plot: true
   plot_dir: report
@@ -168,9 +169,9 @@ report:
   noise_reducer:
     extention: nr-raw.png
     run: true
-  overwrite: false
+  overwrite: true
   path: report
-  run: false
+  run: true
   save: true
 suggest_bads:
   file_extention:
