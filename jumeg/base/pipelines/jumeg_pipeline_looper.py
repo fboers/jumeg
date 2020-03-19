@@ -88,7 +88,7 @@ class JuMEG_PDF_BASE(object):
        pass
        
    def info(self):
-       logger.info("  -> PDFs:\n  -> " + "\n".join(self.pdfs) )
+       logger.info("PDFs:\n  -> " + "\n".join(self.pdfs) )
        if self.debug:
           logger.debug( jb.pp_list2str(self.__dict__) )
    
@@ -214,7 +214,7 @@ class JuMEG_PDF_IDS(JuMEG_PDF_BASE):
              with jb.working_directory(start_dir):
                   for fext in self.file_extention:
                       if self.debug:
-                         logging.debug( "  -> start dir     : {}\n".format(start_dir)+
+                         logging.debug( "start dir     : {}\n".format(start_dir)+
                                         "  -> extention     : {}\n".format(fext)+
                                         "  -> glob recursive: {}\n".format(self.recursive) +
                                         "  -> glob pattern  : {}".format(fpatt)
@@ -223,12 +223,12 @@ class JuMEG_PDF_IDS(JuMEG_PDF_BASE):
                       for f in glob.glob(fpatt + fext,recursive=self.recursive):
                           self._pdfs.append( os.path.abspath( os.path.join(start_dir,f) ) )
           except:
-              logger.exception("---> error subject : {}\n".format(subj) +
+              logger.exception("error subject : {}\n".format(subj) +
                                "  -> start dir     : {}\n".format(start_dir) )
       self._pdfs.sort()
       
       if self.debug:
-         logger.debug( "---> PDFS:\n  ->"+"\n  ->".join(self.pdfs) )
+         logger.debug("PDFs:\n  ->"+"\n  ->".join(self.pdfs) )
         
       return self._pdfs
 
@@ -269,7 +269,7 @@ class JuMEG_PDF_LIST(JuMEG_PDF_BASE):
 
    def GetFullListFileName(self):
        if not self.list_file_name:
-          logger.warning("  -> list file name is not defined for reading PDFs from list, if needed set option <list_name> <list_path>")
+          logger.warning("list file name is not defined for reading PDFs from list, if needed set option <list_name> <list_path>")
           return None
        if self.list_file_path:
           return os.path.join(self.list_file_path,self.list_file_name)
@@ -299,7 +299,7 @@ class JuMEG_PDF_LIST(JuMEG_PDF_BASE):
               return None
            
            if not os.path.isfile( self.GetFullListFileName() ):
-              logger.exception("---> <list file> is not a file:\n  -> path: {}\n  -> file: {}".format(self.list_file_path,self.list_file_name))
+              logger.exception("<list file> is not a file:\n  -> path: {}\n  -> file: {}".format(self.list_file_path,self.list_file_name))
               return None
             
            # if self.debug:
@@ -314,12 +314,12 @@ class JuMEG_PDF_LIST(JuMEG_PDF_BASE):
                        fname = line.split()[0]
                        try:
                            if not self.check_file_extention(fname):
-                              msg= "\n---> error wrong file extention: skip file !!!\n  -> file extention list: {}\n".format(self.file_extention)
+                              msg= "ERROR wrong file extention: skip file !!!\n  -> file extention list: {}\n".format(self.file_extention)
                               raise FileNotFoundError(msg)
                            if self.stage:
                               fname = os.path.abspath( os.path.join( self.stage+ "/" + fname ) )
                            if not os.path.isfile(fname):
-                              raise FileNotFoundError("---> error file is not a real file: skip file !!!")
+                              raise FileNotFoundError("ERROR file is not a real file: skip file !!!")
                               continue
                            
                            found_list.append(fname)
@@ -337,16 +337,16 @@ class JuMEG_PDF_LIST(JuMEG_PDF_BASE):
                               logger.warning(msg)
                               
        except :
-           msg=" --> error in file list; found files:\n  -> "+"\n  -> ".join(found_list)
+           msg="ERROR in file list; found files:\n  -> "+"\n  -> ".join(found_list)
            logger.error(msg)
            
-           logger.exception(" --> error in reading list file:\n  -> path: {}\n  -> file: {}\n".format( self.list_file_path,self.list_file_name ) )
+           logger.exception("ERROR in reading list file:\n  -> path: {}\n  -> file: {}\n".format( self.list_file_path,self.list_file_name ) )
            if self.ExitOnError:
               sys.exit()
            return False
         
        if self.debug:
-          logger.debug(" --> PDF in list file: {}\n".format(self.GetFullListFileName() )+
+          logger.debug("PDF in list file: {}\n".format(self.GetFullListFileName() )+
                        "  -> counts : {}\n".format( len(found_list) )+
                        "  -> files  :\n    "+ "\n    ".join(found_list) )
        
@@ -571,7 +571,7 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
                self.pdf.pdfs.append(self._PDFFile.pdf)
             self.pdf.pdfs.sort()
         except:
-            raise Exception("\n" + "\n ---> error in update  PDFs list")
+            raise Exception("\n" + "\n ---> ERROR in update  PDFs list")
             return False
         return len( self.pdf.pdfs )
         
@@ -585,11 +585,11 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
         if config:
            self.config_file = config
         if self.debug:
-            logger.info("  -> loading config file: {} ...".format(self.config_file) )
+            logger.info("loading config file: {} ...".format(self.config_file) )
         with open(self.config_file,'r') as f:
              self._config_data = yaml.full_load(f)
         if self.debug:
-            logger.info("  -> DONE loading config file")
+            logger.info("DONE loading config file")
 
     def _update_config_values(self):
         """
@@ -659,7 +659,7 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
            cfg_global = self.config.get("global")
            vlist.append(cfg_global)
            
-        logger.debug(" ---> config global parameter: {} ".format(cfg_global))
+        logger.debug("config global parameter: {} ".format(cfg_global))
         #logger.debug(" ---> value list parameter: {} ".format(vlist))
    
        #--- logfile
@@ -742,15 +742,15 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
         self.update(**kwargs)
        
         if not self._update_pdf_list():
-           logger.info("\n---> No files in list, stop process")
+           logger.info("No files in list, stop process")
            return
         
-        logger.debug("---> PDF files to process: \n"+"\n".join(self.pdf.pdfs) )
+        logger.debug("PDF files to process: \n"+"\n".join(self.pdf.pdfs) )
         
         for self.pdf.idx in range( len( self.pdf.pdfs ) ):
             try:
                 with jb.working_directory(self.pdf.dir):
-                     msg = ["---> Start PreProc Ids: {}".format( self.pdf.counts ),
+                     msg = ["Start PreProc Ids: {}".format( self.pdf.counts ),
                             " --> subject id       : {} file number: {} / {}".format(self.pdf.id,self.pdf.current_number,self.pdf.counts),
                             "  -> raw file name    : {}".format(self.pdf.name),
                             "  -> stage            : {}".format(self.stage),
@@ -777,7 +777,7 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
                      try:
                          yield self.pdf.name,self.pdf.id,self.pdf.dir
                      except:
-                         logger.exception("---> error subject : {}\n".format(self.pdf.id) +
+                         logger.exception("ERROR subject : {}\n".format(self.pdf.id) +
                                           "  -> recordings dir: {}\n".format(self.pdf.dir) +
                                           "  -> file          : {}\n".format(self.pdf.name))
                          return False
@@ -788,7 +788,7 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
                    self._Hlog.close()
                    self._Hlog = None
             except:
-                logger.exception("---> error subject : {}\n".format(self.pdf.id) )
+                logger.exception("ERROR subject : {}\n".format(self.pdf.id) )
                 if self.ExitOnError:
                     logger.error("\nExit On Error")
                     break

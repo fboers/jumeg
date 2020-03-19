@@ -127,7 +127,7 @@ class JuMEG_CONFIG_Info():
         return dt
         
     def info(self):
-        msg = ["---> Config Info:"]
+        msg = ["Config Info:"]
         for k in ["user","date","version","comments"]:
             msg.append("  -> {} : {}".format(k,self._param[k]) )
         logger.info( "\n".join(msg) )
@@ -221,7 +221,7 @@ class JuMEG_CONFIG(object):
         pass
     
     def info(self):
-        logger.info("---> config info:\n  -> file: {}\n{}\n".format(self.filename,pprint.pformat(self._cfg,indent=4)))
+        logger.info("config info:\n  -> file: {}\n{}\n".format(self.filename,pprint.pformat(self._cfg,indent=4)))
         
     def GetDataDict(self,key=None,copy=True):
         '''
@@ -278,7 +278,7 @@ class JuMEG_CONFIG(object):
            self._cfg = self._cfg.get( kwargs["key"] )
         
         if self.verbose:
-           logger.info( " --> done loading config file: {}".format(self.fname) )
+           logger.info("done loading config file: {}".format(self.fname) )
         return self._update_struct()
         
     def update(self,**kwargs):
@@ -329,9 +329,9 @@ class JuMEG_CONFIG(object):
              elif fname.endswith(".json"):
                 json.dump(self._cfg,FH)
              else:
-                logger.exception(" ERROR config file name must end with [.yaml | .json]: {}".format(self.fname))
+                logger.exception("ERROR config file name must end with [.yaml | .json]: {}".format(self.fname))
          if self.verbose:
-            logger.info( " --> done saving config file: {}".format(self.fname) )
+            logger.info("done saving config file: {}".format(self.fname) )
             
 if __name__=='__main__':
     from jumeg.base.jumeg_logger import setup_script_logging

@@ -32,7 +32,7 @@ from jumeg.base.jumeg_base_config                    import JuMEG_CONFIG as jCFG
 #---
 from jumeg.base.pipelines.jumeg_pipelines_utils_base import get_args,JuMEG_PipelineFrame
 from jumeg.base.pipelines.jumeg_pipelines_ica        import JuMEG_PIPELINES_ICA
-#from jumeg.base.pipelines.jumeg_pipelines_report     import JuMEG_REPORT
+from jumeg.base.pipelines.jumeg_pipelines_report     import JuMEG_REPORT
 #---
 from jumeg.plot.jumeg_plot_preproc                   import JuMEG_PLOT_PSD
 from jumeg.filter.jumeg_mne_filter                   import JuMEG_MNE_FILTER
@@ -141,8 +141,7 @@ def apply_noise_reducer(raw_fname=None,raw=None,config=None,label="noise reducer
        else:
           CFG.config["noise_reducer"] = { "files": os.path.basename(fout) }
        CFG.save_cfg(fname=report_config,data=data)
-       delete(CFG)
-
+   
     return fname_out,raw,RawIsChanged,None
 
 #---------------------------------------------------

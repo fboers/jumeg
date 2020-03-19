@@ -319,7 +319,7 @@ class  JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
       self._used_dict=self.GetData()
    
    def info(self):
-       logger.info("---> config info:\n {}\n".format(pprint.pformat(self.GetData(),indent=4)))
+       logger.info("config info:\n {}\n".format(pprint.pformat(self.GetData(),indent=4)))
        
    def _wx_init(self,**kwargs):
     
@@ -450,7 +450,7 @@ class CtrlPanel(wx.Panel):
                  data = self.CfgTreeCtrl._used_dict
                  self.CFG.save_cfg(fname=pathname,data=data)
              except IOError:
-                 wx.LogError("---> ERROR Can not save current data in config file '%s'." % pathname)
+                 wx.LogError("ERROR Can not save current data in config file '%s'." % pathname)
                  
     def FDLGOpen(self, event=None):
        '''

@@ -286,6 +286,7 @@ class JuMEG_PipelineFrame(object):
         self._on_enter(**kwargs)
         
         if not self.run or not self.raw:
+           self._raw = None
            return self.fname_out,self.raw
    
         try:
@@ -299,7 +300,7 @@ class JuMEG_PipelineFrame(object):
                 self.postfix = postfix
             
         except:
-            logger.exception("---> ERROR in {}\n".format(self.label) + self.info())
+            logger.exception(" ERROR in {}\n".format(self.label) + self.info())
         
         finally:
             return self._on_exit()
@@ -313,11 +314,11 @@ class JuMEG_PipelineFrame(object):
         self._update_from_kwargs(**kwargs)
         
         #print(Fore.GREEN)
-        logger.info("\n---> Start: < {} > file name: {}".format(self.label,self._raw_fname))
+        logger.info("Start: < {} > file name: {}".format(self.label,self._raw_fname))
         #print(Style.RESET_ALL)
         
         if self._debug:
-           logger.debug(" -> config parameter:\n{}".format(self._cfg))
+           logger.debug("config parameter:\n{}".format(self._cfg))
 
        # self._raw = None
         self._run = True
@@ -325,29 +326,30 @@ class JuMEG_PipelineFrame(object):
 
         #--- check file extention in list
         if not jb.check_file_extention(fname=self._raw_fname,file_extention=self._cfg.get("file_extention")):
-            logger.info(
-                " --> preproc {}:  SKIPPED : <file extention not in extention list>\n".format(self.label) + self.info())
+            logger.info("preproc {}:  SKIPPED : <file extention not in extention list>\n".format(self.label) + self.info())
             self._run = False
+            self._raw = None
             return None,None
         
         self._fname_out,self._raw = jb.update_and_save_raw(self._raw,fin=self._raw_fname,fout=None,save=False,
                                                            postfix=self.postfix,overwrite=False)
        #--- return raw_fname,raw
         if not self._cfg.get("run"):
-            logger.info(" --> preproc {}:  SKIPPED : <run> is False\n".format(self.label) + self.info())
+            logger.info("preproc {}:  SKIPPED : <run> is False\n".format(self.label) + self.info())
             self._run = False
+            self._raw = None
             return self._raw_fname,None
         
         #--- if file exist and do not overwrite
         if os.path.isfile(self._fname_out) and (self._cfg.get("overwrite",False) == False):
-            logger.info(
-                " --> preproc {}: SKIPPED : do not overwrite existing output file\n".format(self.label) + self.info())
+            logger.info("preproc {}: SKIPPED : do not overwrite existing output file\n".format(self.label) + self.info())
             self._run = False
+            self._raw = None
             return self._fname_out,None
         
         #--- OK load raw, reset bads
         self._raw,self._raw_fname = jb.get_raw_obj(self._raw_fname,raw=self._raw,reset_bads=self._reset_bads)
-        logger.info(" --> preproc {}\n".format(self.label) + self.info())
+        logger.info("preproc {}\n".format(self.label) + self.info())
         return self._raw_fname,self._raw
     
     def _on_exit(self,**kwargs):
@@ -362,12 +364,12 @@ class JuMEG_PipelineFrame(object):
         self._fname_out,self._raw = jb.update_and_save_raw(self._raw,fin=self._raw_fname,fout=None,save=save,
                                                            update_raw_filename=True,postfix=self.postfix,
                                                            overwrite=True)
-        logger.info(" --> done preproc: {} \n".format(self.label) + self.info())
+        logger.info("done preproc: {} \n".format(self.label) + self.info())
         
         if self._fname_out:
            return self._fname_out,self._raw
         else:
-            raise Exception("---> ERROR file name not defined !!!")
+            raise Exception(" ERROR file name not defined !!!")
     
     
     #--- FYI use in with statement

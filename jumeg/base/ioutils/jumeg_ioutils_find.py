@@ -81,10 +81,10 @@ class JuMEG_IoUtils_FileIO(object):
         # f = os.path.abspath(os.path.expandvars(os.path.expanduser(fin)))
         if os.path.isfile(f):
             if logmsg:
-               logger.info("---> " + head + "\n --> file exist: {}\n  -> abs file{:>18} {}".format(fck,':',f))
+               logger.info(head + "\n --> file exist: {}\n  -> abs file{:>18} {}".format(fck,':',f))
             return f
         #--- error no such file
-        logger.error("---> " + head + "\n --> no such file or directory: {}\n  -> abs file{:>18} {}".format(fck,':',f))
+        logger.error(head + "\n --> no such file or directory: {}\n  -> abs file{:>18} {}".format(fck,':',f))
         if exit_on_error:
             raise SystemError("File not exists: {}".format(f) )
         return False
@@ -119,10 +119,10 @@ class JuMEG_IoUtils_FileIO(object):
         p = os.path.abspath(self.expandvars(pin))
         if os.path.isdir(p):
             if logmsg:
-                logger.info("--->" + head + "\n --> dir exist: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
+                logger.info(head + "\n --> dir exist: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
             return p
         #--- error no such file
-        logger.error("---> " + head + "\n --> no such directory: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
+        logger.error(head + "\n --> no such directory: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
         if exit_on_error:
             raise SystemError(self.__MSG_CODE_PATH_NOT_EXIST)
         return False
@@ -139,7 +139,7 @@ class JuMEG_IoUtils_FileIO(object):
         try:
             if os.path.isfile(f):
                os.remove(f)
-               logger.debug("  -> removing file: {}".format(f))
+               logger.debug("removing file: {}".format(f))
                return True
         except OSError as e:  ## if failed, report it back to the user ##
             logger.exception("Error: no such file: %s \n  %s." % (e.filename, e.strerror))
@@ -218,7 +218,7 @@ class JuMEG_IoUtils_FileIO(object):
             file_extention.append(s)
         
         if debug or self.debug:
-            logging.debug("  -> start dir      : {}\n".format(start_dir) +
+            logging.debug("start dir      : {}\n".format(start_dir) +
                           "  -> glob pattern   : {}\n".format(pattern) +
                           "  -> file extention : {}\n".format(file_extention) +
                           "  -> glob recursive : {}\n".format(recursive) +
@@ -272,7 +272,7 @@ class JuMEG_IoUtils_FileIO(object):
             file_extention.append(s)
         
         if debug or self.debug:
-           logger.debug("  -> start dir      : {}\n".format(start_dir) +
+           logger.debug("start dir      : {}\n".format(start_dir) +
                           "  -> glob pattern   : {}\n".format(pattern) +
                           "  -> file extention : {}\n".format(file_extention) +
                           "  -> glob recursive : {}\n".format(recursive) +

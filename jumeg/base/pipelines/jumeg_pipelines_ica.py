@@ -119,11 +119,11 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
     # might want to raise the number
     # 'extended-infomax', 'fastica', 'picard'
     
-    logger.info('---> START ICA FIT: init ICA object')
+    logger.info('START ICA FIT: init ICA object')
     ica = ICA(method='fastica', n_components=40, random_state=random_state,
               max_pca_components=None, max_iter=5000, verbose=False)
   
-    logger.debug(' --> ICA FIT: apply ICA.fit\n reject: {} \n picks: {}'.format(reject,picks))
+    logger.debug('ICA FIT: apply ICA.fit\n reject: {} \n picks: {}'.format(reject,picks))
     ica.fit(raw, picks=picks, decim=None, reject=reject, verbose=True)
 
     #######################################################################
@@ -131,7 +131,7 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
     #######################################################################
 
     if use_jumeg:
-        logger.info(" --> JuMEG Computing scores and identifying components ...")
+        logger.info("JuMEG Computing scores and identifying components ...")
        #--- get ECG related components using JuMEG
         ic_ecg,sc_ecg = get_ics_cardiac(raw, ica, flow=flow_ecg, fhigh=fhigh_ecg,
                                         thresh=ecg_thresh, tmin=-0.5, tmax=0.5, name_ecg=ecg_ch,
@@ -152,14 +152,14 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
         bads_list.extend( ic_eog )
         bads_list.sort()
         ica.exclude = bads_list
-        msg = [" --> JuMEG identified ICA components",
+        msg = ["JuMEG identified ICA components",
                "  -> ECG components: {}".format(ic_ecg),
                "  ->         scores: {}".format(sc_ecg[ic_ecg]),
                "  -> EOG components: {}".format(ic_eog)
               ]
         logger.debug("\n".join(msg))
     else:
-        logger.info(" --> MNE Computing scores and identifying components ...")
+        logger.info("MNE Computing scores and identifying components ...")
         ecg_scores = ica.score_sources(raw, target=ecg_ch, score_func='pearsonr',
                                        l_freq=flow_ecg, h_freq=fhigh_ecg, verbose=False)
         # horizontal channel
@@ -187,7 +187,7 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
 
         # if necessary include components identified by correlation as well
         ica.exclude = highly_corr
-        msg = ["  -> MNE Highly correlated artifact components",
+        msg = ["MNE Highly correlated artifact components",
                "  -> ECG  : {} ".format(highly_corr_ecg),
                "  -> EOG 1: {} ".format(highly_corr_eog1),
                "  -> EOG 2: {} ".format(highly_corr_eog2)
@@ -195,7 +195,7 @@ def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
                
         logger.debug("\n".join(msg))
    
-    logger.info(" --> done ICA FIT\n  -> excluded ICs: {}\n".format(ica.exclude))
+    logger.info("done ICA FIT\n  -> excluded ICs: {}\n".format(ica.exclude))
     return ica
 
 
@@ -318,13 +318,13 @@ class JuMEG_PIPELINES_ICA(object):
 
     #--- calc chop times
     def _calc_chop_times(self):
-        logger.debug("  -> Start calc Chop Times: length: {} raw time: {}".format(self.cfg.chops.length,self.raw.times[-1]))
+        logger.debug("Start calc Chop Times: length: {} raw time: {}".format(self.cfg.chops.length,self.raw.times[-1]))
         self._chop_times = None
         
         if self.raw.times[-1] <= self.cfg.chops.length:
            cps      = np.zeros([1,2],dtype=np.float32)
            cps[0,0] = 0.0
-           logger.warning("---> <Raw Times> : {} smaler than <Chop Times> : {}\n\n".format(self.raw.times[-1],self._chop_times))
+           logger.warning("<Raw Times> : {} smaler than <Chop Times> : {}\n\n".format(self.raw.times[-1],self._chop_times))
         else:
            n_chops,t_rest = np.divmod(self.raw.times[-1],self.cfg.chops.length)
            n_chops = int(n_chops)
@@ -339,13 +339,13 @@ class JuMEG_PIPELINES_ICA(object):
         cps[-1,1] = None #self.trunc_nd(self.raw.times[-1], 3)  # ???? error in mne crop line 438 mne error tend == or less tmax
         self._chop_times = cps
         
-        logger.debug("  -> Chop Times:\n{}".format(self._chop_times))
+        logger.debug("Chop Times:\n{}".format(self._chop_times))
         return self._chop_times
 
    #--- calc chop times from events
     def _calc_chop_times_from_events(self):
         
-        logger.info("  -> Chop Times:\n{}".format(self._chop_times))
+        logger.info("Chop Times:\n{}".format(self._chop_times))
         return self._chop_times
 
     def _copy_crop_and_chop(self,raw,chop):
@@ -363,7 +363,7 @@ class JuMEG_PIPELINES_ICA(object):
           # if raw.annotations:
           #    anato = raw.annotations.copy()
           #    raw_crop.set_annotations( anato.crop(tmin=chop[0],tmax=chop[1]) )
-           logger.info("---> RAW Crop Annotation : {}\n  -> tmin: {} tmax: {}\n {}\n".format(jb.get_raw_filename(raw),chop[0],chop[1],raw_crop.annotations))
+           logger.info("RAW Crop Annotation : {}\n  -> tmin: {} tmax: {}\n {}\n".format(jb.get_raw_filename(raw),chop[0],chop[1],raw_crop.annotations))
            return raw_crop
         return raw
 
@@ -443,7 +443,7 @@ class JuMEG_PIPELINES_ICA(object):
 
         fname_ica,fname = self._get_chop_name(raw_chop,chop=None)
       
-        logger.info("---> start ICA FIT chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]) +
+        logger.info("start ICA FIT chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]) +
                     " --> chop id      : {}\n".format(chop) +
                     "  -> ica fname    : {}\n".format(fname_ica) +
                     "  -> ica chop path: {}\n".format(self.path_ica_chops) +
@@ -456,7 +456,7 @@ class JuMEG_PIPELINES_ICA(object):
        
         if load_from_disk:
            self._ica_obj,fname_ica = jb.get_raw_obj(fname_ica,path=self.path_ica_chops)
-           logger.info("---> DONE LOADING ICA chop form disk: {}\n  -> ica filename: {}".
+           logger.info("DONE LOADING ICA chop form disk: {}\n  -> ica filename: {}".
                        format(chop,fname_ica))
         else:
             if self.useArtifactRejection:
@@ -477,24 +477,24 @@ class JuMEG_PIPELINES_ICA(object):
                
             if self.useSVM:
                if not self._ica_obj:
-                  logger.info('---> SVM start ICA FIT: init ICA object')
+                  logger.info('SVM start ICA FIT: init ICA object')
                  #--- !!! ToDo put parameter in CFG file
                   self._ica_obj = ICA(method='fastica',n_components=40,random_state=42,max_pca_components=None,max_iter=5000,verbose=False)
                   self._ica_obj.fit(raw_chop,picks=self.picks,decim=None,reject=self.CFG.GetDataDict(key="reject"),
                                 verbose=True)
                else:
-                 logger.info('---> SVM ICA Obj start')
+                 logger.info('SVM ICA Obj start')
                 #--- !!! do_copy = True => resample
                  self._ica_obj,_ = self.SVM.run(raw=self.raw,ICA=self._ica_obj,picks=self.picks,do_crop=False,do_copy=True)
-                 logger.info('---> DONE SVM ICA FIT: apply ICA.fit')
+                 logger.info('DONE SVM ICA FIT: apply ICA.fit')
 
         #--- save ica object
         if self.cfg.fit.save and not load_from_disk:
-           logger.info("---> saving ICA chop: {}\n".format(idx + 1,self._chop_times.shape[0]) +
+           logger.info("saving ICA chop: {}\n".format(idx + 1,self._chop_times.shape[0]) +
                        "  -> ica filename   : {}".format(fname_ica))
            self._ica_obj.save(os.path.join(self.path_ica_chops,fname_ica))
               
-        logger.info("---> done ICA FIT for chop: {}\n".format(chop)+
+        logger.info("done ICA FIT for chop: {}\n".format(chop)+
                     "  -> raw chop filename    : {}\n".format(fname_ica)+
                     "-"*30+"\n"+
                     "  -> ICs found JuMEG/MNE  : {}\n".format(self.ICs)+
@@ -529,7 +529,7 @@ class JuMEG_PIPELINES_ICA(object):
             raw_clean : mne.io.Raw()
                        Raw object after ICA cleaning
         """
-        logger.info("---> Start ICA Transform")
+        logger.info("Start ICA Transform")
         if copy_raw:
            _raw = raw.copy()
         else:
@@ -580,11 +580,11 @@ class JuMEG_PIPELINES_ICA(object):
       #--- update report config
         CFG = jCFG()
         report_config = os.path.join(self.plot_dir,os.path.basename(self.raw_fname).rsplit("_",1)[0] + "-report.yaml")
-        d= None
+        d = None
         if not CFG.load_cfg(fname=report_config):
             d = { "ica":{ data } }
         else:
-            CFG.config["ica"] = { data }
+            CFG.config["ica"] = data
         CFG.save_cfg(fname=report_config,data=d)
 
 
@@ -612,7 +612,7 @@ class JuMEG_PIPELINES_ICA(object):
         
         for idx in range(self._chop_times.shape[0]):
             chop = self._chop_times[idx]
-            logger.info("---> Start ICA FIT & Transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
+            logger.info("Start ICA FIT & Transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
         
            #--- chop raw
             raw_chop = self._copy_crop_and_chop(raw,chop)
@@ -657,7 +657,7 @@ class JuMEG_PIPELINES_ICA(object):
                   fname_clean = os.path.join(self.path_ica_chops,fname_clean)
                   raw_chops_clean_list[-1].save(fname_clean,overwrite=True)
                
-            logger.info(" --> done ICA FIT & transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
+            logger.info("done ICA FIT & transform chop: {} / {}\n".format(idx + 1,self._chop_times.shape[0]))
         
       #--- concat & save raw chops to raw_clean
         if raw_chops_clean_list:
@@ -704,7 +704,7 @@ class JuMEG_PIPELINES_ICA(object):
             self._calc_chop_times()
         
         if not isinstance(self._chop_times,(np.ndarray)):
-           logger.exception("---> No <chop times> defined for ICA\n" +
+           logger.exception("No <chop times> defined for ICA\n" +
                             "  -> raw filename : {}\n".format(self._raw_fname))
            return None
        
@@ -717,7 +717,7 @@ class JuMEG_PIPELINES_ICA(object):
             s+="{}-{}  ".format(cp[0],cp[1])
             
         msg = [
-            "---> Apply ICA => FIT & Transform",
+            "Apply ICA => FIT & Transform",
             "  -> filename      : {}".format(self._raw_fname),
             "  -> ica chop path : {}".format(self.path_ica_chops),
             "  -> chops         : {}".format(s),
@@ -766,7 +766,7 @@ class JuMEG_PIPELINES_ICA(object):
                                                     save_chops_clean = self.cfg.transform.unfiltered.save_chop_clean,
                                                     save_clean       = self.cfg.transform.unfiltered.save)
                                          
-        logger.info("---> DONE ICA FIT & Transpose\n"+
+        logger.info("DONE ICA FIT & Transpose\n"+
                     "  -> filename : {}\n".format( jb.get_raw_filename(raw_unfiltered_clean) )+
                     "  -> time to process :{}".format( datetime.timedelta(seconds= time.time() - self._start_time ) ))
             

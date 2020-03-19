@@ -212,7 +212,7 @@ class JuMEG_ICA_SVM():
 
 def run(opt):
     jumeg_logger.setup_script_logging(logger=logger)
-    logger.info("---> JuMEG SVM ICA mne-version: {}".format(mne.__version__))
+    logger.info("JuMEG SVM ICA mne-version: {}".format(mne.__version__))
     
     from jumeg.base.pipelines.jumeg_pipelines_ica_perfromance import JuMEG_ICA_PERFORMANCE
     jIP = JuMEG_ICA_PERFORMANCE()
@@ -246,7 +246,7 @@ def run(opt):
 
     jIP.Plot.figure.show()
     
-    logger.info("---> DONE JuMEG SVM ICA")
+    logger.info("DONE JuMEG SVM ICA")
 
 
 def get_args(argv):
