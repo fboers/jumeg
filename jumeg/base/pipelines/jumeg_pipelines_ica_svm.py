@@ -161,13 +161,16 @@ class JuMEG_ICA_SVM():
         raw_c.resample(sfreq=self.sfreq,n_jobs=self.n_jobs)
         
         if raw_c.info["bads"]:
+           logger.info("SVM => interpolating bads")
            raw_c.interpolate_bads()  # to get the dimesions right
-
+        
+        logger.info("SVM => filtering RAW data")
         raw_c.filter(l_freq=self.l_freq,h_freq=self.h_freq)
         
         if not self.ICA:
            if not self.picks:
               self.picks = jb.picks.meg_nobads(raw_c)
+           logger.info("SVM => calculating & fitting ICA")
            self.ICA = mne.preprocessing.ICA(n_components=self.n_components,method=self.method)
            self.ICA.fit(raw_c,picks=self.picks)  # ,start=0.0,stop=20.0)
         
@@ -175,6 +178,7 @@ class JuMEG_ICA_SVM():
         self._ics_found.sort()
         
        #--- get topo-maps
+        logger.info("SVM => start classifier with topos")
         topos = np.dot(self.ICA.mixing_matrix_[:,:].T,self.ICA.pca_components_[:self.ICA.n_components_])
        #--- compatibility section -- 3d interpolation to 4d sensorlayout
         self.predict_proba = self.classifier.predict_proba(topos)
@@ -185,6 +189,9 @@ class JuMEG_ICA_SVM():
         # self._ics_found_svm = [item for item in self.ICA.exclude if item not in self._ics_found ]
         self._ics_found_svm = self.ICA.exclude
         self._ics_found_svm.sort()
+        logger.debug("SVM ICs found:\n  -> ICs before: {}\n  -> ICs SVM: {}\  -> ICs excluded: {}".
+                    format(self._ics_found,self._ics_found_svm,self.ICA.exclude) )
+        logger.info("done SVM")
         
         return self.ICA,self.predict_proba
     

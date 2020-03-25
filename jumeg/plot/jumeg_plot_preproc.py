@@ -139,7 +139,7 @@ class JuMEG_PLOT_BASE(object):
            try:
                os.makedirs(fout_path,exist_ok=True)
            except:
-               logger.exception("---> can not create plot\n" +
+               logger.exception("ERROR: can not create plot\n" +
                                 "  -> directory: {}\n".format(fout_path) +
                                 "  -> filename : {}".format(fname))
                return False
@@ -154,7 +154,7 @@ class JuMEG_PLOT_BASE(object):
            else: # pdf ?
                self.fig.savefig(fout,dpi=self.dpi)
            if self.verbose:
-              logger.info("---> done saving plot: {}".format(fout))
+              logger.info("done saving plot: {}".format(fout))
             
            return fout
             

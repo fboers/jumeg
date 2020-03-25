@@ -22,7 +22,7 @@ from jumeg.base.jumeg_base import jumeg_base as jb
 
 logger = logging.getLogger("jumeg")
 
-__version__= "2020.01.16.001"
+__version__= "2020.03.19.001"
 
 
 
@@ -158,7 +158,7 @@ class JuMEG_MNE_FILTER(object):
         v = jb.verbose
         jb.verbose = self.verbose
         
-        logger.info("---> Filter start: {}".format(self.fname))
+        logger.info("Filter start: {}".format(self.fname))
         
         self._update_postfix()
         fname,ext = self.fname.rsplit('-',1)  #raw.fif'
@@ -167,7 +167,7 @@ class JuMEG_MNE_FILTER(object):
         #--- ck if load from disk
         if not self.overwrite:
             if jb.isFile(fname):
-                logger.debug("  -> Filtered RAW reloading from disk ...")
+                logger.debug("Filtered RAW reloading from disk ...")
                 self.raw,fname    = jb.get_raw_obj(fname,None)
                 self._fname_orig  = fname
                 
@@ -178,11 +178,11 @@ class JuMEG_MNE_FILTER(object):
                 self._is_reloaded = True
         
         if not self._is_filtered:
-            logger.info("  -> Filter start MNE filter ...")
+            logger.info("Filter start MNE filter ...")
             if isinstance(self.picks,(list,np.ndarray)):
                picks = self.picks
             else:
-               logger.warning("---> picks not defined : excluding channel group <stim> and <resp>")
+               logger.warning("WARNING: picks not defined : excluding channel group <stim> and <resp>")
                picks = jb.picks.exclude_trigger(self.raw)
                
             self.raw.filter(l_freq=self.flow,h_freq=self.fhigh,picks=picks)
@@ -205,7 +205,7 @@ class JuMEG_MNE_FILTER(object):
         :param msg:
         :return:
         """
-        _msg = ["---> Filter      : {}".format(self.isFiltered),
+        _msg = ["Filter      : {}".format(self.isFiltered),
                 " --> raw filtered: {}".format(self.fname),
                 "  -> postfix: {}".format(self.postfix),
                 "  -> flow   : {}".format(self.flow),
@@ -359,17 +359,17 @@ class JuMEG_MNE_NOTCH_FILTER(JuMEG_MNE_FILTER):
         #--- ck if load from disk
         if not self.overwrite:
             if jb.isFile(fname):
-                logger.debug("  -> Notch Filtered RAW reloading from disk ...")
+                logger.debug("Notch Filtered RAW reloading from disk ...")
                 self.raw,fname = jb.get_raw_obj(fname,None)
                 self._is_filtered = True
                 self._is_reloaded = True
     
         if not self._is_filtered:
-            logger.info("  -> Notch Filter start MNE filter ...")
+            logger.info("Notch Filter start MNE filter ...")
             if isinstance(self.picks,(list,np.ndarray)):
                 picks = self.picks
             else:
-                logger.warning("---> picks not defined : excluding channel group <stim> and <resp>")
+                logger.warning("picks not defined : excluding channel group <stim> and <resp>")
                 picks = jb.picks.exclude_trigger(self.raw)
         
             self.raw.notch_filter(self.freqs,picks=picks,filter_length=self.filter_length,notch_widths=self.notch_widths,
@@ -382,12 +382,12 @@ class JuMEG_MNE_NOTCH_FILTER(JuMEG_MNE_FILTER):
             self._is_filtered = True
         
             if self.save:
-                logger.info("  -> Notch Filter saving data")
+                logger.info("Notch Filter saving data")
                 fname = jb.apply_save_mne_data(self.raw,fname=fname,overwrite=True)
             else:
                 jb.set_raw_filename(self.raw,fname)
     
-        logger.info("---> Notch Filter done: {}\n".format(self.fname) +
+        logger.info("Notch Filter done: {}\n".format(self.fname) +
                     "  -> reloaded from disk: {}".format(self._is_reloaded)
                     )
     
@@ -400,7 +400,7 @@ class JuMEG_MNE_NOTCH_FILTER(JuMEG_MNE_FILTER):
         :param msg:
         :return:
         """
-        _msg = ["---> Notch Filter: {}".format(self.isFiltered),
+        _msg = ["Notch Filter: {}".format(self.isFiltered),
                 " --> raw filtered: {}".format(self.fname),
                 "  -> postfix: {}".format(self.postfix),
                 "  -> save   : {}".format(self.save),

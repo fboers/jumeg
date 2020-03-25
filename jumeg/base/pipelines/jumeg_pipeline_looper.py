@@ -471,7 +471,8 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
         self._PDFIDS  = JuMEG_PDF_IDS()
         self._PDFList = JuMEG_PDF_LIST()
         self._PDFFile = JuMEG_PDF_FILE()
-     
+        self._start_path = os.getcwd()
+        
      #--- logfile
         self._Hlog        = None
         self.log2file     = False
@@ -505,6 +506,9 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
     @property
     def config(self): return self._config_data
    
+    @property
+    def StartPath(self): return self._start_path
+
     @property
     def config_file(self):
         return self._config_file
@@ -746,7 +750,7 @@ class JuMEG_PipelineLooper(JuMEG_PDF_BASE):
            return
         
         logger.debug("PDF files to process: \n"+"\n".join(self.pdf.pdfs) )
-        
+        self._start_path = os.getcwd()
         for self.pdf.idx in range( len( self.pdf.pdfs ) ):
             try:
                 with jb.working_directory(self.pdf.dir):

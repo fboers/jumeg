@@ -648,6 +648,46 @@ class JuMEG_wxSplitterWindow(wx.SplitterWindow):
          listener      : name of pubsub listener to subscribe <SPLITTER>
          flip_position : key word for pubsub listener to flip position <FLIP_POSITION>
          split_min_max : key word for pubsub listener to reise windows <SPLIT_MIN_MAX>
+        
+         Example:
+         --------
+           import wx
+           from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import JuMEG_wxSplitterWindow
+        
+           class Test( wx.Panel):
+                def __init__(self,parent,**kwargs):
+                    super().__init__(parent,**kwargs)
+                    self.pnl_left = None
+                    self.pnl_right= None
+                    self._wx_init(**kwargs)
+                    self._ApplyLayout()
+                
+                def _wx_init(self,**kwargs):
+                    self._splitter = JuMEG_wxSplitterWindow(self,label="TEST",name=self.GetName() + ".SPLITTER")
+                    self._pnl_left = wx.Panel(self._splitter,name="LEFT")
+                    self._pnl_left.SetBackgroundColour("green")
+                    self._pnl_right= wx.Panel(self._splitter,name="RIGHT")
+                    self._pnl_right.SetBackgroundColour("blue")
+               
+                def _ApplyLayout(self):
+                    LEA = wx.LEFT|wx.EXPAND|wx.ALL
+                    vbox = wx.BoxSizer(wx.VERTICAL)
+                    self._splitter.SplitVertically(self._pnl_left,self._pnl_right)
+                    self._splitter.SetMinimumPaneSize(150)
+                    self._splitter.SetSashGravity(1.0)
+                    vbox.Add(self._splitter, 1, wx.ALIGN_CENTER | wx.EXPAND | wx.ALL, 5)
+                   
+                    self.SetAutoLayout(True)
+                    self.SetSizer(vbox)
+                    self.Fit()
+                    self.Layout()
+                    
+           if __name__ == '__main__':
+              app = wx.App()
+              frame = wx.Frame(None, -1, "Test", size=(640, 480))
+              win = Test(frame)
+              frame.Show(True)
+              app.MainLoop()
         """
         super().__init__(parent=parent, id=wx.ID_ANY,style=wx.SP_3DSASH|wx.SP_3DBORDER|wx.SUNKEN_BORDER)
         self._flip_position = "FLIP_POSITION"
@@ -756,7 +796,7 @@ class JuMEG_wxCMDButtons(wx.Panel):
            prefix:"CMD_BUTTONS"
            ShowClose:True,ShowCancel:True,ShowApply:True
            verbose: False, debug: False
-          """
+                """
           super(JuMEG_wxCMDButtons,self).__init__(parent=parent, id=wx.ID_ANY,style=wx.SUNKEN_BORDER)
           self._init(**kwargs)
 

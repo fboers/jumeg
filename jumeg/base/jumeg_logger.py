@@ -514,10 +514,9 @@ def setup_script_logging(fname=None,name=None,opt=None,level="DEBUG",logger=None
     log2file = logfile
     
     if opt:
-       
        try:
           if opt.verbose:
-             msg = ["---> {}".format(script_name),
+             msg = ["{}".format(script_name),
                     "  -> version             : {}".format(version),
                     "  -> python sys version  : {}".format(sys.version_info),
                     "   " + "-" * 40," --> ARGV parameter:"]

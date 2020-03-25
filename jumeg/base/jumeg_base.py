@@ -353,10 +353,10 @@ class JuMEG_Base_Basic(object):
         # f = os.path.abspath(os.path.expandvars(os.path.expanduser(fin)))
         if os.path.isfile(f):
            if logmsg:
-              logger.info( "---> " +head+"\n --> file exist: {}\n  -> abs file{:>18} {}".format(fck,':',f))
+              logger.info( head+"\n --> file exist: {}\n  -> abs file{:>18} {}".format(fck,':',f))
            return f
        #--- error no such file
-        logger.warning("---> " +head+"\n --> no such file or directory: {}\n  -> abs file{:>18} {}".format(fck,':',f))
+        logger.warning( head+"\n --> no such file or directory: {}\n  -> abs file{:>18} {}".format(fck,':',f))
         if exit_on_error:
            raise SystemError(self.__MSG_CODE_FILE_NOT_EXIST)
         return False
@@ -392,15 +392,15 @@ class JuMEG_Base_Basic(object):
         p = os.path.abspath(self.expandvars(pin))
         if os.path.isdir(p):
            if logmsg:
-              logger.info("--->"+head+"\n --> dir exist: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
+              logger.info(head+"\n --> dir exist: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
            return p
         elif mkdir:
             os.makedirs(p)
             if logmsg:
-               logger.info("--->"+head+"\n --> make dirs: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
+               logger.info(head+"\n --> make dirs: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
             return p
        #--- error no such file
-        logger.error("---> "+head+"\n --> no such directory: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
+        logger.error(head+"\n --> no such directory: {}\n  -> abs dir{:>18} {}".format(pin,':',p))
         if exit_on_error:
            raise SystemError(self.__MSG_CODE_PATH_NOT_EXIST)
         return False
@@ -475,7 +475,7 @@ class JuMEG_Base_Basic(object):
     
     
         if debug or self.debug:
-            logging.debug("  -> start dir      : {}\n".format(start_dir) +
+            logging.debug("start dir      : {}\n".format(start_dir) +
                           "  -> glob pattern   : {}\n".format(pattern) +
                           "  -> file extention : {}\n".format(file_extention) +
                           "  -> glob recursive : {}\n".format(recursive) +
@@ -528,7 +528,7 @@ class JuMEG_Base_Basic(object):
            file_extention.append(s)
     
         if debug or self.debug:
-            logging.debug("  -> start dir      : {}\n".format(start_dir) +
+            logging.debug("start dir      : {}\n".format(start_dir) +
                           "  -> glob pattern   : {}\n".format(pattern) +
                           "  -> file extention : {}\n".format(file_extention) +
                           "  -> glob recursive : {}\n".format(recursive) +
@@ -935,7 +935,7 @@ class JuMEG_Base_PickChannels(object):
        #--- if empty list
         if not picks.any():
            if self.verbose or verbose:
-              logger.warning("  -> looking for dead channels -> no picks defined" )
+              logger.warning("looking for dead channels -> no picks defined" )
            return picks
        #--- idx array: 0:dead 1:ok
         idx = np.where( raw._data[picks,:].min(axis=1) == raw._data[picks,:].max(axis=1),0,1 )
@@ -947,12 +947,12 @@ class JuMEG_Base_PickChannels(object):
         if self.verbose or verbose:
           # logger.setLevel("DEBUG")
            bads_idx = np.where(idx < 1)[0]
-           logger.info("  -> looking for dead channels\n"+
+           logger.info("looking for dead channels\n"+
                        "  -> dead channels :  {}\n".format(self.picks2labels(raw,picks[bads_idx]))+
                        "  ->      index    :  {}\n".format(bads_idx)+
                        "  -> update bads in raw.info: {}".format(update)
                        )
-        logger.info("  -> bads: {}\n".format(self.bads(raw) ))
+        logger.info("bads: {}\n".format(self.bads(raw) ))
         
         return picks[ np.where(idx)[0] ]
 
@@ -1608,14 +1608,14 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         fif_out = self.get_fif_name(raw=raw,postfix=postfix)
 
         if self.verbose:
-           logger.info(" --> Update bad-channels\n"+
+           logger.info("Update bad-channels\n"+
                        " --> FIF in  : {}\n".format(self.get_raw_filename(raw))+
                        " --> FIF out : {}\n".format(fif_out)+
                        " --> bads    : {}\n".format(raw.info['bads']))
               
         if ( interpolate and raw.info['bads'] ) :
            logger.info( self.pp_list2str(
-              [" --> Update BAD channels => interpolating: {}".format(raw.info['filename']),
+              ["Update BAD channels => interpolating: {}".format(raw.info['filename']),
                " --> BADs : {}".format(raw.info['bads'])]))
            raw.interpolate_bads()
      
@@ -1685,10 +1685,10 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         
         
         if self.verbose:
-           logger.info("<<<< Reading raw data ...")
+           logger.info(" <<<< Reading raw data ...")
            
         if self.debug:
-           msg= [" --> start reading raw data:\n",
+           msg= ["start reading raw data:\n",
                  "  -> raw : {}\n".format(raw),
                  "  -> file: {}\n".format(fname),
                  "  -> path: {}\n".format(path)]
@@ -1733,7 +1733,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
             if not raw:
                raise FileNotFoundError("ERROR could not load RAW object: {}".format(fn))
         except:
-            logger.exception("---> could not get raw obj from file:\n --> FIF name: {}\n  -> file not exist".format(fn))
+            logger.exception("ERROR: could not get raw obj from file:\n --> FIF name: {}\n  -> file not exist".format(fn))
             return None,None
         
         if reset_bads:
@@ -1745,7 +1745,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
                 logger.exception("ERROR -> cannot reset bads in raw: {}".format(fn))
 
         if raw:
-           msg = [" --> done loading raw data:\n",
+           msg = ["done loading raw data:\n",
                   "  -> raw : {}\n".format(raw),
                   "  -> file: {}\n".format(fname),
                   "  -> path: {}\n".format(path),
@@ -1845,11 +1845,11 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         try:           
             fh.close()
         except:
-            logger.exception("  -> UP`s error: can not close list-file:" +fin,exc_info=True)
+            logger.exception("UP`s error: can not close list-file:" +fin,exc_info=True)
         
         if self.verbose :
            logger.info(self.pp_list2str(
-               [" --> INFO << get_filename_list_from_file >> Files found: %d" % ( len(found_list) ),
+               ["INFO << get_filename_list_from_file >> Files found: %d" % ( len(found_list) ),
                 found_list,"\n --> BADs: ",opt_dict,"\n"]) )
 
         return found_list,opt_dict
@@ -1938,19 +1938,19 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         if save:
             try:
                 if (os.path.isfile(fname) and (not overwrite)):
-                    logger.info(" --> File exist => skip saving data to : " + fname)
+                    logger.info("File exist => skip saving data to : " + fname)
                 else:
                     logger.info(">>>> writing data to disk...\n --> saving: " + fname)
                     mkpath(os.path.dirname(fname))
                     raw.save(fname,overwrite=True)
-                    msg=[' --> Done writing data to disk ...',' --> Bads:' + str(raw.info['bads'])]
+                    msg=['Done writing data to disk ...',' --> Bads:' + str(raw.info['bads'])]
                     try:
                         msg.append(" --> mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
                     except:
                         msg.append(" --> mne.annotations in RAW: None")
                     logger.info("\n".join(msg))
             except:
-                logger.exception("---> error in saving raw object:\n  -> file: {}".format(fname))
+                logger.exception("error in saving raw object:\n  -> file: {}".format(fname))
     
         if update_raw_filename:
            self.set_raw_filename(raw,fname)
@@ -1976,22 +1976,21 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         fname = os.path.expandvars(fname)  # expand envs
         try:
            if ( os.path.isfile(fname) and ( not overwrite) ) :
-              logger.info(" --> File exist => skip saving data to : " + fname)
+              logger.info("File exist => skip saving data to : " + fname)
            else:
               logger.info(">>>> writing data to disk...\n --> saving: "+ fname)
               mkpath( os.path.dirname(fname) )
               raw.save(fname,overwrite=True)
               msg= []
               try:
-                 msg.append(" --> mne.annotations in RAW:\n  -> {}".format(raw.annotations))
+                 msg.append("mne.annotations in RAW:\n  -> {}".format(raw.annotations))
               except:
                  logger.exception(raw.annotations() )
-                 
-                 msg.append(" --> mne.annotations in RAW: not found")
+                 msg.append("mne.annotations in RAW: not found")
               msg.extend( [' --> Bads:' + str( raw.info['bads'] )," --> Done writing data to disk..."])
               logger.info("\n".join(msg))
         except:
-           logger.exception("---> error in saving raw object:\n  -> file: {}".format(fname))
+           logger.exception("error in saving raw object:\n  -> file: {}".format(fname))
            
         return fname
 

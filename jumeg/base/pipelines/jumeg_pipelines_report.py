@@ -46,7 +46,7 @@ class MNE_REPORT(JUMEG_SLOTS):
     and show in MNE Reports
     """
     __slots__ = { "postfix","html_extention","h5_extention","info_name","experiment","subject_id",
-                  "title","open_browser","write_hdf5","raw_psd","image_format","overwrite","verbose",
+                  "title","open_browser","write_hdf5","raw_psd","image_format","overwrite","verbose","debug",
                   "_isOpen","_path","_fhdf","_MNE_REPORT"}
     
     def __init__(self,**kwargs):
@@ -83,6 +83,12 @@ class MNE_REPORT(JUMEG_SLOTS):
     @property
     def fullname(self):
         return os.path.join(self.path,self.fname)
+
+    @property
+    def html_name(self): return self.fullname + self.html_extention
+    @property
+    def hdf_name(self): return self.fullname + self.h5_extention
+    
     @property
     def image_extention(self): return "."+self.image_format
     
@@ -112,36 +118,42 @@ class MNE_REPORT(JUMEG_SLOTS):
         """
         self._update_from_kwargs(**kwargs)
         self._isOpen = False
+        # logger.info("report path (stage): {}".format(self.fullname))
+       
+        if self.overwrite:
+           try:
+              for fext in [ self.h5_extention,self.html_extention ]:
+                  fname = self.fullname+fext
+                  if os.path.isfile(fname):
+                     os.remove(self.fname)
+           except:
+              logger.exception("ERROR: can not overwrite report ile: {}".format(self.fullname))
+              return False
+       
+       # https://mne.tools/dev/auto_tutorials/misc/plot_report.html
         try:
-            if self.overwrite:
-               for fext in [ self.h5_extention,self.html_extention ]:
-                   fname = self.fullname+fext
-                   if os.path.isfile(fname):
-                      os.remove(self.fname)
+            if os.path.isfile(self.hdf_name):
+               self._MNE_REPORT = mne.open_report(self.hdf_name)
+            else:
+               self._MNE_REPORT = mne.Report(info_fname=self.info_name,title=self.title,image_format=self.image_format,
+                                             raw_psd=self.raw_psd,verbose=self.verbose)
+            self._isOpen = True
         except:
-            logger.exception("ERROR: can not overwrite report ile: {}".format(self.fullname))
-            return false
-    
-        self._MNE_REPORT = mne.Report(info_fname=self.info_name,title=self.title,image_format=self.image_format,
-                                      raw_psd=self.raw_psd,verbose=self.verbose)
-        self._isOpen = True
+            logger.exception("ERROR: can not open or create MNE Report {}".format(self.hdf_name))
         return self._isOpen
 
-    def save(self,overwrite=False):
+    def save(self,overwrite=True):
         if not self.isOpen:
             logger.exception("ERROR in saving JuMEG MNE report: {}\n ---> Report not open\n".format(self.fullname))
             return self.isOpen
         
         # mkpath( self.path,mode=0o770)
        #--- html
-        fname = self.fullname + self.html_extention
-        self.MNEreport.save(fname,overwrite=overwrite,open_browser=self.open_browser)
-        logger.info("DONE saving JuMEG MNE report: HTML: {}\n".format(fname))
+        self.MNEreport.save(self.html_name,overwrite=overwrite,open_browser=self.open_browser)
+        logger.info("DONE saving JuMEG MNE report: HTML: {}\n".format(self.html_name))
        #--- h5
-        if self.write_hdf5:
-           fname = self.fullname + self.h5_extention
-           self.MNEreport.save( fname, overwrite=overwrite,open_browser=False)
-           logger.info("DONE saving JuMEG MNE report: HDF5: {}\n".format(fname))
+        self.MNEreport.save( self.hdf_name, overwrite=overwrite,open_browser=False)
+        logger.info("DONE saving JuMEG MNE report: HDF5: {}\n".format(self.hdf_name))
      
         return self.isOpen
     
@@ -282,7 +294,7 @@ class JuMEG_REPORT(JUMEG_SLOTS):
         if "config" in kwargs:
            self._jumeg_cfg = kwargs.get("config")
         
-        logger.info("jumeg config report: {}".format( self.jumeg_cfg))
+        #logger.info("jumeg config report: {}".format( self.jumeg_cfg))
         
        #--- update from kwargs
         self.stage = jb.expandvars(self.stage)

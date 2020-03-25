@@ -163,7 +163,7 @@ class ARTEFACT_EVENTS(JUMEG_SLOTS):
         orig_time   = self.raw.info.get("meas_date",self.raw.times[0])
         
         for k in self.events.keys():
-            msg = ["---> update raw.annotations: {}".format(k)]
+            msg = ["update raw.annotations: {}".format(k)]
     
             onset  = self.events[k]['events'][:,0] / self.raw.info["sfreq"]
             #onset -= self.tmin
@@ -193,7 +193,7 @@ class ARTEFACT_EVENTS(JUMEG_SLOTS):
            fanato = f.replace( "-raw.fif","-anato.csv")
            self.raw.annotations.save( fanato )
            
-        msg.append(" --> storing mne.annotations in RAW obj:\n  -> {}".format(self.raw.annotations))
+        msg.append("storing mne.annotations in RAW obj:\n  -> {}".format(self.raw.annotations))
         logger.info("\n".join(msg))
         
         return self.raw.annotations
@@ -503,7 +503,7 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         self._update_from_kwargs(**kwargs)
         
         
-        logger.info("---> RAW annotations: {}".format(self.raw.annotations))
+        logger.info("RAW annotations: {}".format(self.raw.annotations))
         
    #--- get epochs  calc avgs + ref
         annotat = mne.events_from_annotations(self.raw,event_id={ self.ch_name:self.event_id },use_rounding=True,chunk_duration=None)
@@ -596,7 +596,7 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
        #--- save img
         if self.save:
            self.figure.savefig(fout,dpi=self.dpi,orientation=self.orientation)
-           logger.info("---> done saving plot: " +fout)
+           logger.info("done saving plot: " +fout)
 
         self.fout=fout
         
