@@ -109,8 +109,11 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
     opt.log2file     = jpl.log2file
     opt.logprefix    = jpl.logprefix
     opt.logoverwrite = jpl.logoverwrite
-    
-    jumeg_logger.setup_script_logging(name=name,opt=opt,logger=logger,version=__version__)
+    if opt.debug:
+       level = "DEBUG"
+    else:
+       level = "INFO"
+    jumeg_logger.setup_script_logging(name=name,opt=opt,logger=logger,version=__version__,level=level)
 
     for fname,subject_id,raw_dir in jpl.file_list():
       
@@ -135,12 +138,11 @@ def apply(name=None,opt=None,defaults=None,logprefix="preproc"):
 
        #--- call resample
         # raw_fname,raw = utils.apply_resample(raw_fname,raw=raw,config=jpl.config.get("resampling"))
-
         utils.apply_report(stage=jpl.stage,subject_id=subject_id,experiment=jpl.experiment,
                            path=raw_dir,fname=raw_fname,
                            config=jpl.config.get("report") )
 
-        logger.info(" --> DONE preproc subject id: {}\n".format(subject_id)+
+        logger.info("DONE preproc subject id: {}\n".format(subject_id)+
                     "  -> input  file: {}\n".format(fname)+
                     "  -> output file: {}\n".format(raw_fname))
         
