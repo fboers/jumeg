@@ -22,7 +22,7 @@ from jumeg.base.template.jumeg_template import JuMEG_Template
 import logging
 logger = logging.getLogger("jumeg")
 
-__version__="2019.05.14.001"
+__version__="2020.03.29.001"
 
 __DEFAULT_EXPERIMENT_TEMPLATE__={
 "info":{
@@ -34,8 +34,8 @@ __DEFAULT_EXPERIMENT_TEMPLATE__={
               "name" : "default",
               #"ids"  : [], not used jet
               "scans": [],
-              "stages":["${JUMEG_PATH_MNE_IMPORT}/exp","${JUMEG_PATH_MNE_IMPORT2}/exp","${JUMEG_PATH_LOCAL_DATA}/exp"],
-              "bads_list":["MEG 010","MEG 142","MEG 156","RFM 011"], # MEG 007,MEG 042
+              "stages":["${JUMEG_PATH_MNE_IMPORT1}/exp","${JUMEG_PATH_MNE_IMPORT2}/exp","${JUMEG_PATH_LOCAL_DATA}/exp"],
+              "bads_list":[], #"MEG 010","MEG 142","MEG 156","RFM 011"],
               "segmentation":{
                               "path":{
                                       "mrdata"     : "mrdata",
@@ -46,7 +46,8 @@ __DEFAULT_EXPERIMENT_TEMPLATE__={
               "path":{
                        "mne"        : "mne",
                        "eeg"        : "eeg",
-                       "mft"        : "mft",
+                       "mft"        : "mft","MEG 010
+                       "report"     : "report",
                        "doc"        : "doc",
                        "source"     : "source",
                        "stimuli"    : "stimuli"

@@ -58,7 +58,7 @@ import logging
 logger = logging.getLogger("jumeg")
 #logger.setLevel('DEBUG')
 
-__version__="2020.01.16.001"
+__version__="2020.03.27.001"
 
 '''
 class AccessorType(type):
@@ -1486,7 +1486,8 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
       #--- ToDo --- start implementig BV support may new CLS
         self.brainvision_response_shift = 1000
         self.brainvision_extention      = '.vhdr'
-        self.ica_extention              = '-ica.fif'
+        self.ctf_extention              = ".ds"
+        self.ica_extention              = 'ica.fif'
 
     def get_fif_name(self, fname=None, raw=None,path=None, prefix=None,postfix=None, extention="-raw.fif", update_raw_fname=False):
         """
@@ -1662,9 +1663,13 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         return raw,self.get_raw_filename(raw)
     
             
-    def get_raw_obj(self,fname,raw=None,path=None,preload=True,reload_raw=False,reset_bads=False):
+    def get_raw_obj(self,fname,raw=None,path=None,preload=True,reload_raw=False,reset_bads=False,clean_names=False,
+                    system_clock='truncate'):
         """
-        load file in fif format <*.raw> or brainvision eeg data
+        load file in
+          fif format <*.raw>
+          brainvision eeg data
+          CTF  <*.ds>
         check for filename or raw obj
         check for meg or brainvision eeg data *.vhdr
         if filename -> load fif file
@@ -1678,6 +1683,10 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
          reload_raw: reload raw-object via raw.filename <False>
          reset_bads: reset bads <False>
          
+         CTF parameter:
+           clean_names = False,
+           system_clock = 'truncate'
+           
         Results
         ----------
          raw obj,fname from raw obj
@@ -1727,6 +1736,8 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
                #raw.info['bads'] = []
             elif (fn.endswith(self.ica_extention)):
                 raw = mne.preprocessing.read_ica(fn)
+            elif ( fn.endswith(self.ctf_extention) ):
+                raw = mne.io.read_raw_ctf(fn,system_clock=system_clock,preload=preload,clean_names=clean_names,verbose=verbose)
             else:
                raw = mne.io.Raw(fn,preload=preload)
     

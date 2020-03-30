@@ -333,21 +333,13 @@ class JuMEG_PIPELINES_ICA(object):
            cps          = np.zeros([n_chops,2],dtype=np.float32)
            cps[:,0]    += np.arange(n_chops) * dtime
            cps[0:-1,1] += cps[1:,0]
-        #cps[-1,1]    = '%.3f'%( self.raw.times[-1] ) # ???? error in mne crop line 438
-        # fb 01.11.2019
-        
+         
         cps[-1,1] = None #self.trunc_nd(self.raw.times[-1], 3)  # ???? error in mne crop line 438 mne error tend == or less tmax
         self._chop_times = cps
         
         logger.debug("Chop Times:\n{}".format(self._chop_times))
         return self._chop_times
-
-   #--- calc chop times from events
-    def _calc_chop_times_from_events(self):
-        
-        logger.info("Chop Times:\n{}".format(self._chop_times))
-        return self._chop_times
-
+       
     def _copy_crop_and_chop(self,raw,chop):
         """
         copy raw
@@ -356,14 +348,10 @@ class JuMEG_PIPELINES_ICA(object):
         :param chop:
         :return:
         """
-        logger.info("RAW Annotation : {} \n{}".format(jb.get_raw_filename(raw),raw.annotations))
-        
         if self._chop_times.shape[0] > 1:
            raw_crop = raw.copy().crop(tmin=chop[0],tmax=chop[1])
-          # if raw.annotations:
-          #    anato = raw.annotations.copy()
-          #    raw_crop.set_annotations( anato.crop(tmin=chop[0],tmax=chop[1]) )
-           logger.info("RAW Crop Annotation : {}\n  -> tmin: {} tmax: {}\n {}\n".format(jb.get_raw_filename(raw),chop[0],chop[1],raw_crop.annotations))
+           if self.debug:
+              logger.debug("RAW Crop Annotation : {}\n  -> tmin: {} tmax: {}\n {}\n".format(jb.get_raw_filename(raw),chop[0],chop[1],raw_crop.annotations))
            return raw_crop
         return raw
 
@@ -506,7 +494,8 @@ class JuMEG_PIPELINES_ICA(object):
         return self._ica_obj,fname_ica
 
    #--- apply ica transform
-    def apply_ica_artefact_rejection(self,raw,ICA,fname_raw= None,fname_clean=None,replace_pre_whitener=True,copy_raw=True):
+    def apply_ica_artefact_rejection(self,raw,ICA,fname_raw= None,fname_clean=None,replace_pre_whitener=True,copy_raw=True,
+                                     reject=None):
         """
         Applies ICA to the raw object.
 
@@ -520,6 +509,7 @@ class JuMEG_PIPELINES_ICA(object):
                   Path for saving the raw object
             fname_clean : str | None
                   Path for saving the ICA cleaned raw object
+            reject: MNE reject dict
             replace_pre_whitener : bool
                   If True, pre_whitener is replaced when applying ICA to
                   unfiltered data otherwise the original pre_whitener is used.
@@ -530,7 +520,7 @@ class JuMEG_PIPELINES_ICA(object):
             raw_clean : mne.io.Raw()
                        Raw object after ICA cleaning
         """
-        logger.info("Start ICA Transform")
+        logger.info("Start ICA Transform => call <apply_ica_replace_mean_std>")
         if copy_raw:
            _raw = raw.copy()
         else:
@@ -541,8 +531,7 @@ class JuMEG_PIPELINES_ICA(object):
         
         with jumeg_logger.StreamLoggerSTD(label="ica fit"):
              raw_clean = apply_ica_replace_mean_std(_raw,ica,picks=self.picks,
-                                                    reject=self.CFG.GetDataDict(key="reject"),
-                                                    exclude=ica.exclude,n_pca_components=None)
+                                                    reject=reject,exclude=ica.exclude,n_pca_components=None)
             
         return raw_clean
 
@@ -636,7 +625,7 @@ class JuMEG_PIPELINES_ICA(object):
             #--- ICA Transform chop
             if run_transform:
                fout = jb.get_raw_filename(raw_chop)
-               raw_chops_clean_list.append(self.apply_ica_artefact_rejection(raw_chop,ICA))
+               raw_chops_clean_list.append(self.apply_ica_artefact_rejection(raw_chop,ICA,reject=self.CFG.GetDataDict(key="reject")))
              
               #--- plot performance
                txt = "ICs JuMEG/MNE: "
