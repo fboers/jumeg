@@ -32,7 +32,7 @@ from jumeg.base.jumeg_base_config import JuMEG_CONFIG
 from jumeg.base import jumeg_logger
 logger = jumeg_logger.get_logger()
 
-__version__= "2020.04.28.001" # platform.python_version()
+__version__= "2020.05.07.001" # platform.python_version()
 
 class JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
    def __init__(self,parent,**kwargs):
@@ -233,7 +233,7 @@ class JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
         
            elif isinstance(v,(str)):
                 if os.path.dirname(v):
-                   ctrl = JuMEG_wxSTXTBTCtrl(self,name="TEST",label=v,cmd=self.ClickOnShowDLG,textlength=txt_size,style=style)
+                   ctrl = JuMEG_wxSTXTBTCtrl(self,name="path."+v,label=v,cmd=self.ClickOnShowDLG,textlength=txt_size,style=style)
                 else:
                    ctrl = wx.TextCtrl(self,-1,style=wx.TE_LEFT,value=v,name="str")
                    sz = ctrl.GetSizeFromTextSize(ctrl.GetTextExtent("W" * txt_size))
@@ -305,10 +305,12 @@ class JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
            obj = evt.GetEventObject()
        except:
            obj = evt
+           
      # txt ctrl
        p = jb.expandvars( obj.GetValue() )
        if os.path.isdir(p):
-          with wx.DirDialog(self,message=obj.GetName(),defaultPath=p,style=wx.DD_DEFAULT_STYLE,name=obj.GetName() + "_DLG") as DLG:
+          with wx.DirDialog(self,message=obj.GetName(),defaultPath=p,style=wx.DD_DEFAULT_STYLE,
+                            name=obj.GetName() + "_DLG") as DLG:
                DLG.SetPath( p )
                if DLG.ShowModal() == wx.ID_CANCEL:
                   return     # the user changed their mind
@@ -316,8 +318,7 @@ class JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
        else:
            fext = p.rsplit(".",1)[-1]
            wc = "files (*." +fext+",*.*)|*."+fext+";*.all"
-           with wx.FileDialog(self,"{} => Select File Name".format(obj.GetName()),wildcard=wc,
-                              style=wx.DD_DEFAULT_STYLE,
+           with wx.FileDialog(self,wildcard=wc,style=wx.DD_DEFAULT_STYLE,
                               name=obj.GetName() + "_DLG") as DLG:
                DLG.SetPath(p)
                if DLG.ShowModal() == wx.ID_CANCEL:

@@ -254,8 +254,37 @@ class StreamLoggerSTD(object):
        self.unlog_stdout()
        self.unlog_stderr()
 
-
 class JuMEGLogFormatter(logging.Formatter):
+    """
+    Logging Formatter to add colors and count warning / errors
+    https://docs.python.org/3/library/logging.html#logrecord-attributes
+    https://stackoverflow.com/questions/14844970/modifying-logging-message-format-based-on-message-logging-level-in-python3
+    
+    Example:
+    --------
+    logger = logging.getLogger(__name__)
+    logger.setLevel(logging.DEBUG)
+    logger_ch = logging.StreamHandler()
+    logger_ch.setLevel(logging.INFO)
+    logger_ch.setFormatter(JuMEGLogFormatter())
+    logger.addHandler(logger_ch)
+    """
+
+    FORMATS = {
+               logging.INFO:   "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
+              #logging.INFO:   "\n%(levelname)s - %(asctime)s — %(module)s - %(funcName)s:%(lineno)d :\n%(message)s",
+               logging.ERROR:  "\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n\n",
+               logging.WARNING:"\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
+               logging.DEBUG:  "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n"
+              }
+    
+    def format(self, record):
+        fmt_date = "%Y-%m-%d %H:%M:%S"  #'%Y-%m-%dT%T%Z'
+        log_fmt = self.FORMATS.get(record.levelno,self.FORMATS[logging.DEBUG])
+        formatter = logging.Formatter(log_fmt,fmt_date)
+        return formatter.format(record)
+ 
+class JuMEGLogFormatterCL(logging.Formatter):
     """
     Logging Formatter to add colors and count warning / errors
     https://docs.python.org/3/library/logging.html#logrecord-attributes
@@ -298,7 +327,7 @@ class LogStreamHandler(logging.StreamHandler):
         if _has_colorlogs:
            self.setFormatter( ClFormatter )
         else:
-           self.setFormatter( JuMEGLogFormatter() )
+           self.setFormatter( JuMEGLogFormatterCL() )
     
     def setLevel(self, level):
         """
@@ -357,10 +386,10 @@ class LogFileHandler(logging.FileHandler):
         
         super().__init__(self.filename,mode=mode)
         self._level = level if level else logging.NOTSET
-        if _has_colorlogs:
-            self.setFormatter(ClFormatter)
-        else:
-            self.setFormatter(JuMEGLogFormatter())
+        #if _has_colorlogs:
+        #    self.setFormatter(ClFormatter)
+        #else:
+        self.setFormatter(JuMEGLogFormatter())
     
     def setLevel(self, level):
         """
@@ -590,7 +619,7 @@ def test1():
     print("="*40)
     print("TEST Logger ( using print)")
    
-    logger = setup_script_logging()
+    logger = setup_script_logging(logfile=True)
     logger.info("LOGGER INFO    :\n --> use colorlogs   : {}\n --> version         : {}".
                 format(_has_colorlogs,__version__))
     logger.debug("LOGGER DEBUG   : {}".format("this is debug"))

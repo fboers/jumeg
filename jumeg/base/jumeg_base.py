@@ -1048,7 +1048,7 @@ class JuMEG_Base_StringHelper(JuMEG_Base_Basic):
         
         """
         #xranges = [(lambda l: range(l[0], l[-1]+1))(map(int, r.split('-'))) for r in seq_str.split(',')]
-        #--- py3 range instead of xrange
+        #-- py3 range instead of xrange
     
        
         if self.isString(seq):
@@ -1067,7 +1067,7 @@ class JuMEG_Base_StringHelper(JuMEG_Base_Basic):
                       xrange.append(int(l[0]))
             else:
                xrange.append(int(r))
-       #--- mk unique & list & sort
+       #-- mk unique & list & sort
         xrange = list(set(xrange))
         xrange.sort()
         # flatten list of xranges
@@ -1107,7 +1107,7 @@ class JuMEG_Base_StringHelper(JuMEG_Base_Basic):
                xrange+= list(range(int(l[0]),int(l[-1]) + 1))
             else:
                xrange.append( int(l[0]) )
-       #--- mk unique & list & sort
+       #-- mk unique & list & sort
         xrange = list(set(xrange))
         xrange.sort()
         # flatten list of xranges

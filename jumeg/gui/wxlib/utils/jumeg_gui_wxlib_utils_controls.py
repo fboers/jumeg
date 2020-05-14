@@ -16,11 +16,11 @@ from pubsub import pub
 import wx.lib.agw.floatspin as FS
 from   wx.adv import EditableListBox
 
-import logging
 from jumeg.base import jumeg_logger
-logger = logging.getLogger('jumeg')
+logger = jumeg_logger.get_logger()
 
-__version__='2020.03.12.001'
+
+__version__='2020.05.07.001'
 
 LEA=wx.LEFT|wx.EXPAND|wx.ALL
 
@@ -96,6 +96,7 @@ class SpinCtrlScientific(wx.Panel):
     Digits,Increment
     Min,Max,Range,Value
     """
+
     def __init__(self,parent,**kwargs):
         super().__init__(parent)
         self.SetName("SpinCtrlScientific")
@@ -335,7 +336,7 @@ class JuMEG_wxSTXTBTCtrl(wx.Panel):
         super().__init__(parent)
         
         self._TXT = None
-        self._BT   = None
+        self._BT  = None
         
         self._wx_init(**kwargs)
         self._ApplyLayout()
@@ -377,9 +378,9 @@ class JuMEG_wxSTXTBTCtrl(wx.Panel):
         
     def SetValue(self,v):
         #self._STXT.Clear()
-        self._STXT.SetValue( str(v))
-    def GetValue(self,v):
-        return self._STXT.GetValue()
+        self._TXT.SetValue( str(v))
+    def GetValue(self):
+        return self._TXT.GetValue()
 
     def ClickOnButton(self,evt):
         if self._CMD:

@@ -683,7 +683,15 @@ class JuMEG_PIPELINES_ICA(object):
         
         fimages_filtered     = []
         fimages_unfiltered   = None
-        
+       
+       #-- ToDo speed up if not save filter
+       #  run for chop in chops
+       #   -> if filter
+       #   ---> fi chop -> ica fit -> transform -> plot if save: concat to raw_fi_ar
+       #   -> if unfilter
+       #      un_chop  -> not ica_fi -> calc ica fit
+       #               -> transform -> plot ->  to concat to raw_un_ar
+       #
        #--- apply raw-filter ica-fit,transform, save
         if self.PreFilter.isFiltered:
            raw_filtered_clean,ICA_objs,fimages_filtered = self._apply(raw = self.PreFilter.raw,

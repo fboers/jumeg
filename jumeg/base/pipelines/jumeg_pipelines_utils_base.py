@@ -29,7 +29,7 @@ from jumeg.base                    import jumeg_logger
 
 logger = jumeg_logger.get_logger()
 
-__version__= "2019.10.11.001"
+__version__= "2020.05.06.001"
 
 #---
 def get_args(argv,parser=None,defaults=None,version=None):
@@ -72,7 +72,7 @@ def get_args(argv,parser=None,defaults=None,version=None):
     
    #--- parser
     if not parser:
-       parser = argparse.ArgumentParser(description=description)
+       parser = argparse.ArgumentParser(description=description,formatter_class=argparse.RawTextHelpFormatter)
     else:
        parser.description = description
     
