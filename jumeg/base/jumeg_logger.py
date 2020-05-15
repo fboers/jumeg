@@ -23,7 +23,7 @@ import inspect
 from distutils.dir_util import mkpath
 import logging
 
-__version__="2020.04.22.001"
+__version__="2020.05.14.001"
 
 try:
     # https://github.com/borntyping/python-colorlog
@@ -269,14 +269,15 @@ class JuMEGLogFormatter(logging.Formatter):
     logger_ch.setFormatter(JuMEGLogFormatter())
     logger.addHandler(logger_ch)
     """
-
-    FORMATS = {
-               logging.INFO:   "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
-              #logging.INFO:   "\n%(levelname)s - %(asctime)s — %(module)s - %(funcName)s:%(lineno)d :\n%(message)s",
-               logging.ERROR:  "\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n\n",
-               logging.WARNING:"\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
-               logging.DEBUG:  "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n"
-              }
+    def __init__(self):
+        super().__init__()
+        fmt = "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n"
+        self.FORMATS = {
+                        logging.INFO   : fmt,
+                        logging.ERROR  : "\n"+fmt+"\n",
+                        logging.WARNING: "\n"+ fmt,
+                        logging.DEBUG  : fmt
+                       }
     
     def format(self, record):
         fmt_date = "%Y-%m-%d %H:%M:%S"  #'%Y-%m-%dT%T%Z'
@@ -284,7 +285,7 @@ class JuMEGLogFormatter(logging.Formatter):
         formatter = logging.Formatter(log_fmt,fmt_date)
         return formatter.format(record)
  
-class JuMEGLogFormatterCL(logging.Formatter):
+class JuMEGLogFormatterCL(JuMEGLogFormatter):
     """
     Logging Formatter to add colors and count warning / errors
     https://docs.python.org/3/library/logging.html#logrecord-attributes
@@ -299,23 +300,12 @@ class JuMEGLogFormatterCL(logging.Formatter):
     logger_ch.setFormatter(JuMEGLogFormatter())
     logger.addHandler(logger_ch)
     """
-
-    FORMATS = {
-               logging.INFO:   "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
-              #logging.INFO:   "\n%(levelname)s - %(asctime)s — %(module)s - %(funcName)s:%(lineno)d :\n%(message)s",
-               logging.ERROR:  "\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n\n",
-               logging.WARNING:"\n%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n",
-               logging.DEBUG:  "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n"
-              }
     
     def format(self, record):
         if _has_colorlogs:
            return ClFormatter
         else:
-           fmt_date = "%Y-%m-%d %H:%M:%S"  #'%Y-%m-%dT%T%Z'
-           log_fmt = self.FORMATS.get(record.levelno,self.FORMATS[logging.DEBUG])
-           formatter = logging.Formatter(log_fmt,fmt_date)
-           return formatter.format(record)
+           super().format()
     
 class LogStreamHandler(logging.StreamHandler):
     def __init__(self,level=None):
