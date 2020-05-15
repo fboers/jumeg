@@ -37,7 +37,7 @@ from jumeg.filter.jumeg_mne_filter import JuMEG_MNE_FILTER
 
 logger = jumeg_logger.get_logger()
 
-__version__= "2020.04.23.001"
+__version__= "2020.05.15.001"
 
 
 def fit_ica(raw, picks, reject, ecg_ch, eog_hor, eog_ver,
@@ -305,13 +305,13 @@ class JuMEG_PIPELINES_ICA(object):
    
     def _set_ecg_eog_annotations(self):
         """
-        finding ECG, EOG events in raw, setting events as anotations
+        finding ECG, EOG events in raw, setting events as anotations in raw
         """
        #--- find ECG in raw
         self.ICAPerformance.ECG.find_events(raw=self.raw,**self.CFG.GetDataDict("ecg"))
        #--- find EOG in raw
-        annotations = self.ICAPerformance.EOG.find_events(raw=self.raw,**self.CFG.GetDataDict("eog"))
-        self.raw.set_annotations(annotations)
+        self.ICAPerformance.EOG.find_events(raw=self.raw,**self.CFG.GetDataDict("eog"))
+        
   
     def trunc_nd(self,n,d):
         """
@@ -340,12 +340,13 @@ class JuMEG_PIPELINES_ICA(object):
         #--- get picks from raw
         self._picks = jb.picks.meg_nobads(self._raw)
         
-    def _get_chop_name(self,raw,chop=None,extention="-ica.fif",postfix=None,fullpath=False):
+    def _get_chop_name(self,raw,chop=None,extention="-ica.fif",postfix=None,fullpath=False,chop_path=None):
         """
         raw
         chop     = None
         extention= "-ica.fif" [-raw.fif]
         postfix  = None      [ar]
+        chop_path= None, path or use CLS var <path_ica_chops>
         fullpath = True
                    if True: includes path in filename
         Return:
@@ -355,10 +356,12 @@ class JuMEG_PIPELINES_ICA(object):
         fname = jb.get_raw_filename(raw)
         fname,fextention = op.basename(fname).rsplit('-',1)
         if fullpath:
-           if fname.startswith(self.path_ica_chops):
+           if not chop_path:
+              chop_path = self.path_ica_chops
+           if fname.startswith(chop_path):
               fchop = fname
            else:
-              fchop = op.join(self.path_ica_chops,fname)
+              fchop = op.join(chop_path,fname)
         else:
            fchop = os.path.basename(fname)
            
@@ -367,7 +370,7 @@ class JuMEG_PIPELINES_ICA(object):
         try:
            if len(chop):
               if np.isnan(chop[1]):
-                 fchop += ',{:04d}-{:04d}'.format(int(chop[0]),int(self.raw.times[-1]))
+                 fchop += ',{:04d}-{:04d}'.format(int(chop[0]),int(raw.times[-1]))
               else:
                  fchop += ',{:04d}-{:04d}'.format(int(chop[0]),int(chop[1]))
         except:
@@ -462,6 +465,7 @@ class JuMEG_PIPELINES_ICA(object):
                     "-"*30+"\n"+
                     "  -> save ica fit         : {}".format(self.cfg.fit.save)
                    )
+        
         return ica_obj,fname_ica
 
   
@@ -505,7 +509,7 @@ class JuMEG_PIPELINES_ICA(object):
         with jumeg_logger.StreamLoggerSTD(label="apply_ica_replace_mean_std"):
              raw_clean = apply_ica_replace_mean_std(_raw,ica,picks=self.picks,
                                                     reject=reject,exclude=ica.exclude,n_pca_components=None)
-             
+         
         return raw_clean
 
 
@@ -619,7 +623,197 @@ class JuMEG_PIPELINES_ICA(object):
            del( raw_chops_clean_list )
            
         return raw_clean,ica_objs,fimages
+  
+   
+    def _plot_chop_performance(self,raw_chop=None,raw_chop_clean=None,fout=None):
+       
+        txt = "ICs JuMEG/MNE: "
+        # ToDo ck SVM  => last ica_obj  ICs
+        if self.useSVM:
+           if self.SVM.ICsMNE:
+              txt+= ",".join( [str(i) for i in self.SVM.ICsMNE ] )
+              txt+= " SVM: {}".format(self.SVM.ICsSVM)
+           else:
+              txt+= ",".join( [str(i) for i in ica_obj.exclude ] )
+        self.ICAPerformance.plot(raw=raw_chop,raw_clean=raw_chop_clean,verbose=True,text=txt,
+                                 plot_path=self.plot_dir,
+                                 fout=fout.rsplit("-",1)[0] + "-ar")
+        return self.ICAPerformance.Plot.fout
+            
+    
+    def _save_chop(self,raw_chop,chop,extention="-raw.fif"):
+        """
         
+
+        Parameters
+        ----------
+        raw_chop : TYPE
+            DESCRIPTION.
+        chop : TYPE
+            DESCRIPTION.
+        extention : TYPE, optional
+            DESCRIPTION. The default is "-raw.fif".
+
+        Returns
+        -------
+        fname_chop : TYPE
+            DESCRIPTION.
+
+        """
+        
+        fname_chop,fname_raw = self._get_chop_name(raw_chop,chop=chop,extention=extention)
+        jb.set_raw_filename(raw_chop,fname_chop)
+        raw_chop.save(fname_chop,overwrite=True)
+        return fname_chop
+        
+    def _copy_crop_and_chop(self,raw,chop,extention="-raw.fif",save=False):
+        """
+        
+
+        Parameters
+        ----------
+        raw : TYPE
+            DESCRIPTION.
+        chop : TYPE
+            DESCRIPTION.
+        extention : TYPE, optional
+            DESCRIPTION. The default is "-raw.fif".
+        save : TYPE, optional
+            DESCRIPTION. The default is False.
+     
+        Returns
+        -------
+        raw_chop : TYPE
+            DESCRIPTION.
+
+        """
+        raw_chop = self.Chopper.copy_crop_and_chop(raw,chop) # ck save chop
+ 
+        if save:
+           self._save_chop(raw_chop,chop,extention=extention)
+        return raw_chop        
+         
+
+    def _apply_chop_by_chop(self,run_transform=False,save_ica=False,save_chops=False,save_chops_clean=False,save_clean=True):
+        """
+          
+          :param raw             : raw filtered or unfilterd
+          :param run_transform   : self.cfg.transform.run or self.cfg.transform.filtered.run
+          :param ICAs            : list of ICA objs if None calc ICA fit
+          :param save_ica        : save ICA obj
+          :param save_chops      : self.cfg.transform.unfiltered.save_chop or self.cfg.transform.filtered.save_chop
+          :param save_chops_clean: self.cfg.transform.unfiltered.save_chop_clean or self.cfg.transform.filtered.save_chop_clean
+          :param save_clean      : self.cfg.transform.filtered.save or self.cfg.transform.unfiltered.save
+          :return:
+             raw_clean,ICA_objs
+             ICAs obj list to transform with unfilterd data if self.PreFilter.isFiltered
+             titles
+             images as np.arry
+             
+                   raw_filtered_clean,ICA_objs,fimages_filtered = self._apply(raw = self.PreFilter.raw,
+                                                     run_transform    = self.cfg.transform.run and self.cfg.transform.filtered.run,
+                                                     save_chops       = self.cfg.transform.filtered.save_chop,
+                                                     save_chops_clean = self.cfg.transform.filtered.save_chop_clean,
+                                                     save_clean       = self.cfg.transform.filtered.save)
+           self.PreFilter.raw.close()
+
+       #---apply transform for unfilterd data update data-mean
+            raw_unfiltered_clean, _ ,fimages_unfiltered = self._apply(raw = self.raw,
+                                                       ICAs = ICA_objs,
+                                                    run_transform    = self.cfg.transform.run and self.cfg.transform.unfiltered.run,
+                                                    save_chops       = self.cfg.transform.unfiltered.save_chop,
+                                                    save_chops_clean = self.cfg.transform.unfiltered.save_chop_clean,
+                                                    save_clean       = self.cfg.transform.unfiltered.save)
+     
+          
+        """
+        raw_chops_clean_fi = []
+        raw_chops_clean    = []
+         
+        fimages_fi = []
+        fimages    = []
+          
+        for idx in range(self.Chopper.n_chops):
+            chop = self.Chopper.chops[idx]
+            logger.info("Start ICA FIT & Transform chop: {} / {}\n".format(idx + 1,self.Chopper.n_chops))
+           
+            ica_obj   = None   
+            fname_ica = None
+              
+           #-- ck for filter
+            if self.PreFilter.isFiltered:
+               opt = self.cfg.transform.filtered
+              #-- chop raw filter  ToDo add option to save chop
+               raw_chop = self._copy_crop_and_chop(self.PreFilter.raw,chop,extention="-raw.fif",save=opt.save)
+              #-- calc filter ICA obj 
+               ica_obj,fname_ica = self._apply_fit(raw_chop=raw_chop,chop=chop,idx=idx) # ck save ICA obj
+             
+               if self.cfg.transform.run and opt.run:
+                  fout   = jb.get_raw_filename(raw_chop) 
+                  raw_cc = self.apply_ica_artefact_rejection(raw_chop,ica_obj,reject=self.CFG.GetDataDict(key="reject") )
+                  fimages_fi.append( self._plot_chop_performance(raw_chop=raw_chop,raw_chop_clean=raw_cc,fout=fout.rsplit("-",1)[0] + "-ar") )
+                         
+                  if opt.save:
+                     raw_chops_clean_fi.append(raw_cc) 
+                  if opt.save_chop_clean:
+                     self._save_chop(raw_cc,chop,extention=',ar-raw.fif') 
+                        
+         
+           #-- chop raw unfiltered
+            opt = self.cfg.transform.unfiltered
+           #-- chop raw filter  ToDo add option to save chop
+            raw_chop = self._copy_crop_and_chop(self.raw,chop,extention="-raw.fif",save=opt.save)
+            
+            if not ica_obj:
+               ica_obj,fname_ica = self._apply_fit(raw_chop=raw_chop,chop=chop,idx=idx)
+                
+            if self.cfg.transform.run and opt.run:
+               fout   = jb.get_raw_filename(raw_chop) 
+               raw_cc = self.apply_ica_artefact_rejection(raw_chop,ica_obj,reject=self.CFG.GetDataDict(key="reject") )
+               fimages.append( self._plot_chop_performance(raw_chop=raw_chop,raw_chop_clean=raw_cc,fout=fout.rsplit("-",1)[0] + "-ar") )
+                         
+               if opt.save:
+                  raw_chops_clean.append(raw_cc) 
+               if opt.save_chop_clean:
+                  self._save_chop(raw_cc,chop,extention=',ar-raw.fif') 
+                        
+            logger.info("done ICA FIT & transform chop: {} / {}\n".format(idx + 1,self.Chopper.n_chops))
+          
+
+  make in def() concat_and_save(raw_chops,fname,annotations,save,extention=",ar-raw.fif")
+      
+       #--- concat & save raw chops filtered to raw_clean filtered
+        if raw_chops_clean_fi:
+            fname_clean = self.PreFilter.filename.replace("-raw.fif",",ar-raw.fif")
+            if not fname_clean.endswith(",ar-raw.fif"):
+               fname_clean += ",ar-raw.fif"
+             
+            raw_clean = self.Chopper.concat_and_save(raw_chops_clean_fi,
+                                                     fname       = fname_clean,
+                                                     annotations = self.PreFilter.raw.annotations,
+                                                     save        = save_clean)
+              
+            del( raw_chops_fi_clean_list )
+          
+          
+       #--- concat & save raw chops to raw_clean
+        if raw_chops_clean:
+           fname_clean = self.raw_fname.replace("-raw.fif",",ar-raw.fif")
+           if not fname_clean.endswith(",ar-raw.fif"):
+              fname_clean += ",ar-raw.fif"
+             
+              
+           raw_clean = self.Chopper.concat_and_save(raw_chops_clean,
+                                                    fname       = fname_clean,
+                                                    annotations = self.raw.annotations,
+                                                    save        = save_clean)
+              
+           del( raw_chops_clean_list )
+             
+             
+        return raw_clean,fimages,fimages_fi
+        
+
    #==== MAIN function
     def run(self,**kwargs):
         """
@@ -750,7 +944,7 @@ class JuMEG_PIPELINES_ICA(object):
 
 def test1():
    #--- init/update logger
-    jumeg_logger.setup_script_logging(logger=logger)
+    jumeg_logger.setup_script_logging(logger=logger,logfile=True)
     
     stage = "$JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne"
     fcfg  = os.path.join(stage,"meg94t_config01.yaml")
@@ -783,6 +977,7 @@ def test1():
     #raw_filtered_clean.plot(block=True)
 
 if __name__ == "__main__":
+    
   test1()
   
 '''
