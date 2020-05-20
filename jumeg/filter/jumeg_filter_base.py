@@ -198,19 +198,20 @@ class JuMEG_Filter_Base(JuMEG_Base_Basic):
     def filter_notch(self):    return self.__filter_notch
     @filter_notch.setter
     def filter_notch(self,v):
-        if isinstance(v,(np.ndarray)):
+        self.filter_kernel_isinit = False
+        if v is None:
+           self.__filter_notch = np.array([],dtype=np.float)
+        elif isinstance(v,(np.ndarray)):
            self.__filter_notch = v
         elif v:
            self.__filter_notch = np.array([v],dtype=np.float)
-        else:   
-           self.__filter_notch = np.array([],dtype=np.float)        
-        self.filter_kernel_isinit = False
+       
     
     @property
     def notch(self):    return self.__filter_notch
     @notch.setter
     def notch(self,v): 
-        self.filter_notch(v)
+        self.filter_notch = v
 
 #---- notch width e.g. window sinc
     @property
