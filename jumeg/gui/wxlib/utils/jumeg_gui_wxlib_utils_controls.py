@@ -20,9 +20,124 @@ from jumeg.base import jumeg_logger
 logger = jumeg_logger.get_logger()
 
 
-__version__='2020.05.07.001'
+__version__='2020.05.20.001'
 
 LEA=wx.LEFT|wx.EXPAND|wx.ALL
+
+
+
+class _BasePanel(wx.Panel):
+   def __init__(self,parent,**kwargs):
+      super().__init__(parent,style=wx.BORDER_SUNKEN)
+      
+      self.SetBackgroundColour( kwargs.get("bg","grey70") ) 
+      self._init(**kwargs)
+     
+      self._wx_init()
+      self._ApplyLayout()
+      self._ApplyFinalLayout()
+      self._init_pubsub()
+   
+   def _init(self,**kwargs):
+       pass   
+   
+   def _wx_init(self,**kwargs):
+       pass
+      
+   def ClickOnCtrl(self,evt):
+       evt.Skip()
+       
+   def _ApplyLayout(self):
+       """
+       pack ctrls in sizer and set sizer
+    
+       Example
+       --------    
+       hbox = wx.BoxSizer(wx.HORIZONTAL)
+       hbox.Add(0,0,1,LA,5)
+       self.SetSizer(hbox)
+       
+       Returns
+       -------
+       None.
+
+       """
+       pass
+     
+        
+   def _ApplyFinalLayout(self):
+   
+       self.SetAutoLayout(True)
+       self.Fit()
+       self.Layout()
+          
+   def _init_pubsub(self):
+      pass
+    
+
+class ButtonPanel(_BasePanel):
+   
+   def _init(self,**kwargs):
+       """
+  
+       Parameters
+       ----------
+       **kwargs : TYPE
+         name  : class name use for <BUTTON>
+         bg    : backgroundcolour
+         call  : function to subscribe with pubsub <None>
+         labels: list of button labels  <["Apply"]>
+        
+   
+       Example
+       -------
+        BT = ButtonPanel(self,name="BUTTON",labels=["Cancel","Apply"],bg="blue",call=None)
+        BT.subscribe( ClickOnButton )
+        or 
+        BT = ButtonPanel(self,name="BUTTON",labels=["Cancel","Apply"],bg="blue",call=self.ClickOnButton)
+        
+       
+       Returns
+       -------
+       None.
+
+       """
+       self._bts    = []
+       self._labels = kwargs.get("labels",["Apply"])
+       self.SetName( kwargs.get("name",self.GetName()) )
+       #- subscribe
+       if "call" in kwargs:
+           self.subscribe( kwargs.get("call") )             
+   
+   @property
+   def labels(self): return self._labels
+       
+   def _wx_init(self):
+       for label in self._labels:
+          self._bts.append( wx.Button(self,label=label,name=self.GetName()+"."+label.upper()))
+       self.Bind(wx.EVT_BUTTON,self.ClickOnCtrl)
+      
+   def ClickOnCtrl(self,evt):
+       obj  = evt.GetEventObject()
+       data = obj.GetName().upper()
+       # print("--> ClickOnCtrl send pubsub call: "+ data)
+       pub.sendMessage( data,data=data )
+       
+   def _ApplyLayout(self):
+      LA = wx.LEFT|wx.ALL
+      #hbox = wx.ALIGN_CENTER_HORIZONTAL | wx.ALL
+      hbox = wx.BoxSizer(wx.HORIZONTAL)
+      for bt in self._bts:
+          hbox.Add(bt,0,LA,5)
+          #hbox.AddStretchSpacer(1)
+      self.SetSizer(hbox)
+  
+   def subscribe(self,funct):
+       for l in self.labels:
+           pub.subscribe(funct,self.GetName()+"."+ l.upper() )
+       
+
+
 
 class EditableListBoxPanel(wx.Panel):
     """
