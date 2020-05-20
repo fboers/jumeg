@@ -34,7 +34,7 @@ from jumeg.jumeg_interpolate_bads  import interpolate_bads as jumeg_interpolate_
 
 logger = jumeg_logger.get_logger()
 
-__version__= '2020.05.04.001'
+__version__= '2020.05.18.001'
 
 #---------------------------------------------------
 #-- apply_noise_reducer
@@ -273,11 +273,12 @@ def apply_ica(raw_fname=None,raw=None,path=None,config=None,label="ica",fname_ou
     
     if not path:
        path = os.path.dirname(raw_fname)
-
-    raw,raw_filtered_clean = jICA.run(raw=raw,raw_fname=raw_fname,path=path,config=config)
-    
-    if raw_filtered_clean:
-       raw_filtered_clean.close()
+ 
+    raw = jICA.run(raw=raw,raw_fname=raw_fname,path=path,config=config)
+   
+    # raw,raw_filtered_clean = jICA.run(raw=raw,raw_fname=raw_fname,path=path,config=config)
+    #if raw_filtered_clean:
+    #   raw_filtered_clean.close()
     
     fname_out = jb.get_raw_filename(raw)
   

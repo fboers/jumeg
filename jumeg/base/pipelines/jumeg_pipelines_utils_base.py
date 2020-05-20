@@ -314,7 +314,7 @@ class JuMEG_PipelineFrame(object):
         self._update_from_kwargs(**kwargs)
         
         #print(Fore.GREEN)
-        logger.info("Start: < {} > file name: {}".format(self.label,self._raw_fname))
+        logger.info("="*20+"\n---> Start: < {} > file name: {}".format(self.label,self._raw_fname))
         #print(Style.RESET_ALL)
         
         if self._debug:

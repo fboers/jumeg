@@ -77,7 +77,7 @@ class ARTEFACT_EVENTS(JUMEG_SLOTS):
        EOG.GetInfo(debug=True)
        
     """
-    __slots__ = ["raw","ch_name","set_annotations","event_id","events","tmin","tmax","verbose","debug","_call"]
+    __slots__ = ("raw","ch_name","set_annotations","event_id","events","tmin","tmax","verbose","debug","_call")
     
     def __init__(self,**kwargs):
         super().__init__(**kwargs)

@@ -58,7 +58,7 @@ import logging
 logger = logging.getLogger("jumeg")
 #logger.setLevel('DEBUG')
 
-__version__="2020.04.28.001"
+__version__="2020.05.20.001"
 
 '''
 class AccessorType(type):
@@ -84,12 +84,19 @@ class AccessorType(type):
             setattr(self, name, property(getter, setter, deler, ""))
 
 '''
-
 class JUMEG_SLOTS(object):
-    __slots__ = []
+    __slots__ = ('_verbose')
     
     def __init__(self,**kwargs):
         super().__init__()
+    
+    @property
+    def verbose(self):
+        return self._verbose
+    
+    @verbose.setter
+    def verbose(self,v):
+        self._verbose = v
     
     def _init(self):
         #--- init slots
@@ -100,7 +107,14 @@ class JUMEG_SLOTS(object):
     def init(self,**kwargs):
         self._init()
         self._update_from_kwargs(**kwargs)
-        
+    
+    def __get_slots_attr(self):
+        data = dict()
+        for k in self.__slots__:
+            if k.startswith("_"): continue
+            data[k] = getattr(self,k)
+        return data
+    
     def _update_from_kwargs(self,**kwargs):
         if not kwargs: return
         for k in kwargs:
@@ -122,7 +136,28 @@ class JUMEG_SLOTS(object):
     
     def update(self,**kwargs):
         self._update_from_kwargs(**kwargs)
+    
+    def get_info(self):
+        msg = ["Info"]
+        for k in self.__slots__:
+            if k.startswith("_"): continue
+            msg.append("  -> {} : {}".format(k,getattr(self,k)))
+        try:
+            logger.info("\n".join(msg))
+        except:
+            print("--->" + "\n".join(msg))
+    
+    def dump(self):
+        """
+        return
+        dump of slots, who starts with a letter [aA..zZ]
 
+        Returns
+        -------
+        dict() key/values in __slots__
+
+        """
+        return self.__get_slots_attr()
 
 class JuMEG_Base_Basic(object):
     def __init__ (self):
@@ -1955,7 +1990,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
                     raw.save(fname,overwrite=True)
                     msg=['Done writing data to disk ...',' --> Bads:' + str(raw.info['bads'])]
                     try:
-                        msg.append(" --> mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
+                        msg.append(" --> mne.annotations in RAW:\n  -> {}".format(raw.annotations))
                     except:
                         msg.append(" --> mne.annotations in RAW: None")
                     logger.info("\n".join(msg))
