@@ -50,8 +50,8 @@ def interpolate_bads(inst, reset_bads=True, mode='accurate', origin=None, verbos
     #--- check if EEG in raw
     picks_eeg = pick_types(inst.info, meg=False, eeg=True, exclude=[])
     if picks_eeg is not None:
-   #--- ck for origin or mne version
-       if 'origin' in _interpolate_bads_eeg.code.co_varnames:
+   #--- ck for origin or mne version  FB 2020-05-20 PY3
+       if 'origin' in _interpolate_bads_eeg.__code__.co_varnames:
            _interpolate_bads_eeg(inst,origin) # mne 0.20
        else:
            _interpolate_bads_eeg(inst) # mne <0.20
