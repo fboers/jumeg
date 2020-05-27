@@ -2026,7 +2026,7 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
         
         if not duration:
            duration = np.ones( onsets.shape[0] ) / raw.info["sfreq"]
-        
+           # duration = np.zeros( onsets.shape[0] )
         annot = mne.Annotations(onset       = onsets.tolist(),
                                 duration    = duration.tolist(),
                                 description = description,
@@ -2062,7 +2062,6 @@ class JuMEG_Base_IO(JuMEG_Base_FIF_IO):
            logger.info("\n".join(msg))
         return raw
    
-  
     def apply_save_mne_data(self,raw,fname=None,overwrite=True):
         """saving mne raw obj to fif format
         
