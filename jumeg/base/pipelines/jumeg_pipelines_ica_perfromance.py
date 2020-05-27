@@ -441,7 +441,7 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         self.show      = False
         self.save      = True
         self.colors    = ["black","yellow","red","magenta","green"]
-        self.scale     = { "raw":{ "factor":10.0 ** 15,"unit":"fT" },"ref":{ "factor":10.0 ** 3,"unit":"mV" } }
+        self.scale     = { "raw":{ "factor":1e15,"unit":"fT" },"ref":{ "factor":1e3,"unit":"mV" } }
         
         self._update_from_kwargs(**kwargs)
      
@@ -537,6 +537,8 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
        #--- sig clean
         ax2 = plt.subplot(self.n_rows,self.n_cols,self.idx + self.n_cols)
         self._plot(ax2,t,sig_clean * scl.get("factor"),scl.get("unit"),"black")
+        #-- test
+        ax2.set_ylim( 500,-500)
         
        #---
         scl = self.scale.get("ref")
@@ -553,7 +555,7 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         ax4.legend(["Clean "+self.ch_name + " cnts {}".format(counts)],loc=2,prop={ 'size':8 })
 
         ax1.set_ylim(ylim[0],ylim[1])
-        ax2.set_ylim(ylim[0],ylim[1])
+        # ax2.set_ylim(ylim[0],ylim[1])
 
         #if self.save:
         #   self.save_figure()
@@ -675,17 +677,15 @@ class JuMEG_ICA_PERFORMANCE(JUMEG_SLOTS):
         self._update_from_kwargs(**kwargs)
         self._PLOT._update_from_kwargs(**kwargs)
         
-       #--- init performance plot
+       #-- init performance plot
         self.Plot.idx = 1
         idx = 1
         ch_names = []
         ids      = []
-
+       
+       #-- calc plot cols via channel counts; rows=2
         self._mklists(self.ECG,channels=ch_names,event_ids=ids)
         self._mklists(self.EOG,channels=ch_names,event_ids=ids)
-        
-        #self.EOG.GetInfo(debug=True)
-        
         self.Plot.n_cols = len(ch_names)
         self.Plot.n_rows = 2
         

@@ -750,9 +750,7 @@ class JuMEG_PIPELINES_CHOPPER(JUMEG_SLOTS):
        
         jb.update_annotations(self.raw,description=self.description,onsets=self.chops[:,1],verbose=self.verbose)
             
-      
-        
-  
+    
     def update(self,**kwargs):
         """
         calc chops from timepoints 
@@ -792,7 +790,7 @@ class JuMEG_PIPELINES_CHOPPER(JUMEG_SLOTS):
            logger.exception("ERROR chop is None")   
            return None
        
-        return copy_crop_and_chop(raw=raw,chop=chop,verbose=self.verbose) 
+        return copy_crop_and_chop(raw=raw,chop=chop,verbose=self.verbose)
     
     def concat_and_save(self,raws,fname=None,annotations=None,save=False,clear=True):
         '''
