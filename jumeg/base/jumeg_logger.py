@@ -37,7 +37,9 @@ try:
             'INFO'    :'black',
             'WARNING' :'purple',
             'ERROR'   :'red',
-            'CRITICAL':'red'
+            'CRITICAL':'red',
+            'TEST1'   :'cyan',
+            'TEST2'   :'purple',
             },
         style='%'
         )
@@ -564,7 +566,7 @@ def setup_script_logging(fname=None,name=None,opt=None,level="DEBUG",logger=None
 def get_logger(logger=None,logname="jumeg"):
     if not logger:
        logger=logging.getLogger(logname)
-    return logger   
+    return logger
      
 def update_filehandler(logger=None,logname="jumeg",**kwargs):
     """

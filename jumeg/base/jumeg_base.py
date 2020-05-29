@@ -98,11 +98,12 @@ class JUMEG_SLOTS(object):
     def verbose(self,v):
         self._verbose = v
     
-    def _init(self):
+    def _init(self,**kwargs):
         #--- init slots
         for k in self.__slots__:
             self.__setattr__(k,None)
-        # self._update_from_kwargs(**kwargs)
+        #if kwargs:
+        #   self._update_from_kwargs(**kwargs)
     
     def init(self,**kwargs):
         self._init()

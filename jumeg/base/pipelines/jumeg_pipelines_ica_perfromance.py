@@ -308,6 +308,7 @@ class CalcSignal(JUMEG_SLOTS):
           picks = jb.picks.meg_nobads(raw)
     
       #--- RAW mk epochs + average
+      #logger.info("event_id: {}".format(event_id))
       ep = mne.Epochs(raw,events,event_id=event_id,tmin=tmin,tmax=tmax,picks=picks)
       if len(picks) > 1:
           avg = ep.average()
@@ -519,7 +520,8 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         counts = evt.shape[0]
       
         sig_raw,sig_clean,range,t = self._calc_data(self.raw,self.raw_clean,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=self.picks)
-       
+        #gfp_raw,gfp_clean,range,t = self._calc_gfp(self.raw,self.raw_clean,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=self.picks)
+      
        #--- ref channel e.g.: ECG
         sig_ref,_,_ = self._calc_signal(self.raw,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=jb.picks.labels2picks(self.raw,self.ch_name))
     
@@ -534,11 +536,12 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         scl = self.scale.get("raw")
         ylim = self._calc_ylimits(ranges=range,factor=scl.get("factor"),offset=self.offset)
         self._plot(ax1,t,sig_raw * scl.get("factor"),scl.get("unit"),"black")
+        #self._plot(ax1,t,gfp_raw * scl.get("factor"),scl.get("unit"),"blue")
+    
        #--- sig clean
         ax2 = plt.subplot(self.n_rows,self.n_cols,self.idx + self.n_cols)
         self._plot(ax2,t,sig_clean * scl.get("factor"),scl.get("unit"),"black")
-        #-- test
-        ax2.set_ylim( 500,-500)
+        #self._plot(ax2,t,gfp_clean * scl.get("factor"),scl.get("unit"),"blue")
         
        #---
         scl = self.scale.get("ref")
@@ -555,7 +558,9 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         ax4.legend(["Clean "+self.ch_name + " cnts {}".format(counts)],loc=2,prop={ 'size':8 })
 
         ax1.set_ylim(ylim[0],ylim[1])
-        # ax2.set_ylim(ylim[0],ylim[1])
+        ax2.set_ylim(ylim[0],ylim[1])
+       #-- test
+        #ax2.set_ylim( 1000,-100)
 
         #if self.save:
         #   self.save_figure()
@@ -629,7 +634,7 @@ class JuMEG_ICA_PERFORMANCE(JUMEG_SLOTS):
     
     def __init__(self,**kwargs):
         super().__init__(**kwargs)
-        self._init(**kwargs)
+        self.init(**kwargs)
         self._ECG = ARTEFACT_EVENTS(raw=self.raw,ch_name="ECG",event_id=999,tmin=-0.4,tmax=0.4,_call=find_ecg_events)
         self._EOG = ARTEFACT_EVENTS(raw=self.raw,ch_name=['EOG ver','EOG hor'],event_id=[997,998],tmin=-0.4,tmax=0.4,
                                     _call=find_eog_events)
@@ -675,7 +680,7 @@ class JuMEG_ICA_PERFORMANCE(JUMEG_SLOTS):
         :return:
         """
         self._update_from_kwargs(**kwargs)
-        self._PLOT._update_from_kwargs(**kwargs)
+        self.Plot._update_from_kwargs(**kwargs)
         
        #-- init performance plot
         self.Plot.idx = 1
@@ -750,19 +755,13 @@ def test2():
     jumeg_logger.setup_script_logging(logger=logger)
     
     raw = None
-    stage = "$JUMEG_PATH_LOCAL_DATA/exp/MEG94T/mne"
-    fcfg  = os.path.join(stage,"meg94t_config01.yaml")
-    fpath = "206720/MEG94T0T2/130820_1335/1/"
-    path = os.path.join(stage,fpath)
-
-    #fraw   =  "206720_MEG94T0T2_130820_1335_1_c,rfDC,meeg,nr,bcc,int,000516-000645-raw.fif"
-    #fraw_ar = "206720_MEG94T0T2_130820_1335_1_c,rfDC,meeg,nr,bcc,int,000516-000645,ar-raw.fif"
-    
-    fraw    = "206720_MEG94T0T2_130820_1335_1_c,rfDC,meeg,nr,bcc,int,fibp0.10-45.0-raw.fif"
-    fraw_ar = "206720_MEG94T0T2_130820_1335_1_c,rfDC,meeg,nr,bcc,int,fibp0.10-45.0,ar-raw.fif"
+  
+    path    = "~/MEGBoers/data/exp/JUMEGTest/mne/201772/INTEXT01/190212_1334/2/ica/chops"
+    fraw    = "201772_INTEXT01_190212_1334_2_c,rfDC,meeg,nr,bcc,int,0000-0152-raw.fif"
+    fraw_ar = "201772_INTEXT01_190212_1334_2_c,rfDC,meeg,nr,bcc,int,0000-0152,ar-raw.fif"
     
     logger.info("JuMEG Pipeline ICA Performance ICA mne-version: {}".format(mne.__version__))
-   #---
+   #--- raw
     f = os.path.join(path,fraw)
     raw,raw_fname = jb.get_raw_obj(f,raw=None)
     raw_path      = os.path.dirname(raw_fname)
@@ -772,17 +771,25 @@ def test2():
     raw_ar,raw_ar_fname = jb.get_raw_obj(f,raw=None)
     
    #--- read config
-    CFG = jCFG()
-    CFG.update(config=fcfg)
-    config = CFG.GetDataDict("ica")
+    #CFG = jCFG()
+    #CFG.update(config=fcfg)
+    #config = CFG.GetDataDict("ica")
     
    #
     jIP = JuMEG_ICA_PERFORMANCE(raw=raw,raw_clean=raw_ar,picks=picks)
-    #jIP.report()
+     #--- find ECG
+    jIP.ECG.find_events(raw=raw) #,**config.get("ecg"))
+    jIP.ECG.GetInfo(debug=True)
+   #--- find EOG
+    jIP.EOG.find_events(raw=raw) #,**config.get("eog"))
+    jIP.EOG.GetInfo(debug=True)
+   
     
     fout = raw_fname.rsplit("-",1)[0] + "-ar"
-    jIP.plot(verbose=True,fout=fout)
+    jIP.plot(raw=raw,raw_clean=raw_ar,verbose=True,fout=fout)
     
+    #plot(raw=self.PreFilter.raw,raw_clean=raw_clean_fi,plot_path = self.plot_dir,
+    #                                text=None,fout = self.PreFilter.fname.rsplit("-",1)[0] + "-ar")
     
 if __name__ == "__main__":
     # test1()

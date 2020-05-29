@@ -33,7 +33,7 @@ from jumeg.base.jumeg_base         import JUMEG_SLOTS
      
 logger = jumeg_logger.get_logger()
 
-__version__= "2020.05.06.001"
+__version__= "2020.05.28.001"
 
 
 def get_chop_times_indices(times, chop_length=60., chop_nsamp=None, strict=False,exit_on_error=False):
@@ -101,7 +101,7 @@ def get_chop_times_indices(times, chop_length=60., chop_nsamp=None, strict=False
                   "  -> calculated chop legth: {}".format(chop_len),
                   "  -> rest [s]             : {}".format(t_rest),
                   "-"*40,
-                  "  -> chop length          : {}".format(chop_length),
+                  "  -> original chop length : {}".format(chop_length),
                   "  -> numer of timepoints  : {}".format(n_times),
                   "  -> strict               : {}".format(strict),
                   "-"*40,
@@ -272,7 +272,7 @@ def copy_crop_and_chop(raw,chop,verbose=False):
     return raw_crop
         
 
-def concat_and_save(raws,fname=None,save=False,annotations=None,clear=True):
+def concat_and_save(raws,fname=None,save=False,annotations=None,clear=True,verbose=False):
     '''
     concatenate a list of raw obj's to a new raw obj
     calling mne.concatenate_raw
@@ -289,7 +289,8 @@ def concat_and_save(raws,fname=None,save=False,annotations=None,clear=True):
     save  : <False>
     clear : close all raw obj in raws <True>
     annotations: set annotations in raw obj <None>.
-  
+    verbose: <false>
+    
     Returns
     -------
     raw obj concatenated
@@ -297,6 +298,12 @@ def concat_and_save(raws,fname=None,save=False,annotations=None,clear=True):
     raw_concat = None
     
     if raws:
+       if verbose:
+           msg=["concat and save raw obj:"]
+           for raw in raws:
+               msg.append( jb.get_raw_filename(raw) )
+           logger.info("\n".join(msg) )
+           
        raw_concat = mne.concatenate_raws(raws)
        if clear:
           while raws:
@@ -816,7 +823,7 @@ class JuMEG_PIPELINES_CHOPPER(JUMEG_SLOTS):
         '''
         
         return concat_and_save(raws,fname=fname,save=save,
-                               annotations=annotations,clear=clear)
+                               annotations=annotations,clear=clear,verbose=self.verbose)
         
     def compare_data_shapes(self,shapes,labels):
         '''

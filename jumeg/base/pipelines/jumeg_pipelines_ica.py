@@ -38,7 +38,7 @@ from jumeg.filter.jumeg_mne_filter import JuMEG_MNE_FILTER
 
 logger = jumeg_logger.get_logger()
 
-__version__= "2020.05.27.001"
+__version__= "2020.05.28.001"
 
 class JuMEG_PIPELINES_ICA(object):
     def __init__(self,**kwargs):
@@ -211,7 +211,7 @@ class JuMEG_PIPELINES_ICA(object):
            self.PreFilter.clear()
         
                  
-    def _get_chop_name(self,raw,chop=None,extention="-ica.fif",postfix=None,fullpath=False,chop_path=None):
+    def _get_chop_name(self,raw,chop=None,extention=None,postfix=None,fullpath=False,chop_path=None):
         """
         raw
         chop     = None
@@ -237,10 +237,8 @@ class JuMEG_PIPELINES_ICA(object):
            else:
               fchop = op.join(chop_path,fname)
         else:
-           fchop = os.path.basename(fname)
+           fchop = fname
            
-        if postfix:
-           fchop +=","+postfix
         try:
            if len(chop):
               if np.isnan(chop[1]):
@@ -249,12 +247,18 @@ class JuMEG_PIPELINES_ICA(object):
                  chop_fix = ',{:04d}-{:04d}'.format(int(chop[0]),int(chop[1]))
         except:
             pass
-        
+
         if not fchop.endswith(chop_fix):
            fchop += chop_fix
-        
+
+        if postfix:
+           if not fchop.endswith(postfix):
+                fchop += "," +postfix
+
         if extention:
-           fchop+=extention
+           fchop+= extention
+        else:
+           fchop+= "-"+fextention
     
         return fchop,fname
       
@@ -275,7 +279,7 @@ class JuMEG_PIPELINES_ICA(object):
         ica_obj = None
         self._ics_found_svm = None
 
-        fname_ica,fname = self._get_chop_name(raw_chop,chop=None)
+        fname_ica,fname = self._get_chop_name(raw_chop,extention="-ica.fif",chop=None)
       
         msg=["start ICA FIT chop: {} / {}".format(idx + 1,self.Chopper.n_chops),
              " --> chop id      : {}".format(chop),
@@ -418,7 +422,7 @@ class JuMEG_PIPELINES_ICA(object):
                                         plot_path=self.plot_dir,fout=fout.rsplit("-",1)[0] + "-ar")
         #return os.path.basename(fout)
     
-    def _save_chop(self,raw_chop,chop,fullpath=True,extention="-raw.fif"):
+    def _save_chop(self,raw_chop,chop,fullpath=True,extention=None,postfix=None):
         """
         
 
@@ -428,9 +432,9 @@ class JuMEG_PIPELINES_ICA(object):
             DESCRIPTION.
         chop : TYPE
             DESCRIPTION.
-        fullpath: True    
-        extention : TYPE, optional
-            DESCRIPTION. The default is "-raw.fif".
+        fullpath  : True
+        extention : string, optional -raw.fif
+        postfix   : string  optional ar
 
         Returns
         -------
@@ -438,12 +442,17 @@ class JuMEG_PIPELINES_ICA(object):
             DESCRIPTION.
 
         """
+        if self.debug:
+           logger.debug("START save chop {} => {}".format(chop,jb.get_raw_filename(raw_chop) ))
         
-        fname_chop,fname_raw = self._get_chop_name(raw_chop,chop=chop,fullpath=True,extention=extention)
+        fname_chop,fname_raw = self._get_chop_name(raw_chop,chop=chop,fullpath=fullpath,extention=extention,postfix=postfix)
         
         jb.set_raw_filename(raw_chop,fname_chop)
-       
+        
         raw_chop.save(fname_chop,overwrite=True)
+        if self.debug:
+           logger.debug("DONE  save chop: {} => {}".format(chop,fname_chop))
+           
         return fname_chop
         
     def _copy_crop_and_chop(self,raw,chop,extention="-raw.fif",save=False):
@@ -513,13 +522,14 @@ class JuMEG_PIPELINES_ICA(object):
         Returns:
           raw cleaned
         """
-       
         raw_chops_clean_fi = []
         raw_chops_clean    = []
          
         plt_fnames    = []
         plt_fnames_fi = []  
         raw_clean     = None
+        
+        self.Chopper.verbose = True
         
         for idx in range(self.Chopper.n_chops):
             chop = self.Chopper.chops[idx]
@@ -541,17 +551,20 @@ class JuMEG_PIPELINES_ICA(object):
                   fout = jb.get_raw_filename(raw_chop)
                
                   raw_cc = self._apply_ica_artefact_rejection(raw_chop,ica_obj,reject=self.CFG.GetDataDict(key="reject") ) # raw_chop copy internal
-                  
-                  logger.warning(fout)
+               
+                  if opt.save_chop_clean:
+                     self._save_chop(raw_cc,chop,extention=',ar-raw.fif')
+               
                   plt_fnames_fi.append(self._plot_chop_performance(raw=raw_chop,ica=ica_obj,raw_clean=raw_cc,
                                                                    fout=fout.rsplit("-",1)[0] + "-ar"))
                   
-                  if opt.save_chop_clean:
-                     self._save_chop(raw_cc,chop,extention=',ar-raw.fif')
                   if opt.save:
                      raw_chops_clean_fi.append( raw_cc.copy() )
-                  
-                  
+             
+              #--- clean up for filter raw chop
+               raw_chop.close()
+               raw_chop = None
+      
            #-- chop raw unfiltered
             opt = self.cfg.transform.unfiltered
            #-- chop raw filter 
@@ -564,15 +577,17 @@ class JuMEG_PIPELINES_ICA(object):
                fout = jb.get_raw_filename(raw_chop)
                
                raw_chops_clean.append(self._apply_ica_artefact_rejection(raw_chop,ica_obj,reject=self.CFG.GetDataDict(key="reject")) ) # raw_chop copy internal
-               
+
+               if opt.save_chop_clean:
+                   self._save_chop(raw_chops_clean[-1],chop,extention=',ar-raw.fif')
+
                plt_fnames.append(self._plot_chop_performance(raw=raw_chop,ica=ica_obj,raw_clean=raw_chops_clean[-1],
                                                              fout=fout.rsplit("-",1)[0] + "-ar"))
-               if opt.save_chop_clean:
-                  self._save_chop(raw_cc,chop,extention=',ar-raw.fif') 
-                        
+               
             logger.info("done ICA FIT & transform chop: {} / {}\n".format(idx + 1,self.Chopper.n_chops))
            
-           #--- clean up for chop
+           #--- clean up for raw chop
+            ica_obj = None
             raw_chop.close()
             raw_chop = None
            

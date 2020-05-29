@@ -42,7 +42,7 @@ from jumeg.base.jumeg_base_config import JuMEG_CONFIG as jCFG
 
 logger = jumeg_logger.get_logger()
 
-__version__ = "2020.05.26.001"
+__version__ = "2020.05.28.001"
 
 
 #######################################################
@@ -375,7 +375,7 @@ def ica_artefact_rejection_and_apply(raw,ica_obj,picks=None,reject=None,copy_raw
                    Raw object after ICA cleaning
         ica obj, copy &   replace mean,std
     """
-    logger.info("Start ICA Transform => call <apply_ica_replace_mean_std>")
+    logger.info("Start ICA Transform => call <ica.apply> and replace mean & std")
     
     if picks is None:
         picks = jb.picks.meg_nobads(raw)
