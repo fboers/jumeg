@@ -347,10 +347,11 @@ class CalcSignal(JUMEG_SLOTS):
       if len(picks) > 1:
           avg = ep.average()
           times = avg.times
-          signal = np.sum(avg._data ** 2,axis=0)
+          signal = np.sum(avg._data**2,axis=0)
       else:  # ref channel e.g. ECG, EOG  as np.array
           signal = np.average(ep.get_data(),axis=0).flatten()
-    
+          signal = signal**2
+          
       range = [signal.min(),signal.max()]
       return signal,range,times
 
@@ -520,7 +521,7 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         counts = evt.shape[0]
       
         sig_raw,sig_clean,range,t = self._calc_data(self.raw,self.raw_clean,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=self.picks)
-        #gfp_raw,gfp_clean,range,t = self._calc_gfp(self.raw,self.raw_clean,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=self.picks)
+        #gfp_raw,gfp_clean,range,t = self._calc_data(self.raw,self.raw_clean,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=self.picks,type="gfp")
       
        #--- ref channel e.g.: ECG
         sig_ref,_,_ = self._calc_signal(self.raw,evt,event_id=self.event_id,tmin=self.tmin,tmax=self.tmax,picks=jb.picks.labels2picks(self.raw,self.ch_name))
@@ -541,9 +542,11 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
        #--- sig clean
         ax2 = plt.subplot(self.n_rows,self.n_cols,self.idx + self.n_cols)
         self._plot(ax2,t,sig_clean * scl.get("factor"),scl.get("unit"),"black")
-        #self._plot(ax2,t,gfp_clean * scl.get("factor"),scl.get("unit"),"blue")
-        
-       #---
+       
+       # self._plot(ax2,t,gfp_raw,  scl.get("unit"),"blue")
+       # self._plot(ax2,t,gfp_clean,scl.get("unit"),"green")
+
+        #---
         scl = self.scale.get("ref")
         ax3 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
         color = 'tab:blue'
@@ -560,7 +563,7 @@ class JuMEG_ICA_PERFORMANCE_PLOT(CalcSignal):
         ax1.set_ylim(ylim[0],ylim[1])
         ax2.set_ylim(ylim[0],ylim[1])
        #-- test
-        #ax2.set_ylim( 1000,-100)
+       # ax2.set_ylim( 1000,-100)
 
         #if self.save:
         #   self.save_figure()
@@ -766,6 +769,7 @@ def test2():
     raw,raw_fname = jb.get_raw_obj(f,raw=None)
     raw_path      = os.path.dirname(raw_fname)
     picks         = jb.picks.meg_nobads(raw)
+
    #---
     f = os.path.join(path,fraw_ar)
     raw_ar,raw_ar_fname = jb.get_raw_obj(f,raw=None)

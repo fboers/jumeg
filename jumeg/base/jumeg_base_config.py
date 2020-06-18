@@ -246,7 +246,17 @@ class JuMEG_CONFIG(object):
    
     @property
     def filename(self): return self._fname
-    
+    @property
+    def dirname(self):
+        if self._fname:
+            return os.path.dirname(self._fname)
+        return None
+    @property
+    def basename(self):
+        if self._fname:
+            return os.path.basename(self._fname)
+        return None
+ 
     def _init(self,**kwargs):
         pass
     
@@ -295,14 +305,13 @@ class JuMEG_CONFIG(object):
         self.useStruct = kwargs.get("useStruct",self.useStruct)
         
         with open(self.fname) as FH:
-
-            if self.fname.endswith(".yaml"):
-               if yaml_type == "ruamel":
-                  self._cfg = yaml.load( FH ,Loader=loader)
-               else:
-                  self._cfg = yaml.load(FH)
-            elif self.fname.endswith(".json"):
-               self._cfg = json.load( FH )
+             if self.fname.endswith(".yaml"):
+                if yaml_type == "ruamel":
+                   self._cfg = yaml.load( FH ,Loader=loader)
+                else:
+                   self._cfg = yaml.safe_load(FH)
+             elif self.fname.endswith(".json"):
+                self._cfg = json.load( FH )
 
         if kwargs.get("key",None):
            self._cfg = self._cfg.get( kwargs["key"] )

@@ -38,7 +38,7 @@ from jumeg.filter.jumeg_mne_filter import JuMEG_MNE_FILTER
 
 logger = jumeg_logger.get_logger()
 
-__version__= "2020.05.28.001"
+__version__= "2020.06.03.001"
 
 class JuMEG_PIPELINES_ICA(object):
     def __init__(self,**kwargs):
@@ -379,7 +379,7 @@ class JuMEG_PIPELINES_ICA(object):
         
         if not picks:
             picks = self.picks
-        return ica_artefact_rejection_and_apply(raw,ICA,picks=picks,reject=reject) #copy_raw=copy_raw,copy_ica=copy_ica
+        return ica_artefact_rejection_and_apply(raw,ICA,picks=picks,reject=reject)
    
     def _update_report(self):
         """
@@ -449,7 +449,9 @@ class JuMEG_PIPELINES_ICA(object):
         
         jb.set_raw_filename(raw_chop,fname_chop)
         
+        logger.info("Start save chop: {} => {}".format(chop,fname_chop))
         raw_chop.save(fname_chop,overwrite=True)
+        
         if self.debug:
            logger.debug("DONE  save chop: {} => {}".format(chop,fname_chop))
            
@@ -568,7 +570,7 @@ class JuMEG_PIPELINES_ICA(object):
            #-- chop raw unfiltered
             opt = self.cfg.transform.unfiltered
            #-- chop raw filter 
-            raw_chop = self._copy_crop_and_chop(self.raw,chop,extention="-raw.fif",save=opt.save)
+            raw_chop = self._copy_crop_and_chop(self.raw,chop,extention="-raw.fif",save=opt.save_chop)
             
             if not ica_obj:
                ica_obj,fname_ica = self._apply_fit(raw_chop=raw_chop,chop=chop,idx=idx,save=self.cfg.fit.save)

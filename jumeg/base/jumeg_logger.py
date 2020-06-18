@@ -23,7 +23,7 @@ import inspect
 from distutils.dir_util import mkpath
 import logging
 
-__version__="2020.05.14.001"
+__version__="2020.06.18.001"
 
 try:
     # https://github.com/borntyping/python-colorlog
@@ -273,7 +273,7 @@ class JuMEGLogFormatter(logging.Formatter):
     """
     def __init__(self):
         super().__init__()
-        fmt = "%(levelname)s - %(asctime)s — %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n"
+        fmt = "%(levelname)s - %(asctime)s - %(name)s - %(module)s - %(funcName)s:%(lineno)d :\n%(message)s\n"
         self.FORMATS = {
                         logging.INFO   : fmt,
                         logging.ERROR  : "\n"+fmt+"\n",
