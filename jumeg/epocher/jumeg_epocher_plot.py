@@ -168,7 +168,7 @@ class JuMEG_Epocher_Plot(JuMEG_Base_IO):
            try:
                os.makedirs(fout_path,exist_ok=True)
            except:
-               logger.exception("---> can not create epocher plot\n"+
+               logger.exception("Can not create epocher plot\n"+
                                 "  -> directory: {}\n".format(fout_path)+
                                 "  -> filename : {}".format(fname) )
                return
@@ -256,7 +256,9 @@ class JuMEG_Epocher_Plot(JuMEG_Base_IO):
         
       #---
         if save_plot:
-           fout += ","+condition + self.file_extention
+           # fout += ","+condition + self.file_extention
+           fout += self.file_extention
+           
            pl.savefig(fout, dpi=self.dpi)
            if self.verbose:
               logger.info("---> done saving plot: " +fout)

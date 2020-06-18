@@ -1418,8 +1418,11 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
          
         if self.verbose:
            if "iod_div" in df.columns:
-              logger.info("Stimulus Onset and IOD div [tsl] mean: {0:3.1f}  std:{1:3.1f}".format(df["iod_div"].mean(),df["iod_div"].std()))
-            
+              div_ms = df["iod_div"] / raw.info["sfreq"] * 1000.0
+              msg=["Difference in Stimulus Onset and IOD [ msec ] :",
+                   "  -> mean: {0:3.1f}  std: {1:3.1f}".format(div_ms.mean(),div_ms.std()),
+                   "  -> min : {0:3.1f}  max: {1:3.1f}".format(div_ms.min(),div_ms.max())]
+              logger.info("\n".join(msg))
         return df,mrk_info  
     
 #---    
@@ -1590,7 +1593,7 @@ class JuMEG_Epocher_Events(JuMEG_Epocher_HDF,JuMEG_Epocher_Basic):
                 
                if self.verbose:
                   logger.info(self.pp_list2str(self.response.parameter,
-                                               head="---> Response Epocher Events Data Frame [response channel] : " + self.response.channel))
+                                               head="Response Epocher Events Data Frame [response channel] : " + self.response.channel))
                 
                #logger.info(marker_data_frame)
                
