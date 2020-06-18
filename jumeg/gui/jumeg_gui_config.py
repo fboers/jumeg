@@ -17,22 +17,24 @@
 
 import getpass,datetime,platform
 import os,sys,argparse,pprint
-# from ruamel.ordereddict import ordereddict
-from collections import OrderedDict
+
 from copy import  deepcopy
 
+from pubsub import pub
 import wx
 import wx.lib.agw.customtreectrl as CT
 from   wx.lib.agw.customtreectrl import CustomTreeCtrl
 
-from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import SpinCtrlScientific,EditableListBoxPanel,JuMEG_wxSTXTBTCtrl
-from jumeg.base.jumeg_base import jumeg_base as jb
+from jumeg.gui.wxlib.jumeg_gui_wxlib_main_base            import JuMEGBaseFrame,JuMEGBaseMainPanel,JuMEGBasePanel,ShowFileDLG,LEA
+from jumeg.gui.wxlib.utils.jumeg_gui_wxlib_utils_controls import SpinCtrlScientific,EditableListBoxPanel,JuMEG_wxSTXTBTCtrl,ButtonPanel
+
+from jumeg.base.jumeg_base        import jumeg_base as jb
 from jumeg.base.jumeg_base_config import JuMEG_CONFIG
 
 from jumeg.base import jumeg_logger
 logger = jumeg_logger.get_logger()
 
-__version__= "2020.05.07.001" # platform.python_version()
+__version__= "2020.06.16.001" # platform.python_version()
 
 class JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
    def __init__(self,parent,**kwargs):
@@ -395,19 +397,20 @@ class JuMEG_ConfigTreeCtrl(CustomTreeCtrl):
        
        self.Expand(self.root)
 
-class JuMEG_wxConfig(wx.Panel):
-    def __init__(self,parent,**kwargs):
-        super().__init__(parent)
-        self.root_name="jumeg"
-        self.SetName(kwargs.get("name","test"))
-        self._CfgTreeCtrl = None
-        self._CfgTreeCtrlPNL = None
-        self._wx_init(**kwargs)
-        self._ApplyLayout()
+class JuMEGConfig(JuMEGBasePanel):
     
+    def _init(self,**kwargs):
+        self.root_name = "jumeg"
+        self.title     = "JuMEG ConfigFile INM4-MEG FZJ"
+        self.SetName(kwargs.get("name","test"))
+        self._ShowButtons    = kwargs.get("ShowButtons",True)
+        self._CFG            = None
+        self._BUT            = None
+        self._CfgTreeCtrl    = None
+        self._CfgTreeCtrlPNL = None
+        
     @property
     def verbose(self): return self.CFG.verbose
-
     @verbose.setter
     def verbose(self,v):
         self.CFG.verbose = v
@@ -419,32 +422,35 @@ class JuMEG_wxConfig(wx.Panel):
     
     @property
     def CfgTreeCtrl(self): return self._CfgTreeCtrl
+
+    def _init_pubsub(self):
+        pub.subscribe(self.ClickOnConfig,"MSG.CONFIG")
+
+    def _init_cfg(self,**kwargs):
+        self._CFG = JuMEG_CONFIG(**kwargs)
+        if self.CFG.update(**kwargs):
+            self._update_TreeCtrl()
     
     def _wx_init(self,**kwargs):
-        self.SetBackgroundColour(wx.GREEN)
+        self.SetBackgroundColour("grey40")
         self._CfgTreeCtrlPNL = wx.Panel(self)
-
+        self._CfgTreeCtrlPNL.SetBackgroundColour("grey50")
         self._init_cfg(**kwargs)
 
         #--- init buttons
-        #fehlerhaft show button
-        self._bt_open = wx.Button(self,label="Open",name=self.GetName()+".BT.OPEN")
-        self._bt_info  = wx.Button(self,label="Show", name=self.GetName()+".BT.SHOW")
-        self._bt_save  = wx.Button(self,label="Save", name=self.GetName()+".BT.SAVE")
-        self._bt_update =wx.Button(self,label="Update", name=self.GetName()+".BT.UPDATE")
-        self._bt_close = wx.Button(self,label="Close",name=self.GetName()+".BT.CLOSE")
-        
-        self.Bind(wx.EVT_BUTTON,self.ClickOnButton)
-    
+        if self._ShowButtons:
+           self._BUT = ButtonPanel(self,name="BUTTON",labels=["Open","Show","Save","Update","Close"])
+           self._BUT.BindCtrls(self.ClickOnButton)
+        if kwargs.get("fname"):
+           self.OpenConfigFile(fname=kwargs.get("fname"))
+            
     def _update_TreeCtrl(self):
-        if self._CfgTreeCtrl:
-           self._CfgTreeCtrl._clear()
+        if self.CfgTreeCtrl:
            self.CfgTreeCtrl.update(data=self.CFG.GetDataDict(),root_name=self.root_name)
         else:
-         #--- init & pacl ctrl
+         # -- init & pack treectrl
            self._CfgTreeCtrl = JuMEG_ConfigTreeCtrl(self._CfgTreeCtrlPNL,root_name=self.root_name,data=self.CFG.GetDataDict())
            self.CfgTreeCtrl.verbose = self.verbose
-           LEA = wx.LEFT | wx.EXPAND | wx.ALL
            vbox = wx.BoxSizer(wx.VERTICAL)
            vbox.Add(self._CfgTreeCtrl,1,LEA,4)
            self._CfgTreeCtrlPNL.SetSizer(vbox)
@@ -453,167 +459,137 @@ class JuMEG_wxConfig(wx.Panel):
            self._CfgTreeCtrlPNL.Layout()
            self.Layout()
 
-    def _init_cfg(self, **kwargs):
-        self._CFG = JuMEG_CONFIG(**kwargs)
-        if self.CFG.update(**kwargs):
-           self._update_TreeCtrl() 
+    def GetData(self,pretty=False):
+        if self._CfgTreeCtrl:
+           if pretty:
+              return format(pprint.pformat(self._CfgTreeCtrl.GetData(),indent=4))
+           return self._CfgTreeCtrl.GetData()
         
-    def FDLGSave(self, event=None):
-        '''
-        opens a menu to save the current data into a .yaml file
-        '''
-        with wx.FileDialog(self, "Save config file", wildcard="config files (*.yaml,*.json)|*.yaml;*.json",
-                          style=wx.FD_SAVE | wx.FD_OVERWRITE_PROMPT) as FDGL:
-             FDGL.SetDirectory(os.path.dirname(self.CFG.filename))
-             if FDGL.ShowModal() == wx.ID_CANCEL:
-                return     # the user changed their mind
-   
-           # save the current contents in the file
-             fname,ext = FDGL.GetPath().rsplit(".",1)
-             
-             if ext in ["yaml","json"]:
-                pathname = FDGL.GetPath()
-             else:
-                pathname = fname+".yaml"
-                         
-             try:
-                 data = self.CfgTreeCtrl._used_dict
-                 self.CFG.save_cfg(fname=pathname,data=data)
-             except IOError:
-                 wx.LogError("ERROR Can not save current data in config file '%s'." % pathname)
-                 
-    def FDLGOpen(self, event=None):
-       '''
-       opens a dialogue to load a [.yaml|.json] file and build a tree out of it
-       '''
-       # otherwise ask the user what new file to open
-       with wx.FileDialog(self, "Open config file", wildcard="config files (*.yaml,+.json)|*.yaml;*.json",
-                          style=wx.FD_OPEN | wx.FD_FILE_MUST_EXIST) as FDGL:
-           
-           p = "."
-           if self.CFG.filename:
-              p = os.path.dirname(self.CFG.filename)
-           FDGL.SetDirectory(p)
-           
-           if FDGL.ShowModal() == wx.ID_CANCEL:
-               return None    # the user changed their mind
-   
-           # Proceed loading the file chosen by the user
-           return FDGL.GetPath()
-            
-    def ClickOnOpenConfigFile(self):
-        fcfg = self.FDLGOpen()
-        if not fcfg: return False
-      
-        if self.CfgTreeCtrl: # one config file is loaded 
-           if wx.MessageBox("Do you want to save?", "Please confirm",wx.ICON_QUESTION | wx.YES_NO, self) == wx.YES:
-              self.ClickOnSaveConfigFile()
-                   
-        self.CFG.update(config=fcfg)
-        self._update_TreeCtrl()
+    def OpenConfigFile(self,fname=None,showDLG=False):
+        """
         
-    def ClickOnSaveConfigFile(self):
-        self._CfgTreeCtrl.update_info()
-        self._CfgTreeCtrl.update_used_dict()
-        self.FDLGSave()
-        
-    def ClickOnButton(self,evt):
-        '''
-        implements the show, save, update and open buttons
-        :param evt: the button which has been clicked
-        '''
-        obj = evt.GetEventObject()
-        if obj.GetName().endswith(".BT.SHOW"):
-           self.CfgTreeCtrl.info()
-        elif obj.GetName().endswith(".BT.SAVE"):
-           self.ClickOnSaveConfigFile()
-           evt.Skip()
-        elif obj.GetName().endswith(".BT.UPDATE"):
-           self._CfgTreeCtrl.update_used_dict()
-        elif obj.GetName().endswith(".BT.OPEN"):
-           self.ClickOnOpenConfigFile()
-           evt.Skip()
-        else:
-           evt.Skip()
+        Parameters
+        ----------
+        fname
+        showDLG
 
-    def _ApplyLayout(self):
-        LEA = wx.LEFT | wx.EXPAND | wx.ALL
+        Returns
+        -------
+
+        """
+        if fname:
+           p = os.path.dirname(fname)
+           f = os.path.basename(fname)
+        else:
+           showDLG = True
+           f = self.CFG.basename
+           p = self.CFG.dirname
+           
+        showDLG = True
+        if showDLG:
+           fname = ShowFileDLG(self,title=self.title,style=wx.FD_OPEN,wildcard="config files (*.yaml,*.json)|*.yaml;*.json",
+                               defaultDir=p,defaultFile=f)
+        if not fname: return False
+        if self.CfgTreeCtrl: # one config file is loaded
+           if wx.MessageBox("Do you want to save?", "Please confirm",wx.ICON_QUESTION | wx.YES_NO, self) == wx.YES:
+              self.SaveConfigFile()
+               
+        self.CFG.update(config=fname)
+        self._update_TreeCtrl()
+   
+    def SaveConfigFile(self,fname=None,showDLG=False):
+        """
+        Parameters
+        ----------
+        fname:   <None>
+        showDLG: <False>
+
+        Returns
+        -------
+        config filename
+        """
+        if fname:
+           p = os.path.dirname(fname)
+           f = os.path.basename(fname)
+           fout = fname
+        else:
+           showDLG = True
+           f = self.CFG.basename
+           p = self.CFG.dirname
         
+        if showDLG:
+           fout = ShowFileDLG(self,title=self.title,style=wx.FD_SAVE,wildcard="config files (*.yaml,*.json)|*.yaml;*.json",
+                              defaultDir=p,defaultFile=f)
+          
+        if fout:
+           self._CfgTreeCtrl.update_info()
+           self._CfgTreeCtrl.update_used_dict()
+          
+           fn,ext = fout.rsplit(".",1)
+           if ext not in ["yaml","json"]:
+              fout = fn +".yaml"
+           try:
+              # data = self.CfgTreeCtrl._used_dict
+              wx.CallAfter( self.CFG.save_cfg,fname=fout,data=self.CfgTreeCtrl.GetData() )
+           except IOError:
+              msg= "ERROR Can not save current data in config file:\n  -> {}".format(fout)
+              wx.CallAfter( pub.sendMessage, "MSG.ERROR",data=msg )
+              wx.LogError(msg)
+        return fout
+
+    def _init_pubsub(self):
+        pub.subscribe(self.ClickOnButton,"MSG.CONFIG")
+
+    def ClickOnConfig(self,data=None,config=None):
+        if config:
+            self._CFG._init_cfg(config=config)
+            self.Show()
+            self.Layout()
+        elif data.endswith("OPEN"):
+            self.OpenConfigFile(showDLG=True)
+            if self.IsShown() == False:
+                self.Show(True)
+                self.Layout()
+        elif data.endswith("SAVE"):
+            if self.IsShown():
+                self.SaveConfigFile(showDLG=True)
+            else:
+                wx.LogMessage("No Config dict to save")
+
+    def ClickOnButton(self,data=None):
+        data = data.upper()
+        if data.endswith("SHOW"):
+           self.CfgTreeCtrl.info()
+        elif data.endswith("UPDATE"):
+           self._CfgTreeCtrl.update_used_dict()
+        else:
+           self.ClickOnConfig(data=data)
+         
+    def _ApplyLayout(self):
         vbox = wx.BoxSizer(wx.VERTICAL)
         #---
-        st1 = wx.StaticLine(self)
-        st1.SetBackgroundColour("GREY85")
-        st2 = wx.StaticLine(self)
-        st2.SetBackgroundColour("GREY80")
-        
-        vbox.Add(st1,0,LEA,1)
-        
-        st = wx.StaticLine(self)
-        st.SetBackgroundColour("GREY85")
-  
-        vbox.Add(self._CfgTreeCtrlPNL,1,LEA,1)
-        vbox.Add(st,0,LEA,1)
-          
-       #--- buttons
-        hbox= wx.BoxSizer(wx.HORIZONTAL)
-        hbox.Add(self._bt_close,0,LEA,2)
-        hbox.Add((0,0),1,LEA,2)
-        hbox.Add(self._bt_update,0,LEA,2)
-        hbox.Add(self._bt_info,0,LEA,2)
-        hbox.Add(self._bt_save,0,LEA,2)
-        hbox.Add(self._bt_open,0,LEA,2)
-        vbox.Add(hbox,0,LEA,2)
-      
-        self.SetAutoLayout(True)
+        #st1 = wx.StaticLine(self)
+        #st1.SetBackgroundColour("GREY85")
+        #vbox.Add(st1,0,LEA,1)
+       # -- Config Tree Control
+        vbox.Add(self._CfgTreeCtrlPNL,1,LEA,5)
+       # -- buttons
+        if self._BUT:
+           vbox.Add(self._BUT,0,LEA,5)
+       
         self.SetSizer(vbox)
-        self.Fit()
-        self.Layout()
-
-class MainWindow(wx.Frame):
-  def __init__(self, parent, title, **kwargs):
-    wx.Frame.__init__(self, parent, -1,title=title)
-    self._wx_init(**kwargs)
-   
-  def _update_from_kwargs(self,**kwargs):
-      pass
+       
+class MainWindow(JuMEGBaseFrame):
   
   def _wx_init(self,**kwargs):
-        w,h = wx.GetDisplaySize()
-        self.SetSize(w/4.0,h/3.0)
-        self.Center()
-        
-        self._update_from_kwargs(**kwargs)
-      #--- init STB in a new CLS
-        self._STB = self.CreateStatusBar()
-        self._STB.SetStatusStyles([wx.SB_SUNKEN])
-        
-        self._PNL = JuMEG_wxConfig(self,**kwargs)
-        
-        self.Bind(wx.EVT_BUTTON,self.ClickOnButton)
-        self.Bind(wx.EVT_CLOSE,self.ClickOnClose)
+      self._PNL = JuMEGConfig(self,**kwargs)
       
-  def ClickOnButton(self,evt):
-      '''
-      implements the close button event or skips the event
-      '''
-      obj = evt.GetEventObject()
-      if obj.GetName().endswith("CLOSE"):
-        self.Close()
-      if obj.GetName().endswith("OPEN"):
-        self._STB.SetStatusText(self._PNL.CFG.fname)
-      if obj.GetName().endswith("SAVE"):
-          self._STB.SetStatusText(self._PNL.CFG.fname)
-
-      else:
-          evt.Skip()
-
-  def ClickOnClose(self,evt):
-      '''
-      implements the close button event
-      '''
-      #--- place to clean your stuff
-      evt.Skip()
-     
+      self.Bind(wx.EVT_BUTTON,self.ClickOnButton)
+      self.Bind(wx.EVT_CLOSE,self.ClickOnClose)
+ 
+  def _wx_init(self,**kwargs):
+        self._MAIN_PNL = JuMEGConfig(self,**kwargs)
+      
 #---
 def run(opt):
     '''
@@ -622,9 +598,9 @@ def run(opt):
     if opt.debug:
         opt.verbose = True
         opt.debug = True
-        opt.path = "./config/"
-        #opt.config = "test_config.yaml"
-        opt.config = "test_config.json"
+        opt.path = "." #./config/"
+        opt.config = "test_config.yaml"
+        #opt.config = "test_config.json"
     
     app = wx.App()
     

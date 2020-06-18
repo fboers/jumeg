@@ -158,7 +158,7 @@ class JuMEG_wxLogger(wx.Panel):
         stl = wx.BU_EXACTFIT | wx.BU_NOTEXT  # | wx.BORDER_NONE
         self._BtClear = wx.Button(self._pnl, -1, name=self.cmd_clear,style=stl)
         self._BtClear.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_DELETE, wx.ART_MENU, (12, 12)))
-        
+        '''
         self._BtMinimize = wx.Button(self._pnl, -1, name=self.cmd_min_max, style=stl)
         self._BtMinimize.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_CROSS_MARK, wx.ART_MENU, (12, 12)))
         
@@ -167,7 +167,7 @@ class JuMEG_wxLogger(wx.Panel):
 
         self._BtFlipVertical = wx.Button(self._pnl,-1,name=self.cmd_flip_vertical,style=stl)
         self._BtFlipVertical.SetBitmapLabel(wx.ArtProvider.GetBitmap(wx.ART_GO_FORWARD,wx.ART_MENU,(12,12)))
-
+        '''
         self.Bind(wx.EVT_BUTTON,self.ClickOnButton)
         
         style = wx.TE_MULTILINE | wx.TE_READONLY  # |wx.HSCROLL
@@ -231,10 +231,12 @@ class JuMEG_wxLogger(wx.Panel):
         hbox = wx.BoxSizer(wx.HORIZONTAL)
         hbox.Add(self._txt_head,  1,wx.ALL | wx.EXPAND, 1)
         hbox.Add(self._BtClear,   0,wx.ALL, 1)
+        '''
         hbox.Add(self._BtMinimize,0,wx.ALL, 1)
         hbox.Add((0,0),0,wx.ALL,1)
         hbox.Add(self._BtFlipHorizontal,0,wx.ALL, 1)
         hbox.Add(self._BtFlipVertical,0,wx.ALL,1)
+        '''
         self._pnl.SetSizer(hbox)
         self._pnl.Fit()
 

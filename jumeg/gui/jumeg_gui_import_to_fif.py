@@ -319,7 +319,7 @@ class JuMEG_wxImportToFIFPanel(JuMEG_wxMainPanel):
               cmd += " --fif_extention="+ pdf[1]
               joblist.append( cmd )
           
-         # logger.info(joblist)
+          logger.info(" joblist: {}".format(joblist) )
           
           if self.verbose:
              wx.LogMessage(jb.pp_list2str(joblist, head="MEEG Merger Job list: "))

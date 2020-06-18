@@ -215,7 +215,7 @@ class JuMEG_wxPDFBTi(JuMEG_wxPDFBase):
            logger.error("ERROR Please select PDFs first !!!",file=sys.stderr)
            return None
         
-        # logger.info("PDFs: {}".format(self._pdfs))
+        logger.info("PDFs: {}".format(self._pdfs))
         
         for subject_id in self._pdfs["bti"]:
             for idx in range(len(self._pdfs["bti"][subject_id])):
@@ -262,7 +262,10 @@ class JuMEG_wxPDFBTi(JuMEG_wxPDFBase):
         ds = 5
         LEA = wx.LEFT | wx.EXPAND | wx.ALL
         fgs1 = wx.FlexGridSizer(self._n_pdfs + n_subjects,2,ds,ds)
-        
+       
+        self._ckbox = dict()
+        self._cbbox = dict()
+       
         for subject_id in self._pdfs["bti"]:
             self._ckbox[subject_id] = []
             self._cbbox[subject_id] = []
