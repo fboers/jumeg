@@ -21,7 +21,7 @@ from jumeg.epocher.jumeg_epocher_plot    import jumeg_epocher_plot as jplt
 
 #--- setup logger
 logger = logging.getLogger('jumeg')
-__version__="2020.01.24.001"
+__version__="2020.07.28.001"
 
 class JuMEG_Epocher_Marker(JuMEG_Epocher_Events_Channel):
     '''
@@ -210,7 +210,7 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         self._epochs_run()
       
       #--  e.g. save events in mne.annotations
-        if self.save_raw:
+        if self.save_raw or self.save:
            self.fname = jumeg_base.apply_save_mne_data(raw=self.raw,fname=self.fname,overwrite=True)
            
         return self.raw,self.fname 
@@ -1146,8 +1146,7 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
        
          #--- plot evoked
           fname = jplt.plot_evoked(evt,fname=fname,condition=condition,show_plot=False,save_plot=True,plot_dir='plots')
-          logger.info("done jumeg epocher plot evoked (averaged) :" +fname)
-         
+          logger.info("done jumeg epocher plot evoked (averaged) :\n " +fname)
 
     def set_anotations(self,events,condition):
         """
@@ -1165,45 +1164,10 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
         else:       
            evts = events
        
-        #logger.info("evts:\n{}\n".format(evts[:,0]))
-        
-        jumeg_base.update_annotations(self.raw,description=condition,onsets=evts[:,0],verbose=self.verbose)
-    
-        '''
-       #--- annotations
-        evt_annot = None
-        try:
-            raw_annot = self.raw.annotations
-        except:
-            raw_annot = None
-       
-        #--- store event info into raw.anotations
-        time_format = '%Y-%m-%d %H:%M:%S.%f'
-        orig_time = self.raw.info.get("meas_date",self.raw.times[0])
-    
-        onset    = evt['events'][:,0] / self.raw.info["sfreq"]
-        duration = evt['events'][:,1] / self.raw.info["sfreq"]
-        ep_annot = mne.Annotations(onset       = onset.tolist(),
-                                   duration    = duration.tolist(),
-                                   description = condition,
-                                   orig_time   = orig_time)
-       
-        if raw_annot:
-           msg.append("found mne.annotations in RAW:\n  -> {}".format(raw_annot))
-         #--- clear old annotations
-           kidx = np.where(raw_annot.description == condition)[0]  # get index
-           if kidx.any():
-              msg.append("delete existing annotation {} counts: {}".format(condition,kidx.shape[0]))
-              raw_annot.delete(kidx)
-              self.raw.set_annotations(raw_annot + ep_annot)
-              raw_annot = self.raw.annotations
-           else:
-              self.raw.set_annotations(ep_annot)
-              raw_annot = self.raw.annotations
-    
-        msg.append("storing mne.annotations in RAW:\n  -> {}".format(self.raw.annotations))
-        logger.info("\n".join(msg))
-        '''
+        logger.info("evts:\n{}\n".format(evts[:,0]))
+        onsets = evts[:,0] / self.raw.info["sfreq"]  # samples to time
+        self.raw = jumeg_base.update_annotations(self.raw,description=condition,onsets=onsets,verbose=self.verbose)
+
     #---
     def __clear(self):
         """ clear all CLs parameter"""
@@ -1252,7 +1216,9 @@ class JuMEG_Epocher_Epochs(JuMEG_Epocher_Events):
             elif k=='weights':
                  self.weights = v
             elif k=='verbose':
-                 self.verbose = v          
+                 self.verbose = v
+            elif k=='save_raw':
+                 self.save_raw = v
 #--- 
     def _epochs_update_data(self,**kwargs):
         """

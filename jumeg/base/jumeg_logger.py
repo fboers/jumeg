@@ -23,7 +23,7 @@ import inspect
 from distutils.dir_util import mkpath
 import logging
 
-__version__="2020.06.18.001"
+__version__="2020.10.09.001"
 
 try:
     # https://github.com/borntyping/python-colorlog

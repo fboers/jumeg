@@ -76,7 +76,8 @@ from jumeg.base.jumeg_base     import jumeg_base as jb
 from jumeg.base                import jumeg_logger
 from jumeg.filter.jumeg_filter import jumeg_filter
 
-logger = jumeg_logger.get_logger('jumeg')
+logger = jumeg_logger.get_logger()
+
 __version__= '2020.04.22.001'
 
 class JuMEG_MergeMEEG_HiLoRate(object):

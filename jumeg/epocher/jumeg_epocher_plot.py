@@ -148,40 +148,38 @@ class JuMEG_Epocher_Plot(JuMEG_Base_IO):
         :return:
         '''
         if not evt: return
-        ep   = evt["epochs"]
-        name = 'test'
-        subject_id = name
+        ep    = evt["epochs"]
+        fnout = 'test'
+        subject_id = fnout
      
         if fname:
-           fout_path = os.path.dirname(fname)
-           n = os.path.basename(fname).split(".")
-           n.pop()
-           #name      = os.path.splitext( os.path.basename(fname) )[0]
-           name  = ".".join(n)
-           subject_id = name.split('_')[0]
+           pout  = os.path.dirname(fname)
+           fnout = os.path.basename(fname).rsplit(".",1)[0].rsplit("-raw")[0]
+           subject_id = fnout.split('_')[0]
         else:
-           name      = "test.png"
-           fout_path = "."
+           fnout = "test.png"
+           pout  = "."
        
         if plot_dir:
-           fout_path += "/" + plot_dir
+           pout = os.path.join(pout,plot_dir)
            try:
-               os.makedirs(fout_path,exist_ok=True)
+               os.makedirs(pout,exist_ok=True)
            except:
                logger.exception("Can not create epocher plot\n"+
-                                "  -> directory: {}\n".format(fout_path)+
-                                "  -> filename : {}".format(fname) )
+                                "  -> directory   : {}\n".format(fout_path)+
+                                "  -> filename in : {}".format(fname) +
+                                "  -> output filename: {}".format(fnout)+
+                                "  -> output path    : {}".format(pout) )
                return
             
-          # mkpath( fout_path )
-        fout = fout_path +'/'+ name
+        fout = os.path.join(pout,fnout)
         
         #pl.ioff()  # switch  off (interactive) plot visualisation
-        pl.figure(name)
+        pl.figure(fnout)
         pl.clf()
         #fig = pl.figure(name,figsize=(10, 8), dpi=100))
         
-        pl.title(name)
+        pl.title(fnout)
     
        #--- make title
         t = subject_id + ' Evoked '

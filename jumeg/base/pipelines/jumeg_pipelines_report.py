@@ -23,7 +23,7 @@ from distutils.dir_util import mkpath
 
 import warnings
 import mne
-from mne.report import Report
+#from mne.report import Report
 
 from jumeg.base.jumeg_base         import JUMEG_SLOTS
 from jumeg.base.jumeg_base         import jumeg_base as jb

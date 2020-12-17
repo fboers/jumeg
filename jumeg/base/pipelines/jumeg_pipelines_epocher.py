@@ -193,13 +193,15 @@ def test():
     verbose=True
     debug=False
     
-    stage= "$JUMEG_TEST_DATA/mne/201772/INTEXT01/190212_1334/2"
-    fn   = "201772_INTEXT01_190212_1334_2_c,rfDC,meeg,nr,bcc,int-raw.fif"
-    fn   = "201772_INTEXT01_190212_1334_2_c,rfDC,meeg,nr,bcc,int,fibp0.10-45.0,ar-raw.fif"
-    
-    stage = '$JUMEG_TEST_DATA/mne/212842/INTEXT01/190430_1001/4'
-    fn    = '212842_INTEXT01_190430_1001_4_c,rfDC,meeg,nr,bcc,int,fibp0.10-45.0,ar-raw.fif'
-    fin   = os.path.join(stage,fn)
+    stage= "$JUMEG_TEST_DATA/mne"
+    #p  = "201772/INTEXT01/190212_1334/2"
+    #fn = "201772_INTEXT01_190212_1334_2_c,rfDC,meeg,nr,bcc,int,ar-raw.fif"
+
+    p = "208574/INTEXT01/190521_1416/1"
+    fn= "208574_INTEXT01_190521_1416_1_c,rfDC,meeg,nr,bcc,int,ar-raw.fif"
+    #fn   = "201772_INTEXT01_190212_1334_2_c,rfDC,meeg,nr,bcc,int,fibp0.10-45.0,ar-raw.fif"
+    path = os.path.join(stage,p)
+    fin  = os.path.join(path,fn)
 
     raw,fname = jb.get_raw_obj(fname=fin)
  
@@ -220,7 +222,7 @@ def test():
    
    #--- define template
     template_path      = "$JUMEG_PATH_TEMPLATE_EPOCHER"
-    template_name      = "INTEXT"
+    template_name      = "INTEXT_001"
     template_extention = "jumeg_epocher_template.yaml"
    
    #--- CFG 
@@ -269,7 +271,8 @@ def test():
     jEP = JuMEG_PIPELIENS_EPOCHER()
    
     jEP.run(raw=raw,fname=fname,ep_param=ep_param,evt_param=evt_param,verbose=True,debug=False,show=True)
-   
+
+    #raw.plot(block=True,show=True)
    
    #---ToDo
    # use mne plots

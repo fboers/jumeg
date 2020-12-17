@@ -22,7 +22,7 @@ CuedLeftResIodBc:
     prefix: resp
     type_input: resp_onset
     type_offset: resp_offset
-  run: false
+  run: true
 CuedLeftStimIodBc:
   ResponseOnset:
     and_mask: 3

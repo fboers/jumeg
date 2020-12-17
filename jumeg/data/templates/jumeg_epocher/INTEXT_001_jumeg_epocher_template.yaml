@@ -22,7 +22,7 @@ CuedLeftResIodBc:
     prefix: resp
     type_input: resp_onset
     type_offset: resp_offset
-  run: false
+  run: true
 CuedLeftStimIodBc:
   ResponseOnset:
     and_mask: 3
@@ -47,7 +47,7 @@ CuedLeftStimIodBc:
     prefix: resp
     type_input: resp_onset
     type_offset: resp_offset
-  run: false
+  run: true
 CuedRightResIodBc:
   ResponseOnset:
     and_mask: 3
@@ -72,7 +72,7 @@ CuedRightResIodBc:
     prefix: resp
     type_input: resp_onset
     type_offset: resp_offset
-  run: false
+  run: true
 CuedRightStimIodBc:
   ResponseOnset:
     and_mask: 3
@@ -97,7 +97,7 @@ CuedRightStimIodBc:
     prefix: resp
     type_input: resp_onset
     type_offset: resp_offset
-  run: false
+  run: true
 NoMoveLeftStimIodBc:
   ResponseOnset:
     counts: first
@@ -137,7 +137,7 @@ NoMoveRightStimIodBc:
   postfix: NoMoveRightStimIod
   response:
     matching: false
-  run: false
+  run: true
 SelfLeftRes:
   ResponseOnset:
     event_id: 1
@@ -154,7 +154,7 @@ SelfLeftRes:
   postfix: SelfLeftRes
   response:
     matching: false
-  run: false
+  run: true
   time_post: 0.1
   time_pre: -0.15
 SelfRightRes:
@@ -173,7 +173,7 @@ SelfRightRes:
   postfix: SelfRightRes
   response:
     matching: false
-  run: false
+  run: true
 _keys:
   _root_keys:
   - default
@@ -240,8 +240,8 @@ default:
     system_delay_ms: 0.0
   baseline:
     baseline:
-    - null
-    - 0
+    - None
+    - '0'
     method: mean
     type_input: iod_onset
   experiment: INTEXT
@@ -264,7 +264,7 @@ default:
     type_result: hit
   postfix: test
   reject:
-    mag: 5e-9
+    mag: 5.0e-09
   response:
     channel: ResponseOnset
     matching: false
@@ -274,7 +274,7 @@ default:
   time_post: 1.0
   time_pre: -0.5
 info:
-  gui-version: 2020.03.11.001
-  python-version: 3.6.10
-  time: 2020-04-28 07:49
+  gui-version: 2020.06.16.001
+  python-version: 3.7.7
+  time: 2020-07-28 12:47
   user: fboers
